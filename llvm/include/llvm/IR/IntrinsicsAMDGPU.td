@@ -2648,9 +2648,6 @@ def int_amdgcn_global_load_tr_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
 def int_amdgcn_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
-// i32 @llvm.amdgcn.wave.id()
-def int_amdgcn_wave_id :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.

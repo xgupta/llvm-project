@@ -236,6 +236,7 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
   case DW_OP_form_tls_address:     // 0x9b DWARF3
   case DW_OP_call_frame_cfa:       // 0x9c DWARF3
   case DW_OP_stack_value:          // 0x9f DWARF4
+  case DW_OP_RC_byte_swap:	   // 0xea RAINCODE extension
   case DW_OP_GNU_push_tls_address: // 0xe0 GNU extension
     return 0;
 
@@ -718,6 +719,67 @@ static llvm::Error Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   return llvm::Error::success();
 }
 
+bool DWARFExpression::Evaluate(ExecutionContextScope *exe_scope,
+                               lldb::addr_t loclist_base_load_addr,
+                               const Value *initial_value_ptr,
+                               const Value *object_address_ptr, Value &result,
+                               Status *error_ptr) const {
+  ExecutionContext exe_ctx(exe_scope);
+  return Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, initial_value_ptr,
+                  object_address_ptr, result, error_ptr);
+}
+
+bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
+                               RegisterContext *reg_ctx,
+                               lldb::addr_t func_load_addr,
+                               const Value *initial_value_ptr,
+                               const Value *object_address_ptr, Value &result,
+                               Status *error_ptr) const {
+  ModuleSP module_sp = m_module_wp.lock();
+  std::vector<Value> stack;
+  if (initial_value_ptr)
+    stack.push_back(*initial_value_ptr);
+
+  if (IsLocationList()) {
+    addr_t pc;
+    StackFrame *frame = nullptr;
+    if (reg_ctx)
+      pc = reg_ctx->GetPC();
+    else {
+      frame = exe_ctx->GetFramePtr();
+      if (!frame)
+        return false;
+      RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
+      if (!reg_ctx_sp)
+        return false;
+      pc = reg_ctx_sp->GetPC();
+    }
+
+    if (func_load_addr != LLDB_INVALID_ADDRESS) {
+      if (pc == LLDB_INVALID_ADDRESS) {
+        if (error_ptr)
+          error_ptr->SetErrorString("Invalid PC in frame.");
+        return false;
+      }
+
+      if (llvm::Optional<DataExtractor> expr =
+              GetLocationExpression(func_load_addr, pc)) {
+        return DWARFExpression::Evaluate(
+            exe_ctx, reg_ctx, module_sp, *expr, m_dwarf_cu, m_reg_kind,
+            object_address_ptr, stack, result, error_ptr);
+      }
+    }
+    if (error_ptr)
+      error_ptr->SetErrorString("variable not available");
+    return false;
+  }
+
+  // Not a location list, just a single expression.
+  return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, m_data,
+                                   m_dwarf_cu, m_reg_kind, object_address_ptr,
+                                   stack, result, error_ptr);
+}
+
 namespace {
 /// The location description kinds described by the DWARF v5
 /// specification.  Composite locations are handled out-of-band and
@@ -823,12 +885,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
     const DWARFUnit *dwarf_cu, const lldb::RegisterKind reg_kind,
-    const Value *initial_value_ptr, const Value *object_address_ptr) {
+    const Value *initial_value_ptr, const Value *object_address_ptr,
+    std::vector<Value> &stack, bool expression_call) {
 
   if (opcodes.GetByteSize() == 0)
     return llvm::createStringError(
         "no location, value may have been optimized out");
-  std::vector<Value> stack;
+
 
   Process *process = nullptr;
   StackFrame *frame = nullptr;
@@ -841,9 +904,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   }
   if (reg_ctx == nullptr && frame)
     reg_ctx = frame->GetRegisterContext().get();
-
-  if (initial_value_ptr)
-    stack.push_back(*initial_value_ptr);
 
   lldb::offset_t offset = 0;
   Value tmp;
@@ -1388,6 +1448,25 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_neg:
       if (!stack.back().ResolveValue(exe_ctx).UnaryNegate())
         return llvm::createStringError("unary negate failed");
+      break;
+
+    // OPCODE: DW_OP_RC_byte_swap
+    // OPERANDS: none
+    // DESCRIPTION: pops the top stack entry, and pushes its bytes swapped
+    // result
+    case DW_OP_RC_byte_swap:
+      if (stack.empty()) {
+        if (error_ptr)
+          error_ptr->SetErrorString(
+              "Expression stack needs at least 1 item for DW_OP_RC_byte_swap.");
+        return false;
+      } else {
+        if (!stack.back().ResolveValue(exe_ctx).ByteSwap()) {
+          if (error_ptr)
+            error_ptr->SetErrorString("Byte Swap failed.");
+          return false;
+        }
+      }
       break;
 
     // OPCODE: DW_OP_not
@@ -2042,8 +2121,14 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // may be used as parameters by the called expression and values left on
     // the stack by the called expression may be used as return values by prior
     // agreement between the calling and called expressions.
-    case DW_OP_call2:
-      return llvm::createStringError("unimplemented opcode DW_OP_call2");
+    case DW_OP_call2: {
+      dw_offset_t die_ref_offset =
+          opcodes.GetU16(&offset) + dwarf_cu->GetOffset();
+      EvaluateCall(exe_ctx, reg_ctx, module_sp, dwarf_cu, die_ref_offset,
+                   reg_kind, initial_value_ptr, object_address_ptr, stack);
+    } break;
+
+
     // OPCODE: DW_OP_call4
     // OPERANDS: 1
     //      uint32_t compile unit relative offset of a DIE
@@ -2063,8 +2148,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // may be used as parameters by the called expression and values left on
     // the stack by the called expression may be used as return values by prior
     // agreement between the calling and called expressions.
-    case DW_OP_call4:
-      return llvm::createStringError("unimplemented opcode DW_OP_call4");
+    case DW_OP_call4: {
+      dw_offset_t die_ref_offset =
+          opcodes.GetU32(&offset) + dwarf_cu->GetOffset();
+      EvaluateCall(exe_ctx, reg_ctx, module_sp, dwarf_cu, die_ref_offset,
+                   reg_kind, initial_value_ptr, object_address_ptr, stack);
+    } break;
 
     // OPCODE: DW_OP_stack_value
     // OPERANDS: None
@@ -2284,6 +2373,57 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     }
   }
   return stack.back();
+}
+
+bool DWARFExpression::EvaluateCall(ExecutionContext *exe_ctx,
+                                   RegisterContext *reg_ctx,
+                                   ModuleSP module_sp,
+                                   const DWARFUnit *dwarf_cu,
+                                   dw_offset_t die_ref_offset,
+                                   const RegisterKind reg_kind,
+                                   const Value *object_address_ptr,
+                                   std::vector<Value> &stack,
+                                   Status *error_ptr) {
+  DWARFDIE ref_die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(die_ref_offset);
+  if (!ref_die.IsValid()) {
+    if (error_ptr)
+      error_ptr->SetErrorStringWithFormat(
+          "unable to find DW_OP_call[2|4] reference = %" PRIu32,
+          die_ref_offset);
+    return false;
+  }
+
+  DWARFFormValue form_value;
+  const dw_offset_t attrib_offset =
+      ref_die.GetDIE()->GetAttributeValue(dwarf_cu, DW_AT_location, form_value);
+  if (attrib_offset == 0)
+    return false;
+
+  if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
+    if (error_ptr)
+      error_ptr->SetErrorStringWithFormat(
+          "DW_OP_call[2|4] to reference = %" PRIu32
+          " with location list is not supported.",
+          die_ref_offset);
+    return false;
+  }
+
+  const DWARFDataExtractor &ref_debug_info_data = ref_die.GetData();
+  uint32_t location_offset =
+      form_value.BlockData() - ref_debug_info_data.GetDataStart();
+  uint32_t location_length = form_value.Unsigned();
+  Value result(0);
+  return Evaluate(
+      exe_ctx, reg_ctx, module_sp,
+      DataExtractor(ref_debug_info_data, location_offset, location_length),
+      dwarf_cu, reg_kind, object_address_ptr, stack, result, error_ptr, true);
+}
+
+static DataExtractor ToDataExtractor(const llvm::DWARFLocationExpression &loc,
+                                     ByteOrder byte_order, uint32_t addr_size) {
+  auto buffer_sp =
+      std::make_shared<DataBufferHeap>(loc.Expr.data(), loc.Expr.size());
+  return DataExtractor(buffer_sp, byte_order, addr_size);
 }
 
 bool DWARFExpression::ParseDWARFLocationList(

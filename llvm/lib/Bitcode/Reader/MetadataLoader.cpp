@@ -1527,19 +1527,38 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 7)
-      return error("Invalid record");
 
+    if (Record.size() < 6 || Record.size() > 12)
+      return error("Invalid record");
     IsDistinct = Record[0];
+
     DINode::DIFlags Flags = (Record.size() > 6)
                                 ? static_cast<DINode::DIFlags>(Record[6])
                                 : DINode::FlagZero;
 
-    MetadataList.assignValue(
-        GET_OR_DISTINCT(DIBasicType,
-                        (Context, Record[1], getMDString(Record[2]), Record[3],
-                         Record[4], Record[5], Flags)),
-        NextMetadataNo);
+    if (Record.size() > 7) {
+      DIBasicType::DecimalInfo DAInfo;
+      if (Record[8])
+        DAInfo.DigitCount = Record[8];
+      if (Record[9])
+        DAInfo.DecimalSign = Record[9];
+      if (Record[10])
+        DAInfo.Scale = Record[11];
+
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(DIBasicType,
+                          (Context, Record[1], getMDString(Record[2]),
+                           Record[7] ? getMDString(Record[7]) : nullptr,
+                           Record[3], Record[4], Record[5], Flags, DAInfo)),
+          NextMetadataNo);
+    } else {
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(DIBasicType,
+                          (Context, Record[1], getMDString(Record[2]),
+                           Record[3], Record[4], Record[5], Flags)),
+          NextMetadataNo);
+    }
+
     NextMetadataNo++;
     break;
   }
@@ -2163,15 +2182,26 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
-    uint64_t Version = Record[0] >> 1;
-    auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
+    uint64_t Version = (Record[0] >> 1) & (0xF);
+    uint64_t Ops = (Record[0] >> 6);
+    auto Elts = Ops ? MutableArrayRef<uint64_t>(Record).slice(1, Ops)
+                    : MutableArrayRef<uint64_t>(Record).slice(1);
 
     SmallVector<uint64_t, 6> Buffer;
     if (Error Err = upgradeDIExpression(Version, Elts, Buffer))
       return Err;
 
-    MetadataList.assignValue(GET_OR_DISTINCT(DIExpression, (Context, Elts)),
-                             NextMetadataNo);
+    SmallVector<Metadata*, 4> Refs;
+    /// on old bitcode we will get zero Ops.
+    if (Ops){
+      Ops++;
+      /// Check presence of refs for OP_call2/call4.
+      while(Ops < Record.size())
+        Refs.push_back(getMDOrNull(Record[Ops++]));
+    }
+
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIExpression, (Context, Elts, Refs)), NextMetadataNo);
     NextMetadataNo++;
     break;
   }

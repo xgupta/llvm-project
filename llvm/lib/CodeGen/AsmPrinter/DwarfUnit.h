@@ -194,6 +194,10 @@ public:
                      const MCSymbol *Hi, const MCSymbol *Lo);
 
   /// Add a DIE attribute data and value.
+  void addDIEEntry(DIEValueList &Die, dwarf::Attribute Attribute,
+                   Optional<dwarf::Form> Form, DIEEntry Entry);
+
+  /// Add a DIE attribute data and value.
   void addDIEEntry(DIE &Die, dwarf::Attribute Attribute, DIE &Entry);
 
   /// Add a DIE attribute data and value.

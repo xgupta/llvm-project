@@ -523,6 +523,21 @@ enum LanguageType {
   eNumLanguageTypes
 };
 
+//----------------------------------------------------------------------
+/// Identifier Case type
+///
+/// this enumeration indetifies the treatment of identifiers within
+/// compilation unit. the default is case sensitive in case it is absent
+/// in compilation unit.
+//----------------------------------------------------------------------
+enum IdentifierCaseType {
+  eCaseUnknown = 0,
+  eCaseSensitive = 1,
+  eUpperCase = 2,
+  eLowerCase = 3,
+  eCaseInsensitive = 4,
+};
+
 enum InstrumentationRuntimeType {
   eInstrumentationRuntimeTypeAddressSanitizer = 0x0000,
   eInstrumentationRuntimeTypeThreadSanitizer = 0x0001,
@@ -1127,7 +1142,7 @@ FLAGS_ENUM(TypeFlags){
     eTypeIsVector = (1u << 16),         eTypeIsScalar = (1u << 17),
     eTypeIsInteger = (1u << 18),        eTypeIsFloat = (1u << 19),
     eTypeIsComplex = (1u << 20),        eTypeIsSigned = (1u << 21),
-    eTypeInstanceIsPointer = (1u << 22)};
+    eTypeInstanceIsPointer = (1u << 22), eTypeIsVarString = (1u << 23)};
 
 FLAGS_ENUM(CommandFlags){
     /// eCommandRequiresTarget

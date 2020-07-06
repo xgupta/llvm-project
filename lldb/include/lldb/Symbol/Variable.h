@@ -32,9 +32,10 @@ public:
   Variable(lldb::user_id_t uid, const char *name, const char *mangled,
            const lldb::SymbolFileTypeSP &symfile_type_sp, lldb::ValueType scope,
            SymbolContextScope *owner_scope, const RangeList &scope_range,
-           Declaration *decl, const DWARFExpressionList &location,
-           bool external, bool artificial, bool location_is_constant_data,
-           bool static_member = false);
+           Declaration *decl, const DWARFExpressionList &location, bool external,
+           bool artificial, bool location_is_constant_data,
+           bool static_member = false,
+           bool has_descriptor = false, uint8_t lexical_scope = 0);
 
   virtual ~Variable();
 
@@ -55,7 +56,7 @@ public:
   /// namespace)::i", this function will allow a generic match function that can
   /// be called by commands and expression parsers to make sure we match
   /// anything we come across.
-  bool NameMatches(ConstString name) const;
+  bool NameMatches(ConstString name, bool case_sensitive = true) const;
 
   bool NameMatches(const RegularExpression &regex) const;
 
@@ -72,6 +73,8 @@ public:
   bool IsArtificial() const { return m_artificial; }
 
   bool IsStaticMember() const { return m_static_member; }
+
+  bool HasDescriptor() const { return m_has_descriptor; }
 
   DWARFExpressionList &LocationExpressionList() { return m_location_list; }
 
@@ -140,6 +143,10 @@ protected:
   unsigned m_loc_is_const_data : 1;
   /// Non-zero if variable is static member of a class or struct.
   unsigned m_static_member : 1;
+  /// Non-zero if variable has descriptor.
+  unsigned m_has_descriptor : 1;
+  /// Lexical scope used in some languages like PL/I
+  unsigned m_lexical_scope : 8;
 
 private:
   Variable(const Variable &rhs) = delete;

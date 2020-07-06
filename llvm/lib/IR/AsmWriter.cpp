@@ -2022,13 +2022,11 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
   Out << "!DISubrange(";
   MDFieldPrinter Printer(Out, WriterCtx);
 
-  auto *Count = N->getRawCountNode();
-  if (auto *CE = dyn_cast_or_null<ConstantAsMetadata>(Count)) {
-    auto *CV = cast<ConstantInt>(CE->getValue());
-    Printer.printInt("count", CV->getSExtValue(),
-                     /* ShouldSkipZero */ false);
-  } else
-    Printer.printMetadata("count", Count, /*ShouldSkipNull */ true);
+  if (auto *CE = N->getCount().dyn_cast<ConstantInt *>())
+    Printer.printInt("count", CE->getSExtValue(), /* ShouldSkipZero */ false);
+  else
+    Printer.printMetadata("count", N->getRawCountNode(),
+                          /*ShouldSkipNull */ true);
 
   // A lowerBound of constant 0 should not be skipped, since it is different
   // from an unspecified lower bound (= nullptr).
@@ -2132,6 +2130,19 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
+
+  if (N->hasDecimalInfo()) {
+    Printer.printString("pic", N->getPictureString());
+    if (const auto &digits = N->getDigitCount())
+      Printer.printInt("digits", *digits);
+
+    if (const auto &sign = N->getDecimalSign())
+      Printer.printDwarfEnum("sign", *sign, dwarf::DecimalSignString);
+
+    if (const auto &scale = N->getScale())
+      Printer.printInt("scale", *scale, /*ShouldSkipZero*/ false);
+  }
+
   Printer.printDIFlags("flags", N->getFlags());
   Out << ")";
 }
@@ -2460,6 +2471,9 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
                               AsmWriterContext &WriterCtx) {
   Out << "!DIExpression(";
   FieldSeparator FS;
+  MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
+  // FixMe
+  Printer.FS.Skip = false;
   if (N->isValid()) {
     for (const DIExpression::ExprOperand &Op : N->expr_ops()) {
       auto OpStr = dwarf::OperationEncodingString(Op.getOp());

@@ -246,6 +246,8 @@ public:
 
   void SetRequireHardwareBreakpoints(bool b);
 
+  llvm::StringRef GetTargetCharset() const;
+
   bool GetRequireHardwareBreakpoints() const;
 
   bool GetAutoInstallMainExecutable() const;

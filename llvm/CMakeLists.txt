@@ -1135,6 +1135,53 @@ configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/abi-breaking.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/abi-breaking.h)
 
+# Add target for generating source rpm package.
+set(LLVM_SRPM_USER_BINARY_SPECFILE ${CMAKE_CURRENT_SOURCE_DIR}/llvm.spec.in
+    CACHE FILEPATH ".spec file to use for srpm generation")
+set(LLVM_SRPM_BINARY_SPECFILE ${CMAKE_CURRENT_BINARY_DIR}/llvm.spec)
+set(LLVM_SRPM_DIR "${CMAKE_CURRENT_BINARY_DIR}/srpm")
+
+get_source_info(${CMAKE_CURRENT_SOURCE_DIR} revision repository)
+string(LENGTH "${revision}" revision_length)
+set(LLVM_RPM_SPEC_REVISION "${revision}")
+
+configure_file(
+  ${LLVM_SRPM_USER_BINARY_SPECFILE}
+  ${LLVM_SRPM_BINARY_SPECFILE} @ONLY)
+
+add_custom_target(srpm
+  COMMAND cpack -G TGZ --config CPackSourceConfig.cmake -B ${LLVM_SRPM_DIR}/SOURCES
+  COMMAND rpmbuild -bs --define '_topdir ${LLVM_SRPM_DIR}' ${LLVM_SRPM_BINARY_SPECFILE})
+set_target_properties(srpm PROPERTIES FOLDER "Misc")
+
+#Add traget for generating lldb binary rpm package
+set(LLDB_RPM_USER_BINARY_SPECFILE ${CMAKE_CURRENT_SOURCE_DIR}/../lldb/lldb.spec.in
+    CACHE FILEPATH ".spec file to use for srpm generation")
+set(LLDB_RPM_BINARY_SPECFILE ${CMAKE_CURRENT_BINARY_DIR}/lldb.spec)
+set(LLDB_RPM_DIR "${CMAKE_CURRENT_BINARY_DIR}/rpm")
+
+set(LLDB_RPM_SPEC_REVISION "${revision}")
+
+if(NOT DEFINED LLDB_RPM_VERSION)
+  set(LLDB_RPM_VERSION 0)
+endif()
+
+configure_file(
+  ${LLDB_RPM_USER_BINARY_SPECFILE}
+  ${LLDB_RPM_BINARY_SPECFILE} @ONLY)
+
+set(LLDB_RPM_DEP_LIST "${CMAKE_CURRENT_BINARY_DIR}\;LLVM\;lldb\;/\;${CMAKE_CURRENT_BINARY_DIR}\;LLVM\;lldb-server\;/\;${CMAKE_CURRENT_BINARY_DIR}\;LLVM\;liblldb\;//\;${CMAKE_CURRENT_BINARY_DIR}\;LLVM\;lldb-python-scripts\;/")
+
+add_custom_target(lldbrpm
+  COMMAND cpack -G TGZ --config CPackConfig.cmake -D CPACK_INSTALL_CMAKE_PROJECTS="${LLDB_RPM_DEP_LIST}" -D CPACK_PACKAGE_FILE_NAME="LLDB-${PACKAGE_VERSION}-Linux" -B ${LLDB_RPM_DIR}/SOURCES
+  COMMAND rpmbuild -bb --define '_topdir ${LLDB_RPM_DIR}' ${LLDB_RPM_BINARY_SPECFILE})
+set_target_properties(lldbrpm PROPERTIES FOLDER "Misc")
+
+# They are not referenced. See set_output_directory().
+set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+
 if(APPLE AND DARWIN_LTO_LIBRARY)
   set(CMAKE_EXE_LINKER_FLAGS
     "${CMAKE_EXE_LINKER_FLAGS} -Wl,-lto_library -Wl,${DARWIN_LTO_LIBRARY}")

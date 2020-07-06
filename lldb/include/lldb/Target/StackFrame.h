@@ -428,6 +428,26 @@ public:
   ///   derived from.
   uint32_t GetConcreteFrameIndex() const { return m_concrete_frame_index; }
 
+  /// Searches nested agregate Valobject for named variable for first occurance
+  ///
+  /// \params [in] name
+  ///   The name of the Variable to search
+  ///
+  /// \param [in] valobj_sp
+  ///   Top level valueObject to search into
+  ///
+  /// \params [in] use_dynamic
+  ///     Whether the correct dynamic type of the variable should be
+  ///     determined before creating the ValueObject, or if the static type
+  ///     is sufficient.  One of the DynamicValueType enumerated values.
+  ///
+  /// \return
+  //    A name matched ValueObject.
+  lldb::ValueObjectSP
+  GetValueObjectForFrameAggregateVariable(ConstString name,
+                                          lldb::ValueObjectSP &valobj_sp,
+                                          lldb::DynamicValueType use_dynamic);
+
   /// Create a ValueObject for a given Variable in this StackFrame.
   ///
   /// \param [in] variable_sp

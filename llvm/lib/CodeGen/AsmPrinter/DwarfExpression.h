@@ -30,6 +30,7 @@ class DwarfCompileUnit;
 class DIELoc;
 class TargetRegisterInfo;
 class MachineLocation;
+class DIE;
 
 /// Base class containing the logic for constructing DWARF expressions
 /// independently of whether they are emitted into a DIE or into a .debug_loc
@@ -96,19 +97,30 @@ public:
 
   bool isUnknownLocation() const { return LocationKind == Unknown; }
 
-  bool isMemoryLocation() const { return LocationKind == Memory; }
+  bool isMemoryLocation() const {
+    return LocationKind == Memory;
+  }
 
-  bool isRegisterLocation() const { return LocationKind == Register; }
+  bool isRegisterLocation() const {
+    return LocationKind == Register;
+  }
 
-  bool isImplicitLocation() const { return LocationKind == Implicit; }
+  bool isImplicitLocation() const {
+    return LocationKind == Implicit;
+  }
 
-  bool isEntryValue() const { return LocationFlags & EntryValue; }
+  bool isEntryValue() const {
+    return LocationFlags & EntryValue;
+  }
 
   bool isIndirect() const { return LocationFlags & Indirect; }
 
   bool isParameterValue() { return LocationFlags & CallSiteParamValue; }
 
   std::optional<uint8_t> TagOffset;
+
+
+  Optional<uint8_t> TagOffset;
 
 protected:
   /// Push a DW_OP_piece / DW_OP_bit_piece for emitting later, if one is needed
@@ -132,6 +144,9 @@ protected:
   virtual void emitUnsigned(uint64_t Value) = 0;
 
   virtual void emitData1(uint8_t Value) = 0;
+
+  /// Emit a refrence value in local CU
+  virtual void emitRef(llvm::DIE *Entry, const unsigned ref_size) = 0;
 
   virtual void emitBaseTypeRef(uint64_t Idx) = 0;
 
@@ -251,7 +266,9 @@ public:
   void setEntryValueFlags(const MachineLocation &Loc);
 
   /// Lock this down to become a call site parameter location.
-  void setCallSiteParamValueFlag() { LocationFlags |= CallSiteParamValue; }
+  void setCallSiteParamValueFlag() {
+    LocationFlags |= CallSiteParamValue;
+  }
 
   /// Emit a machine register location. As an optimization this may also consume
   /// the prefix of a DwarfExpression if a more efficient representation for
@@ -283,12 +300,17 @@ public:
   void addExpression(DIExpressionCursor &&Expr);
 
   /// Emit all remaining operations in the DIExpressionCursor.
-  /// DW_OP_LLVM_arg operations are resolved by calling (\p InsertArg).
-  //
-  /// \return false if any call to (\p InsertArg) returns false.
-  bool addExpression(
-      DIExpressionCursor &&Expr,
-      llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg);
+  ///
+  /// \param FragmentOffsetInBits     If this is one fragment out of multiple
+  ///                                 locations, this is the offset of the
+  ///                                 fragment inside the entire variable.
+  void addExpression(DIExpressionCursor &&Expr,
+                     unsigned FragmentOffsetInBits = 0,
+                     SmallVectorImpl<DIE*> *DIERefOffset = nullptr);
+  void
+  addExpression(DIExpressionCursor &&Expr,
+                llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg,
+                SmallVectorImpl<DIE*> *DIERefOffset = nullptr);
 
   /// If applicable, emit an empty DW_OP_piece / DW_OP_bit_piece to advance to
   /// the fragment described by \c Expr.
@@ -324,6 +346,7 @@ class DebugLocDwarfExpression final : public DwarfExpression {
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
   void emitData1(uint8_t Value) override;
+  void emitRef(DIE *Entry, const unsigned RefByteSize) override;
   void emitBaseTypeRef(uint64_t Idx) override;
 
   void enableTemporaryBuffer() override;
@@ -354,6 +377,7 @@ class DIEDwarfExpression final : public DwarfExpression {
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
   void emitData1(uint8_t Value) override;
+  void emitRef(llvm::DIE *Entry, const unsigned RefByteSize) override;
   void emitBaseTypeRef(uint64_t Idx) override;
 
   void enableTemporaryBuffer() override;

@@ -754,6 +754,8 @@ public:
   ReadPointedString(lldb::WritableDataBufferSP &buffer_sp, Status &error,
                     bool honor_array);
 
+  uint16_t GetVarStringLength(Status &error);
+
   virtual size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                                 uint32_t item_count = 1);
 

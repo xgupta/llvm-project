@@ -195,6 +195,12 @@ void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
   getActiveStreamer().emitULEB128(Idx, Twine(Idx), ULEB128PadSize);
 }
 
+void DebugLocDwarfExpression::emitRef(llvm::DIE *Entry, const unsigned ref_size) {
+  // Keep duplicate for the time being
+  //BS.EmitULEB128(Idx, Twine(Idx), ULEB128PadSize);
+}
+
+
 bool DebugLocDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
                                               llvm::Register MachineReg) {
   // This information is not available while emitting .debug_loc entries.
@@ -1022,6 +1028,8 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   NewCU.addUInt(Die, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
                 DIUnit->getSourceLanguage());
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
+  NewCU.addUInt(Die, dwarf::DW_AT_identifier_case, dwarf::DW_FORM_data1,
+                DIUnit->getIdentifierCase());
   StringRef SysRoot = DIUnit->getSysRoot();
   if (!SysRoot.empty())
     NewCU.addString(Die, dwarf::DW_AT_LLVM_sysroot, SysRoot);

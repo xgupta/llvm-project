@@ -1,0 +1,36 @@
+%global debug_package %{nil}
+%global __os_install_post %{nil}
+Name:		LLDB
+Version:	@PACKAGE_VERSION@
+Release:	@LLDB_RPM_VERSION@
+Summary:	Next generation high-performance debugger
+
+License:	Apache-2.0 with LLVM exception
+URL:		http://lldb.llvm.org/
+Source:         http://llvm.org/releases/%{version}/%{name}-%{version}-Linux.tar.gz
+
+%description
+LLDB is a next generation, high-performance debugger. It is built as a set
+of reusable components which highly leverage existing libraries in the
+larger LLVM Project, such as the Clang expression parser and LLVM
+disassembler.
+
+%prep
+%setup -q -n %{name}-%{version}-Linux
+
+%build
+
+%install
+mkdir -p  %{buildroot}/usr/bin/  %{buildroot}/usr/lib64/
+install -m 0755 bin/lldb* %{buildroot}/usr/bin/
+install -m 0744 lib64/liblldb.so.%{version} %{buildroot}/usr/lib64/
+cp -r lib64/python* %{buildroot}/usr/lib64/
+cd %{buildroot}/usr/lib64/
+ln -sf liblldb.so.%{version} liblldb.so.@LLVM_VERSION_MAJOR@git
+ln -sf liblldb.so.@LLVM_VERSION_MAJOR@.git  liblldb.so
+
+%files
+%{_bindir}/lldb*
+%{_libdir}/liblldb.so*
+%{_libdir}/python*
+

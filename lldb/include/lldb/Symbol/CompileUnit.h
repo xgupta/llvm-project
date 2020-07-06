@@ -416,6 +416,8 @@ protected:
   /// The programming language enumeration value.
   lldb::LanguageType m_language;
   /// Compile unit flags that help with partial parsing.
+  lldb::IdentifierCaseType m_identifier_case;
+  ///< The programming language identifier case type
   Flags m_flags;
   /// Maps UIDs to functions.
   llvm::DenseMap<lldb::user_id_t, lldb::FunctionSP> m_functions_by_uid;

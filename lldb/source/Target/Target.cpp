@@ -4815,6 +4815,12 @@ bool TargetProperties::GetAutoInstallMainExecutable() const {
       idx, g_target_properties[idx].default_uint_value != 0);
 }
 
+llvm::StringRef TargetProperties::GetTargetCharset() const {
+  const uint32_t idx = ePropertyCharacterSet;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx,
+                                                     llvm::StringRef());
+}
+
 void TargetProperties::Arg0ValueChangedCallback() {
   m_launch_info.SetArg0(GetArg0());
 }

@@ -550,16 +550,51 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     var_expr = var_expr.drop_front(); // Skip the '&'
   }
 
-  size_t separator_idx = var_expr.find_first_of(".-[=+~|&^%#@!/?,<>{}");
+  size_t separator_idx = 0;
+  // TODO needs better handling
+  bool LegacyLangauage = (GetLanguage() == eLanguageTypeCobol85) ||
+                         (GetLanguage() == eLanguageTypeCobol74) ||
+                         (GetLanguage() == eLanguageTypePLI) ||
+                         (GetLanguage() == eLanguageTypeFortran90);
+
+  if (LegacyLangauage)
+    separator_idx = var_expr.find_first_of(".[=+~|&^%#@!/?,<>{}");
+  else
+    separator_idx = var_expr.find_first_of(".-[=+~|&^%#@!/?,<>{}");
   StreamString var_expr_path_strm;
 
   ConstString name_const_string(var_expr.substr(0, separator_idx));
 
-  var_sp = variable_list->FindVariable(name_const_string, false);
+  // LegacyLanguages listed above are case insesnitive.
+  var_sp = variable_list->FindVariable(name_const_string, false, !LegacyLangauage);
+
+  if (!var_sp && LegacyLangauage) {
+    for (size_t i = 0; i < variable_list->GetSize(); i++) {
+      VariableSP variable_sp = variable_list->GetVariableAtIndex(i);
+      if (!variable_sp)
+        continue;
+
+      Type *var_type = variable_sp->GetType();
+      if (!var_type)
+        continue;
+
+      if (!var_type->IsAggregateType())
+        continue;
+
+      valobj_sp = GetValueObjectForFrameVariable(variable_sp, use_dynamic);
+      if (!valobj_sp)
+        return valobj_sp;
+
+      valobj_sp = GetValueObjectForFrameAggregateVariable(
+          name_const_string, valobj_sp, use_dynamic);
+      if (valobj_sp)
+        break;
+    }
+  }
 
   bool synthetically_added_instance_object = false;
 
-  if (var_sp) {
+  if (var_sp || valobj_sp) {
     var_expr = var_expr.drop_front(name_const_string.GetLength());
   }
 
@@ -621,6 +656,9 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     return ValueObjectSP();
   }
 
+  llvm::StringRef type_name(valobj_sp->GetTypeName().GetStringRef());
+  const bool is_bit_type = type_name.startswith("BIT ");
+
   // We are dumping at least one child
   while (!var_expr.empty()) {
     // Calculate the next separator index ahead of time
@@ -676,9 +714,11 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       var_expr = var_expr.drop_front(); // Remove the '-'
       [[fallthrough]];
     case '.': {
+      // FIXME.
       var_expr = var_expr.drop_front(); // Remove the '.' or '>'
-      separator_idx = var_expr.find_first_of(".-[");
-      ConstString child_name(var_expr.substr(0, var_expr.find_first_of(".-[")));
+      separator_idx = LegacyLangauage ? var_expr.find_first_of(".[")
+                                      : var_expr.find_first_of(".-[");
+      ConstString child_name(var_expr.substr(0, separator_idx));
 
       if (check_ptr_vs_member) {
         // We either have a pointer type and need to verify valobj_sp is a
@@ -766,6 +806,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       // Drop the open brace.
       var_expr = var_expr.drop_front();
       long child_index = 0;
+      long bit_pos = 0;
+      long old_child_index = 0;
 
       // If there's no closing brace, this is an invalid expression.
       size_t end_pos = var_expr.find_first_of(']');
@@ -790,6 +832,12 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 
       if (index_expr.empty()) {
         // The entire index expression was a single integer.
+
+        if(is_bit_type) {
+          old_child_index = child_index;
+          bit_pos = 7 - (child_index % 8);
+          child_index /= 8;
+        }
 
         if (valobj_sp->GetCompilerType().IsPointerToScalarType() && deref) {
           // what we have is *ptr[low]. the most similar C++ syntax is to deref
@@ -961,6 +1009,14 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           if (dynamic_value_sp)
             child_valobj_sp = dynamic_value_sp;
         }
+
+        if (is_bit_type) {
+          child_valobj_sp = child_valobj_sp->GetSyntheticBitFieldChild(
+              bit_pos, bit_pos, true);
+          child_valobj_sp->SetName(
+              ConstString(llvm::formatv("[{0}]", old_child_index).str()));
+        }
+
         // Break out early from the switch since we were able to find the child
         // member
         break;
@@ -1141,6 +1197,32 @@ RegisterContextSP StackFrame::GetRegisterContext() {
 bool StackFrame::HasDebugInformation() {
   GetSymbolContext(eSymbolContextLineEntry);
   return m_sc.line_entry.IsValid();
+}
+
+ValueObjectSP StackFrame::GetValueObjectForFrameAggregateVariable(
+    ConstString name, ValueObjectSP &valobj_sp, DynamicValueType use_dynamic) {
+
+  if (!valobj_sp)
+    return valobj_sp;
+
+  ValueObjectSP result = valobj_sp->GetChildMemberWithName(name, true);
+  if (result)
+    return result;
+
+  for (size_t index = 0; index < valobj_sp->GetNumChildren(); ++index) {
+    ValueObjectSP child = valobj_sp->GetChildAtIndex(index, true);
+    if (!child)
+      continue;
+
+    CompilerType child_type = child->GetCompilerType();
+    if (!child_type.IsAggregateType())
+      continue;
+
+    result = GetValueObjectForFrameAggregateVariable(name, child, use_dynamic);
+    if (result)
+      break;
+  }
+  return result;
 }
 
 ValueObjectSP
@@ -1724,6 +1806,12 @@ lldb::ValueObjectSP StackFrame::FindVariable(ConstString name) {
   VariableSP var_sp;
   SymbolContext sc(GetSymbolContext(eSymbolContextBlock));
 
+  // FIXME optimise this
+  bool LegacyLangauage = (GetLanguage() == eLanguageTypeCobol85) ||
+                         (GetLanguage() == eLanguageTypeCobol74) ||
+                         (GetLanguage() == eLanguageTypePLI) ||
+                         (GetLanguage() == eLanguageTypeFortran90);
+
   if (sc.block) {
     const bool can_create = true;
     const bool get_parent_variables = true;
@@ -1733,7 +1821,8 @@ lldb::ValueObjectSP StackFrame::FindVariable(ConstString name) {
             can_create, get_parent_variables, stop_if_block_is_inlined_function,
             [this](Variable *v) { return v->IsInScope(this); },
             &variable_list)) {
-      var_sp = variable_list.FindVariable(name);
+      // LegacyLanguages listed above are case insensitive
+      var_sp = variable_list.FindVariable(name, true, !LegacyLangauage);
     }
 
     if (var_sp)

@@ -75,6 +75,11 @@ unsigned DIEDwarfExpression::getTemporaryBufferSize() {
 
 void DIEDwarfExpression::commitTemporaryBuffer() { OutDIE.takeValues(TmpDIE); }
 
+void DIEDwarfExpression::emitRef(llvm::DIE *Entry, const unsigned ref_size) {
+  const dwarf::Form form_type = ref_size == 4 ? dwarf::DW_FORM_ref4 : dwarf::DW_FORM_ref2;
+  CU.addDIEEntry(getActiveDIE(), (dwarf::Attribute)0, form_type, DIEEntry(*Entry));
+}
+
 bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
                                          llvm::Register MachineReg) {
   return MachineReg == TRI.getFrameRegister(*AP.MF);
@@ -242,6 +247,11 @@ void DwarfUnit::addSInt(DIEValueList &Die, dwarf::Attribute Attribute,
 void DwarfUnit::addSInt(DIELoc &Die, std::optional<dwarf::Form> Form,
                         int64_t Integer) {
   addSInt(Die, (dwarf::Attribute)0, Form, Integer);
+}
+
+void DwarfUnit::addDIEEntry(DIEValueList &Die, dwarf::Attribute Attribute,
+                            Optional<dwarf::Form> Form, DIEEntry Entry) {
+  Die.addValue(DIEValueAllocator, Attribute, *Form, Entry);
 }
 
 void DwarfUnit::addString(DIE &Die, dwarf::Attribute Attribute,
@@ -727,6 +737,25 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_big);
   else if (BTy->isLittleEndian())
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_little);
+
+  if (BTy->hasDecimalInfo()) {
+    StringRef PictureString = BTy->getPictureString();
+    if (!PictureString.empty())
+      addString(Buffer, dwarf::DW_AT_picture_string, PictureString);
+
+    if (const auto &digits = BTy->getDigitCount())
+      addUInt(Buffer, dwarf::DW_AT_digit_count, std::nullopt, *digits);
+
+    if (const auto &sign = BTy->getDecimalSign())
+      addUInt(Buffer, dwarf::DW_AT_decimal_sign, std::nullopt, *sign);
+
+    if (const auto &scale = BTy->getScale()) {
+      if (BTy->isBinaryScale())
+        addSInt(Buffer, dwarf::DW_AT_binary_scale, dwarf::DW_FORM_sdata, *scale);
+      else
+        addSInt(Buffer, dwarf::DW_AT_decimal_scale, dwarf::DW_FORM_sdata, *scale);
+    }
+  }
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {
@@ -1364,6 +1393,13 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   addAccess(SPDie, SP->getFlags());
 
+  if (SP->isDescLocSubProgram())
+    addUInt(SPDie, dwarf::DW_AT_RAINCODE_desc_type, dwarf::DW_FORM_data1,
+            dwarf::DW_RAINCODE_DESC_TYPE_desc_loc);
+  else if (SP->isDescListSubProgram())
+    addUInt(SPDie, dwarf::DW_AT_RAINCODE_desc_type, dwarf::DW_FORM_data1,
+            dwarf::DW_RAINCODE_DESC_TYPE_desc_list);
+
   if (SP->isExplicit())
     addFlag(SPDie, dwarf::DW_AT_explicit);
 
@@ -1417,7 +1453,16 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
 
   AddBoundTypeEntry(dwarf::DW_AT_lower_bound, SR->getLowerBound());
 
-  AddBoundTypeEntry(dwarf::DW_AT_count, SR->getCount());
+  if (auto *CV = SR->getCount().dyn_cast<DIVariable *>()) {
+    if (auto *CountVarDIE = getDIE(CV))
+      addDIEEntry(DW_Subrange, dwarf::DW_AT_count, *CountVarDIE);
+  } else if (auto *Expr = SR->getCount().dyn_cast<DIExpression *>()) {
+    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+    DIEDwarfExpression DwarfExpr(*getAsmPrinter(), getCU(), *Loc);
+    DwarfExpr.addExpression(Expr);
+    addBlock(DW_Subrange, dwarf::DW_AT_count, DwarfExpr.finalize());
+  } else if (Count != -1)
+    addUInt(DW_Subrange, dwarf::DW_AT_count, None, Count);
 
   AddBoundTypeEntry(dwarf::DW_AT_upper_bound, SR->getUpperBound());
 
@@ -1558,6 +1603,10 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     DwarfExpr.addExpression(RankExpr);
     addBlock(Buffer, dwarf::DW_AT_rank, DwarfExpr.finalize());
   }
+
+  // Emit if vendor specific array
+  if (CTy->isRaincodeStrHeader())
+    addFlag(Buffer, dwarf::DW_AT_RAINCODE_str_header);
 
   // Emit the element type.
   addType(Buffer, CTy->getBaseType());
