@@ -1268,22 +1268,6 @@ private:
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, Metadata *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
           uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
-          VendorDIFlags VFlags, DINodeArray Elements, unsigned RuntimeLang,
-          DIType *VTableHolder, DITemplateParameterArray TemplateParams,
-          StringRef Identifier, DIDerivedType *Discriminator,
-          StorageType Storage, bool ShouldCreate = true) {
-    return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
-                   Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
-                   Flags, VFlags, Elements.get(), RuntimeLang, VTableHolder,
-                   TemplateParams.get(),
-                   getCanonicalMDString(Context, Identifier), Discriminator,
-                   Storage, ShouldCreate);
-  }
-
-  static DICompositeType *
-  getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, Metadata *File,
-          unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
-          uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
           DINodeArray Elements, unsigned RuntimeLang, DIType *VTableHolder,
           DITemplateParameterArray TemplateParams, StringRef Identifier,
           DIDerivedType *Discriminator, Metadata *DataLocation,
@@ -1310,7 +1294,25 @@ private:
     return getImpl(Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                    AlignInBits, OffsetInBits, Flags, VendorDIFlagZero, Elements,
                    RuntimeLang, VTableHolder, TemplateParams, Identifier,
-                   Discriminator, Associated, Allocated, Rank, None, Storage,
+                   Discriminator, DataLocation, Associated, Allocated, Rank, 
+                   None, Storage, ShouldCreate);
+  }
+
+  static DICompositeType *getImpl(
+      LLVMContext &Context, unsigned Tag, StringRef Name, Metadata *File,
+      unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
+      uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
+      VendorDIFlags VFlags, DINodeArray Elements, unsigned RuntimeLang,
+      DIType *VTableHolder, DITemplateParameterArray TemplateParams,
+      StringRef Identifier, DIDerivedType *Discriminator,
+      Metadata *DataLocation, Metadata *Associated, Metadata *Allocated, 
+      Metadata *Rank, StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
+                   Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
+                   Flags, VFlags, Elements.get(), RuntimeLang, VTableHolder,
+                   TemplateParams.get(),
+                   getCanonicalMDString(Context, Identifier), Discriminator,
+                   DataLocation, Associated, Allocated, Rank, Storage,
                    ShouldCreate);
   }
 

@@ -1456,11 +1456,6 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
   if (auto *CV = SR->getCount().dyn_cast<DIVariable *>()) {
     if (auto *CountVarDIE = getDIE(CV))
       addDIEEntry(DW_Subrange, dwarf::DW_AT_count, *CountVarDIE);
-  } else if (auto *Expr = SR->getCount().dyn_cast<DIExpression *>()) {
-    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-    DIEDwarfExpression DwarfExpr(*getAsmPrinter(), getCU(), *Loc);
-    DwarfExpr.addExpression(Expr);
-    addBlock(DW_Subrange, dwarf::DW_AT_count, DwarfExpr.finalize());
   } else if (Count != -1)
     addUInt(DW_Subrange, dwarf::DW_AT_count, None, Count);
 

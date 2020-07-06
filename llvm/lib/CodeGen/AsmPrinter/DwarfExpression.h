@@ -119,9 +119,6 @@ public:
 
   std::optional<uint8_t> TagOffset;
 
-
-  Optional<uint8_t> TagOffset;
-
 protected:
   /// Push a DW_OP_piece / DW_OP_bit_piece for emitting later, if one is needed
   /// to represent a subregister.
