@@ -359,10 +359,13 @@ void ValueObjectPrinter::GetValueSummaryError(std::string &value,
   lldb::Format format = m_options.m_format;
   // if I am printing synthetized elements, apply the format to those elements
   // only
+  bool skip_summary = false;
   if (m_options.m_pointer_as_array)
     m_valobj->GetValueAsCString(lldb::eFormatDefault, value);
-  else if (format != eFormatDefault && format != m_valobj->GetFormat())
+  else if (format != eFormatDefault && format != m_valobj->GetFormat()) {
     m_valobj->GetValueAsCString(format, value);
+    skip_summary = true;
+  }
   else {
     const char *val_cstr = m_valobj->GetValueAsCString();
     if (val_cstr)

@@ -216,6 +216,12 @@ public:
 
   uint64_t GetDWARFLanguageType();
 
+  static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
+
+  static lldb::IdentifierCaseType IdentifierCaseFromDWARF(uint64_t val);
+
+  lldb::LanguageType GetLanguageType();
+
   bool GetIsOptimized();
 
   const FileSpec &GetCompilationDirectory();
@@ -357,6 +363,7 @@ protected:
   DWARFProducer m_producer = eProducerInvalid;
   llvm::VersionTuple m_producer_version;
   std::optional<uint64_t> m_language_type;
+  lldb::IdentifierCaseType m_identifier_case = lldb::eCaseUnknown;
   LazyBool m_is_optimized = eLazyBoolCalculate;
   std::optional<FileSpec> m_comp_dir;
   std::optional<FileSpec> m_file_spec;

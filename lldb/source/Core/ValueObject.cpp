@@ -443,6 +443,10 @@ ValueObjectSP ValueObject::GetChildMemberWithName(llvm::StringRef name,
 size_t ValueObject::GetNumChildren(uint32_t max) {
   UpdateValueIfNeeded();
 
+  static const bool isVarString = GetTypeInfo() & eTypeIsVarString;
+  if (isVarString)
+    return CalculateNumChildren(max);
+
   if (max < UINT32_MAX) {
     if (m_flags.m_children_count_valid) {
       size_t children_count = m_children.GetChildrenCount();
@@ -454,6 +458,7 @@ size_t ValueObject::GetNumChildren(uint32_t max) {
   if (!m_flags.m_children_count_valid) {
     SetNumChildren(CalculateNumChildren());
   }
+
   return m_children.GetChildrenCount();
 }
 
@@ -947,6 +952,21 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
   }
   CopyStringDataToBufferSP(s, buffer_sp);
   return {total_bytes_read, was_capped};
+}
+
+uint16_t ValueObject::GetVarStringLength(Status &error) {
+  const Flags type_flags(GetTypeInfo());
+  if (!type_flags.Test(eTypeIsVarString))
+    return UINT16_MAX;
+
+  lldb::DataBufferSP buffer_sp;
+  auto result = ReadPointedString(buffer_sp, error, 2, true);
+  if (result.first != 2)
+    return UINT16_MAX;
+
+  offset_t offset = 0;
+  DataExtractor data(buffer_sp, lldb::eByteOrderBig, 8);
+  return data.GetU16(&offset);
 }
 
 const char *ValueObject::GetObjectDescription() {

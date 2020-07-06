@@ -230,7 +230,7 @@ void DwarfCompileUnit::addLocationAttribute(
       continue;
 
     // Nothing to describe without address or constant.
-    if (!Global && (!Expr || !Expr->isConstant()))
+    if (!Global && (!Expr || (!Expr->isConstant() && !Expr->getNumOperands())))
       continue;
 
     if (Global && Global->isThreadLocal() &&
@@ -243,7 +243,7 @@ void DwarfCompileUnit::addLocationAttribute(
       DwarfExpr = std::make_unique<DIEDwarfExpression>(*Asm, *this, *Loc);
     }
 
-    if (Expr) {
+    if (Expr->getFragmentInfo() != None) {
       // According to
       // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
       // cuda-gdb requires DW_AT_address_class for all variables to be able to
@@ -260,6 +260,17 @@ void DwarfCompileUnit::addLocationAttribute(
         }
       }
       DwarfExpr->addFragmentOffset(Expr);
+    }
+
+    // Optimize me
+    SmallVector<DIE*, 4> refs;
+    if (Expr->getNumElements()) {
+      for(const Metadata* ref : Expr->operands()) {
+        if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+          ref = DGV->getVariable();
+        }
+        refs.push_back(getDIE((cast<DINode>(ref))));
+      }
     }
 
     if (Global) {
@@ -349,7 +360,7 @@ void DwarfCompileUnit::addLocationAttribute(
     // to detect in the verifier.
     if (DwarfExpr->isUnknownLocation())
       DwarfExpr->setMemoryLocationKind();
-    DwarfExpr->addExpression(Expr);
+    DwarfExpr->addExpression(Expr, 0, &refs);
   }
   if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
     // According to
@@ -1614,10 +1625,17 @@ void DwarfCompileUnit::applyCommonDbgVariableAttributes(const DbgVariable &Var,
   if (!Name.empty())
     addString(VariableDie, dwarf::DW_AT_name, Name);
   const auto *DIVar = Var.getVariable();
-  if (DIVar) {
+  if (DIVar) { 
     if (uint32_t AlignInBytes = DIVar->getAlignInBytes())
       addUInt(VariableDie, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
               AlignInBytes);
+    if (DIVar->isLocatorDesc())
+      addUInt(VariableDie, dwarf::DW_AT_RAINCODE_desc_type, dwarf::DW_FORM_data1,
+	      dwarf::DW_RAINCODE_DESC_TYPE_desc_list);
+    if (uint32_t LexicalScope = DIVar->getLexicalScope())
+      addUInt(VariableDie, dwarf::DW_AT_RAINCODE_lexical_scope,
+	      dwarf::DW_FORM_udata, LexicalScope);
+  }
     addAnnotation(VariableDie, DIVar->getAnnotations());
   }
 

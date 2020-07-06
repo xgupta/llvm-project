@@ -1,0 +1,656 @@
+//===--   PLIUserExpression.cpp ---------------------------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/ADT/StringRef.h"
+
+#include "PLIUserExpression.h"
+
+#include "Plugins/TypeSystem/Legacy/TypeSystemLegacy.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/StreamFile.h"
+#include "lldb/Core/ValueObjectConstResult.h"
+#include "lldb/Core/ValueObjectRegister.h"
+#include "lldb/Expression/DiagnosticManager.h"
+#include "lldb/Expression/ExpressionVariable.h"
+#include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/TypeList.h"
+#include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/StackFrame.h"
+#include "lldb/Target/Target.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataEncoder.h"
+#include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Log.h"
+
+using namespace lldb_private;
+using namespace lldb;
+
+char PLIUserExpression::ID;
+
+static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
+                                                llvm::Twine name) {
+
+  if (!comp_type)
+    return false;
+
+  CompilerType elem_or_pointee_compiler_type;
+  const Flags type_flags(
+      comp_type->GetTypeInfo(&elem_or_pointee_compiler_type));
+  if (!type_flags.Test(eTypeIsStructUnion))
+    return false;
+
+  std::vector<uint32_t> child_indexes;
+  const size_t index = comp_type->GetIndexOfChildMemberWithName(
+      name.str().c_str(), true, child_indexes);
+  if (index != 0)
+    return true;
+
+  const size_t total_count = comp_type->GetNumChildren(true, nullptr);
+  for (size_t i = 0; i < total_count; ++i) {
+    std::string child_name;
+    uint32_t child_byte_size;
+    int32_t child_byte_offset = 0;
+    uint32_t child_bitfield_bit_size;
+    uint32_t child_bitfield_bit_offset;
+    bool child_is_base_class;
+    bool child_is_deref_of_parent;
+    uint64_t language_flags;
+
+    CompilerType child_type = comp_type->GetChildCompilerTypeAtIndex(
+        nullptr, i, true, true, true, child_name, child_byte_size,
+        child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
+        child_is_base_class, child_is_deref_of_parent, nullptr, language_flags);
+    if (SearchCompilerTypeForMemberWithName(&child_type, name))
+      return true;
+  }
+  return false;
+}
+
+/// TODO: improve performance
+static VariableSP SearchMemberByName(TargetSP target, llvm::Twine name) {
+  VariableList variable_list;
+  if (!target) {
+    return nullptr;
+  }
+  target->GetImages().FindGlobalVariables(
+      RegularExpression(llvm::StringRef("^.*$")), 100, variable_list);
+
+  for (size_t i = 0; i < variable_list.GetSize(); ++i) {
+    VariableSP result = variable_list.GetVariableAtIndex(i);
+    if (!result)
+      continue;
+
+    lldb::LanguageType lang = result->GetLanguage();
+    if (lang != eLanguageTypePLI)
+      variable_list.RemoveVariableAtIndex(i);
+
+    if (!result->GetType()->IsAggregateType())
+      variable_list.RemoveVariableAtIndex(i);
+  }
+
+  for (size_t i = 0; i < variable_list.GetSize(); ++i) {
+    VariableSP result = variable_list.GetVariableAtIndex(i);
+    CompilerType comp_type = result->GetType()->GetForwardCompilerType();
+
+    if (SearchCompilerTypeForMemberWithName(&comp_type, name))
+      return result;
+  }
+  return nullptr;
+}
+
+static VariableSP FindGlobalVariable(TargetSP target, llvm::Twine name,
+                                     bool &isMember) {
+  VariableList variable_list;
+  if (!target) {
+    return nullptr;
+  }
+  target->GetImages().FindGlobalVariables(
+      RegularExpression(llvm::StringRef("^" + name.str() + "$"),
+                        true /* case-insensitive */),
+      1, variable_list);
+
+  const auto match_count = variable_list.GetSize();
+  for (uint32_t i = 0; i < match_count; ++i) {
+    VariableSP result = variable_list.GetVariableAtIndex(i);
+    if (!result)
+      continue;
+
+    lldb::LanguageType lang = result->GetLanguage();
+    if (lang == eLanguageTypePLI)
+      return result;
+  }
+
+  if (match_count > 0)
+    return variable_list.GetVariableAtIndex(0);
+
+  isMember = true;
+  return SearchMemberByName(target, name);
+}
+
+PLIPersistentExpressionState::PLIPersistentExpressionState()
+    : PersistentExpressionState(eKindPLI) {}
+
+void PLIPersistentExpressionState::RemovePersistentVariable(
+    lldb::ExpressionVariableSP var) {
+  RemoveVariable(var);
+}
+
+ConstString
+PLIPersistentExpressionState::GetNextPersistentVariableName(bool is_error) {
+  llvm::SmallString<64> name;
+  {
+    llvm::raw_svector_ostream os(name);
+    os << GetPersistentVariablePrefix(is_error)
+       << m_next_persistent_variable_id++;
+  }
+  return ConstString(name);
+}
+
+PLIInterpreter::PLIInterpreter(ExecutionContext &exe_ctx, const char *expr)
+    : m_exe_ctx(exe_ctx), m_frame(exe_ctx.GetFrameSP()), m_parser(expr) {}
+
+bool PLIInterpreter::Parse() {
+  for (std::unique_ptr<PLIASTStmt> stmt(m_parser.Statement()); stmt;
+       stmt.reset(m_parser.Statement())) {
+    if (m_parser.Failed())
+      break;
+    m_statements.emplace_back(std::move(stmt));
+  }
+
+  if (m_parser.Failed() || !m_parser.AtEOF())
+    m_parser.GetError(m_error);
+
+  return m_error.Success();
+}
+
+lldb::ValueObjectSP PLIInterpreter::Evaluate(ExecutionContext &exe_ctx) {
+  m_exe_ctx = exe_ctx;
+  ValueObjectSP result;
+  for (auto &stmt : m_statements) {
+    result = EvaluateStatement(stmt.get());
+    if (m_error.Fail())
+      return nullptr;
+  }
+  return result;
+}
+
+lldb::ValueObjectSP
+PLIInterpreter::EvaluateStatement(const lldb_private::PLIASTStmt *stmt) {
+  // Handle other
+  switch (stmt->GetKind()) {
+  default:
+    m_error.SetErrorStringWithFormat("%s node not supported",
+                                     stmt->GetKindName());
+    break;
+  case PLIASTNode::eExprStmt:
+    const PLIASTExprStmt *expr = llvm::cast<PLIASTExprStmt>(stmt);
+    return EvaluateExpr(expr->GetExpr());
+  }
+  return nullptr;
+}
+
+lldb::ValueObjectSP PLIInterpreter::EvaluateExpr(const PLIASTExpr *expr) {
+  if (expr)
+    return expr->Visit<ValueObjectSP>(this);
+  return ValueObjectSP();
+}
+
+lldb::ValueObjectSP PLIInterpreter::VisitIdent(const PLIASTIdent *ident) {
+  ValueObjectSP result;
+  llvm::StringRef var_name = ident->GetName().m_text;
+  if (m_frame) {
+    VariableSP var_sp;
+    if (var_name[0] == '$') {
+      m_error.Clear();
+      m_error.SetErrorString("Consistent var lookup not implemented yet");
+      return nullptr;
+    }
+
+    VariableListSP var_list_sp(m_frame->GetInScopeVariableList(false));
+    if (var_list_sp) {
+      var_sp = var_list_sp->FindVariable(ConstString(var_name),
+                                         /* include_static_members */ true,
+                                         /* case_sensitive */ false);
+      if (var_sp) {
+        result = m_frame->GetValueObjectForFrameVariable(var_sp, m_use_dynamic);
+      }
+    }
+
+    if (!result) {
+      for (size_t i = 0; i < var_list_sp->GetSize(); i++) {
+        VariableSP variable_sp = var_list_sp->GetVariableAtIndex(i);
+        if (!variable_sp)
+          continue;
+
+        Type *var_type = variable_sp->GetType();
+        if (!var_type)
+          continue;
+
+        ValueObjectSP valobj_sp =
+            m_frame->GetValueObjectForFrameVariable(variable_sp, m_use_dynamic);
+        if (!valobj_sp)
+          return valobj_sp;
+
+        valobj_sp = m_frame->GetValueObjectForFrameAggregateVariable(
+            ConstString(var_name), valobj_sp, m_use_dynamic);
+        if (valobj_sp) {
+          result = valobj_sp;
+          break;
+        }
+      }
+    }
+
+    // search global if available
+    if (!result) {
+      TargetSP target = m_frame->CalculateTarget();
+      if (!target) {
+        m_error.Clear();
+        m_error.SetErrorString("No target");
+        return nullptr;
+      }
+
+      bool isMember = false;
+      var_sp = FindGlobalVariable(target, var_name, isMember);
+      if (var_sp) {
+        ValueObjectSP valobj_sp =
+            m_frame->TrackGlobalVariable(var_sp, m_use_dynamic);
+        if (isMember)
+          valobj_sp = m_frame->GetValueObjectForFrameAggregateVariable(
+              ConstString(var_name), valobj_sp, m_use_dynamic);
+        return valobj_sp;
+      }
+    }
+  }
+  if (!result)
+    m_error.SetErrorStringWithFormat("Unknown variable %s",
+                                     var_name.str().c_str());
+  return result;
+}
+
+ValueObjectSP PLIInterpreter::VisitUnaryExpr(const PLIASTUnaryExpr *expr) {
+  ValueObjectSP var = EvaluateExpr(expr->GetExpr());
+  if (!var)
+    return nullptr;
+
+  switch (expr->GetOp()) {
+  default:
+    return nullptr;
+  case PLILexer::OP_AMP:
+    CompilerType comp_type = var->GetCompilerType().GetPointerType();
+    uint64_t address = var->GetAddressOf();
+
+    ByteOrder byte_order = m_exe_ctx.GetByteOrder();
+    DataBufferSP buffer(new DataBufferHeap(&address, sizeof(address)));
+    DataExtractor data(buffer, byte_order, sizeof(address));
+    return ValueObject::CreateValueObjectFromData(llvm::StringRef(), data,
+                                                  m_exe_ctx, comp_type);
+  }
+}
+
+ValueObjectSP PLIInterpreter::VisitBasicLit(const PLIASTBasicLit *expr) {
+  llvm::StringRef value_string = expr->GetValue().m_text;
+
+  lldb::BasicType base_type = eBasicTypeInvalid;
+  size_t data_length = 0;
+  int64_t iValue;
+  double dValue;
+  bool isArray = false;
+  size_t array_length = 0;
+  const void *data_ptr = nullptr;
+  switch (expr->GetValue().m_type) {
+  default:
+    m_error.SetErrorStringWithFormat("Non-Const lexical type for %s",
+                                     value_string.str().c_str());
+    return nullptr;
+  case PLILexer::LIT_INTEGER:
+    if (value_string.getAsInteger(0, iValue)) {
+      m_error.SetErrorStringWithFormat("integer conversion error %s",
+                                       value_string.str().c_str());
+      return nullptr;
+    }
+    data_length = sizeof(iValue);
+    base_type = eBasicTypeUnsignedInt;
+    data_ptr = &iValue;
+    break;
+  case PLILexer::LIT_FLOAT:
+    if (value_string.getAsDouble(dValue)) {
+      m_error.SetErrorStringWithFormat("double conversion error %s",
+                                       value_string.str().c_str());
+      return nullptr;
+    }
+    data_length = sizeof(dValue);
+    base_type = eBasicTypeDouble;
+    data_ptr = &dValue;
+    break;
+  case PLILexer::LIT_STRING:
+    base_type = eBasicTypeChar;
+    isArray = true;
+    data_ptr = value_string.data();
+    array_length = value_string.size();
+    data_length = array_length;
+    break;
+  }
+
+  TargetSP target = m_exe_ctx.GetTargetSP();
+  if (!target)
+    return nullptr;
+
+  auto type_sys = target->GetScratchTypeSystemForLanguage(eLanguageTypePLI);
+  if (!type_sys)
+    return nullptr;
+
+  TypeSystemLegacy *legacy_type_system =
+      llvm::dyn_cast_or_null<TypeSystemLegacy>(&type_sys.get());
+  if (!legacy_type_system)
+    return nullptr;
+
+  ByteOrder byte_order = endian::InlHostByteOrder();
+  uint8_t addr_size = target->GetArchitecture().GetAddressByteSize();
+
+  DataBufferSP buffer(new DataBufferHeap(data_length, 0));
+  DataEncoder enc(buffer, byte_order, addr_size);
+  enc.PutData(0, data_ptr, data_length);
+  DataExtractor data(buffer, byte_order, addr_size);
+
+  CompilerType comp_type = legacy_type_system->GetBasicTypeFromAST(base_type);
+  if (isArray) {
+    static ConstString array_name("char []");
+    static ConstString empty_name;
+    comp_type = legacy_type_system->CreateArrayType(
+        array_name, empty_name, comp_type, array_length, false /*isVarString*/);
+  }
+  return ValueObject::CreateValueObjectFromData(llvm::StringRef(), data,
+                                                m_exe_ctx, comp_type);
+}
+
+ValueObjectSP
+PLIInterpreter::VisitSelectorExpr(const PLIASTSelectorExpr *expr) {
+  ValueObjectSP target = EvaluateExpr(expr->GetExpr());
+  if (target) {
+    if (target->GetCompilerType().IsPointerType()) {
+      target = target->Dereference(m_error);
+      if (m_error.Fail())
+        return nullptr;
+    }
+    ConstString field(expr->GetSel()->GetName().m_text);
+    ValueObjectSP result = target->GetChildMemberWithName(field, true);
+    if (!result)
+      m_error.SetErrorStringWithFormat("Unknown child %s", field.AsCString());
+    return result;
+  }
+  if (const PLIASTIdent *package =
+          llvm::dyn_cast<PLIASTIdent>(expr->GetExpr())) {
+    bool isMember = false;
+    if (VariableSP global = FindGlobalVariable(
+            m_exe_ctx.GetTargetSP(),
+            package->GetName().m_text + "." + expr->GetSel()->GetName().m_text,
+            isMember)) {
+      if (m_frame) {
+        m_error.Clear();
+        return m_frame->GetValueObjectForFrameVariable(global, m_use_dynamic);
+      }
+    }
+  }
+  return nullptr;
+}
+
+ValueObjectSP
+PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
+  ValueObjectSP var = EvaluateExpr(expr->GetExpr());
+  if (!var) {
+    m_error.SetErrorString("variable not found.");
+    return nullptr;
+  }
+
+  CompilerType elem_type;
+  uint64_t max_elem;
+  bool is_incomplete;
+
+  if (!var->GetCompilerType().IsArrayType(&elem_type, &max_elem,
+                                          &is_incomplete)) {
+    m_error.SetErrorStringWithFormat("variable %s is not an array.",
+                                     var->GetName().AsCString());
+    return nullptr;
+  }
+
+  const bool is_bit_type = (elem_type.GetTypeName() == "BIT");
+
+  ValueObjectSP start_var = EvaluateExpr(expr->GetStartExpr());
+  if (!start_var) {
+    m_error.SetErrorString("ref modifier invalid indexes.");
+    return nullptr;
+  }
+
+  uint32_t start;
+  uint8_t bit_pos;
+  llvm::StringRef index_string(start_var->GetValueAsCString());
+  if (index_string.getAsInteger(10, start)) {
+    m_error.SetErrorStringWithFormat("ref modifier invalid index %s.",
+                                     index_string.str().c_str());
+    return nullptr;
+  }
+
+  start -= 1; // convert 1-based indexing to 0-based.
+  if (is_bit_type) {
+    bit_pos = 7 - (start % 8);
+    start /= 8;
+  }
+
+  if (start >= max_elem) {
+    m_error.SetErrorStringWithFormat("out of bound index: %d.", start + 1);
+    return nullptr;
+  }
+
+  ValueObjectSP len_var = EvaluateExpr(expr->GetLenExpr());
+  if (!len_var) {
+    ValueObjectSP member = var->GetChildAtIndex(start, true);
+
+    // This just an array element select
+    return is_bit_type
+               ? member->GetSyntheticBitFieldChild(bit_pos, bit_pos, true)
+               : member;
+  }
+
+  uint32_t len;
+  llvm::StringRef len_string(len_var->GetValueAsCString());
+  if (len_string.getAsInteger(10, len)) {
+    m_error.SetErrorStringWithFormat("ref modifier invalid index %s.",
+                                     len_string.str().c_str());
+    return nullptr;
+  }
+
+  if ((start + len) > max_elem)
+    len = max_elem - start;
+
+  uint32_t child_byte_size = 0;
+  int32_t child_byte_offset = 0;
+  uint32_t child_bitfield_bit_size = 0;
+  uint32_t child_bitfield_bit_offset = 0;
+  uint64_t ut1 = 0;
+  bool bt1 = false;
+  bool bt2 = false;
+  std::string empty_str;
+
+  if (!(var->GetCompilerType().GetChildCompilerTypeAtIndex(
+          &m_exe_ctx, 0, true, true, false, empty_str, child_byte_size,
+          child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
+          bt1, bt2, var.get(), ut1)))
+    return nullptr;
+
+  const uint64_t offset = start * child_byte_size;
+  AddressType address_type = eAddressTypeInvalid;
+  auto addr = var->GetAddressOf(true, &address_type);
+  CompilerType result_type = len == 1 ? elem_type : elem_type.GetArrayType(len);
+  return ValueObject::CreateValueObjectFromAddress(
+      llvm::StringRef(), addr + offset, m_exe_ctx, result_type);
+}
+
+ValueObjectSP
+PLIInterpreter::VisitFuncCallExpr(const PLIASTFuncCallExpr *expr) {
+  llvm::StringRef funcName = expr->GetFuncName().m_text;
+  if (!funcName.equals(llvm::StringRef("sizeof")))
+    // TODO
+    return nullptr;
+
+  if (expr->getTotalNumParams() != 1) {
+    m_error.SetErrorString("wrong number of params for sizeof operator.");
+    return nullptr;
+  }
+
+  ValueObjectSP param = EvaluateExpr(expr->getParamAtIndex(0));
+  if (!param)
+    return nullptr;
+
+  auto data_size = param->GetByteSize();
+  DataBufferSP buffer(new DataBufferHeap(sizeof(data_size), 0));
+  TargetSP target = m_exe_ctx.GetTargetSP();
+  if (!target)
+    return nullptr;
+
+  auto type_sys = target->GetScratchTypeSystemForLanguage(eLanguageTypePLI);
+  if (!type_sys)
+    return nullptr;
+
+  ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
+  uint8_t addr_size = target->GetArchitecture().GetAddressByteSize();
+  DataEncoder enc(buffer, byte_order, addr_size);
+  enc.PutData(0, &data_size, sizeof(uint64_t));
+  DataExtractor data(buffer, byte_order, addr_size);
+
+  CompilerType comp_type = type_sys->GetBasicTypeFromAST(eBasicTypeUnsignedInt);
+  return ValueObject::CreateValueObjectFromData(llvm::StringRef(), data,
+                                                m_exe_ctx, comp_type);
+}
+
+ValueObjectSP
+PLIInterpreter::VisitAssignmentExpr(const PLIASTAssignmentExpr *expr) {
+  ValueObjectSP lhsRef = EvaluateExpr(expr->GetlhsExpr());
+  if (!lhsRef)
+    return nullptr;
+
+  ValueObjectSP rhsVal = EvaluateExpr(expr->GetrhsExpr());
+  if (!rhsVal)
+    return nullptr;
+
+  DataExtractor data;
+  Status error;
+  rhsVal->GetData(data, error);
+
+  if (error.Fail())
+    return nullptr;
+
+  TargetSP target = m_exe_ctx.GetTargetSP();
+  if (!target)
+    return nullptr;
+
+  auto type_sys = target->GetScratchTypeSystemForLanguage(eLanguageTypePLI);
+  if (!type_sys)
+    return nullptr;
+
+  TypeSystemLegacy *legacy_ts =
+      llvm::dyn_cast_or_null<TypeSystemLegacy>(&type_sys.get());
+  if (!legacy_ts)
+    return nullptr;
+
+  const uint8_t addr_size = target->GetArchitecture().GetAddressByteSize();
+  const auto dst_type = lhsRef->GetCompilerType().GetOpaqueQualType();
+  const auto src_type = rhsVal->GetCompilerType().GetOpaqueQualType();
+  const auto data_size = lhsRef->GetByteSize();
+  DataBufferSP buffer(new DataBufferHeap(data_size, 0));
+  DataExtractor dest_data(buffer, ByteOrder::eByteOrderBig, addr_size);
+  if (!legacy_ts->EncodeDataToType(m_exe_ctx, src_type, data, dst_type,
+                                   dest_data, eLanguageTypePLI))
+    return nullptr;
+
+  lhsRef->SetData(dest_data, error);
+  return lhsRef;
+}
+
+PLIUserExpression::PLIUserExpression(ExecutionContextScope &exe_scope,
+                                     llvm::StringRef expr,
+                                     llvm::StringRef prefix,
+                                     lldb::LanguageType language,
+                                     ResultType desired_type,
+                                     const EvaluateExpressionOptions &options)
+    : UserExpression(exe_scope, expr, prefix, language, desired_type, options) {
+}
+
+bool PLIUserExpression::Parse(DiagnosticManager &diagnostic_manager,
+                              ExecutionContext &exe_ctx,
+                              ExecutionPolicy execution_policy,
+                              bool keep_result_in_memory,
+                              bool generate_debug_info) {
+  InstallContext(exe_ctx);
+  m_interpreter.reset(new PLIInterpreter(exe_ctx, GetUserText()));
+  if (m_interpreter->Parse())
+    return true;
+
+  diagnostic_manager.Printf(eDiagnosticSeverityError,
+                            "PLI expression can't be interpreted");
+  return false;
+}
+
+lldb::ExpressionResults
+PLIUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
+                             ExecutionContext &exe_ctx,
+                             const EvaluateExpressionOptions &options,
+                             lldb::UserExpressionSP &shared_ptr_to_me,
+                             lldb::ExpressionVariableSP &result) {
+
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |
+                                                  LIBLLDB_LOG_STEP));
+
+  lldb_private::ExecutionPolicy execution_policy = options.GetExecutionPolicy();
+  lldb::ExpressionResults execution_results = lldb::eExpressionSetupError;
+
+  Process *process = exe_ctx.GetProcessPtr();
+  Target *target = exe_ctx.GetTargetPtr();
+
+  if (target == nullptr || process == nullptr ||
+      process->GetState() != lldb::eStateStopped) {
+    if (execution_policy == eExecutionPolicyAlways) {
+      if (log)
+        log->Printf("== [PLIUserExpression::Evaluate] Expression may not run, "
+                    "but is not constant ==");
+
+      diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                   "expression needed to run but couldn't");
+
+      return execution_results;
+    }
+  }
+
+  LanguageType language = target->GetLanguage();
+  m_interpreter->set_use_dynamic(options.GetUseDynamic());
+  ValueObjectSP result_val_sp = m_interpreter->Evaluate(exe_ctx);
+  Status err = m_interpreter->error();
+  m_interpreter.reset();
+
+  if (!result_val_sp) {
+    const char *error_cstr = err.AsCString();
+    if (error_cstr && error_cstr[0])
+      diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
+    else
+      diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                   "expression can't be interpreted or run");
+    return lldb::eExpressionDiscarded;
+  }
+
+  result.reset(new ExpressionVariable(ExpressionVariable::eKindPLI));
+  result->m_live_sp = result->m_frozen_sp = result_val_sp;
+  result->m_flags |= ExpressionVariable::EVIsProgramReference;
+  PersistentExpressionState *pv =
+      target->GetPersistentExpressionStateForLanguage(language);
+  if (pv != nullptr) {
+    result->SetName(pv->GetNextPersistentVariableName());
+    pv->AddVariable(result);
+  }
+  return lldb::eExpressionCompleted;
+}

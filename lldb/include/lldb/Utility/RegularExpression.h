@@ -31,7 +31,7 @@ public:
   /// \param[in] string
   ///     An llvm::StringRef that represents the regular expression to compile.
   //      String is not referenced anymore after the object is constructed.
-  explicit RegularExpression(llvm::StringRef string);
+  explicit RegularExpression(llvm::StringRef string, bool icase = false);
 
   ~RegularExpression() = default;
 
@@ -87,6 +87,7 @@ private:
   std::string m_regex_text;
   /// The compiled regular expression.
   mutable llvm::Regex m_regex;
+  bool icase = false;
 };
 
 } // namespace lldb_private

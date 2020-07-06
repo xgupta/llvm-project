@@ -4022,7 +4022,31 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.Kind = ValID::t_Constant;
     return false;
   }
-
+ 
+  // Unary Operators.
+  case lltok::kw_fneg: {
+    unsigned Opc = Lex.getUIntVal();
+    Constant *Val;
+    Lex.Lex();
+    if (parseToken(lltok::lparen, "expected '(' in unary constantexpr") ||
+        parseGlobalTypeAndValue(Val) ||
+        parseToken(lltok::rparen, "expected ')' in unary constantexpr"))
+      return true;
+    
+    // Check that the type is valid for the operator.
+    switch (Opc) {
+    case Instruction::FNeg:
+      if (!Val->getType()->isFPOrFPVectorTy())
+        return error(ID.Loc, "constexpr requires fp operands");
+      break;
+    default: llvm_unreachable("Unknown unary operator!");
+    }
+    unsigned Flags = 0;
+    Constant *C = ConstantExpr::get(Opc, Val, Flags);
+    ID.ConstantVal = C;
+    ID.Kind = ValID::t_Constant;
+    return false;
+  }
   // Binary Operators.
   case lltok::kw_add:
   case lltok::kw_sub:
@@ -4349,6 +4373,11 @@ struct DwarfTagField : public MDUnsignedField {
       : MDUnsignedField(DefaultTag, dwarf::DW_TAG_hi_user) {}
 };
 
+struct DwarfDecimalSignField : public MDUnsignedField {
+  DwarfDecimalSignField() : MDUnsignedField(dwarf::DW_DS_Invalid) {}
+  DwarfDecimalSignField(dwarf::DecimalSignEncoding DS) : MDUnsignedField(DS) {}
+};
+
 struct DwarfMacinfoTypeField : public MDUnsignedField {
   DwarfMacinfoTypeField() : MDUnsignedField(0, dwarf::DW_MACINFO_vendor_ext) {}
   DwarfMacinfoTypeField(dwarf::MacinfoRecordType DefaultType)
@@ -4506,7 +4535,27 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, DwarfTagField &Result) {
 }
 
 template <>
-bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
+                            DwarfDecimalSignField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return ParseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::DwarfDecimalSign)
+    return TokError("expected DWARF Decimal sign");
+
+  unsigned DS = dwarf::getDecimalSign(Lex.getStrVal());
+  if (DS == dwarf::DW_DS_Invalid)
+    return TokError("invalid DWARF decimal sign" + Twine(" '") +
+                    Lex.getStrVal() + "'");
+  assert(DS <= Result.Max && "Expected valid DWARF decimal sign");
+
+  Result.assign(DS);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
                             DwarfMacinfoTypeField &Result) {
   if (Lex.getKind() == lltok::APSInt)
     return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
@@ -5056,22 +5105,42 @@ bool LLParser::parseDIEnumerator(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
-/// parseDIBasicType:
-///   ::= !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32,
-///                    encoding: DW_ATE_encoding, flags: 0)
-bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
+/// ParseDIBasicType:
+/// ::= !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 1,
+///                  encoding: DW_ATE_encoding, pic: "picture_string",
+///                  digits: digit_count, sign: decimal_sign,
+///                  scale: decimal/binary scale, flags: 0)
+bool LLParser::ParseDIBasicType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_base_type));                     \
   OPTIONAL(name, MDStringField, );                                             \
   OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
+  OPTIONAL(pic, MDStringField, );                                              \
+  OPTIONAL(digits, MDUnsignedField, );                                         \
+  OPTIONAL(sign, DwarfDecimalSignField, (dwarf::DW_DS_Invalid));               \
+  OPTIONAL(scale, MDSignedField, );                                            \
   OPTIONAL(flags, DIFlagField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(DIBasicType, (Context, tag.Val, name.Val, size.Val,
-                                         align.Val, encoding.Val, flags.Val));
+  if (pic.Seen || digits.Seen || sign.Seen || scale.Seen) {
+    DIBasicType::DecimalInfo DAInfo;
+    if (digits.Seen)
+      DAInfo.DigitCount = digits.Val;
+    if (sign.Seen)
+      DAInfo.DecimalSign = sign.Val;
+    if (scale.Seen)
+      DAInfo.Scale = scale.Val;
+
+    Result = GET_OR_DISTINCT(DIBasicType,
+                             (Context, tag.Val, name.Val, pic.Val, size.Val,
+                              align.Val, encoding.Val, flags.Val, DAInfo));
+  } else {
+    Result = GET_OR_DISTINCT(DIBasicType, (Context, tag.Val, name.Val, size.Val,
+                                           align.Val, encoding.Val, flags.Val));
+  }
   return false;
 }
 
@@ -5375,7 +5444,7 @@ bool LLParser::parseDICommonBlock(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(declaration, MDField, );                                            \
   OPTIONAL(name, MDStringField, );                                             \
   OPTIONAL(file, MDField, );                                                   \
-  OPTIONAL(line, LineField, );
+  OPTIONAL(line, LineField, );						       
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5577,12 +5646,26 @@ bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
     return true;
 
   SmallVector<uint64_t, 8> Elements;
+  SmallVector<Metadata *,4> Refs;
   if (Lex.getKind() != lltok::rparen)
     do {
       if (Lex.getKind() == lltok::DwarfOp) {
         if (unsigned Op = dwarf::getOperationEncoding(Lex.getStrVal())) {
           Lex.Lex();
           Elements.push_back(Op);
+          if ((Op == dwarf::DW_OP_call2) || (Op == dwarf::DW_OP_call4)) {
+            MDField offset;
+            Lex.Lex();
+            ParseMDField("offset", offset);
+            if (!offset.Seen) {
+              return TokError(Twine("expected ref for DWARF op '") +
+                              dwarf::OperationEncodingString(Op) + "'");
+            }
+            const auto it = llvm::find(Refs, offset.Val);
+            Elements.push_back(it - Refs.begin());
+            if (it == Refs.end())
+              Refs.push_back(offset.Val);
+          }
           continue;
         }
         return tokError(Twine("invalid DWARF op '") + Lex.getStrVal() + "'");
@@ -5611,7 +5694,7 @@ bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
+  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements, Refs));
   return false;
 }
 
