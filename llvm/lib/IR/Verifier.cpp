@@ -1468,6 +1468,10 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
           "invalid reference flags", &N);
 
+  AssertDI(!(N.isDescLocSubProgram() && N.isDescListSubProgram()),
+           "subprogram cannot have both descriptor list and descriptor locator",
+           &N);
+
   auto *Unit = N.getRawUnit();
   if (N.isDefinition()) {
     // Subprogram definitions (not part of the type hierarchy).
@@ -6630,7 +6634,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     Check(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
           "Intrinsic does not support vectors", &FPI);
     break;
-  }
+  } 
 
   case Intrinsic::experimental_constrained_fcmp:
   case Intrinsic::experimental_constrained_fcmps: {
@@ -6641,7 +6645,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
   }
 
   case Intrinsic::experimental_constrained_fptosi:
-  case Intrinsic::experimental_constrained_fptoui: {
+  case Intrinsic::experimental_constrained_fptoui: { 
     Value *Operand = FPI.getArgOperand(0);
     ElementCount SrcEC;
     Check(Operand->getType()->isFPOrFPVectorTy(),
@@ -7181,7 +7185,7 @@ struct VerifierLegacyPass : public FunctionPass {
 
   bool runOnFunction(Function &F) override {
     if (!V->verify(F) && FatalErrors) {
-      errs() << "in function " << F.getName() << '\n';
+      errs() << "in function " << F.getName() << '\n'; 
       report_fatal_error("Broken function found, compilation aborted!");
     }
     return false;

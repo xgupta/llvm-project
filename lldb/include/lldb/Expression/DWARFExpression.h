@@ -11,6 +11,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/dwarf.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
@@ -118,9 +119,9 @@ public:
   /// \param[in] reg_set
   ///     The call-frame-info style register kind.
   ///
-  /// \param[in] initial_value_ptr
-  ///     A value to put on top of the interpreter stack before evaluating
-  ///     the expression, if the expression is parametrized.  Can be NULL.
+  /// \param[in] stack
+  ///     interpreter stack for evaluation of dwarf expression. It is shared
+  ///     between calls in case of adding/removing entries from stack.
   ///
   /// \param[in] result
   ///     A value into which the result of evaluating the expression is
@@ -137,7 +138,14 @@ public:
            lldb::ModuleSP module_sp, const DataExtractor &opcodes,
            const plugin::dwarf::DWARFUnit *dwarf_cu,
            const lldb::RegisterKind reg_set, const Value *initial_value_ptr,
-           const Value *object_address_ptr);
+           const Value *object_address_ptr, std::vector<Value> &stack, bool expression_call = false);
+
+  static bool EvaluateCall(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+                           lldb::ModuleSP module_sp, const DWARFUnit *dwarf_cu,
+                           dw_offset_t die_ref_offset,
+                           const lldb::RegisterKind reg_set,
+                           const Value *object_address_ptr,
+                           std::vector<Value> &stack, Status *error_ptr);
 
   static bool ParseDWARFLocationList(const plugin::dwarf::DWARFUnit *dwarf_cu,
                                      const DataExtractor &data,

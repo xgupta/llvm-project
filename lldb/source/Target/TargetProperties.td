@@ -201,6 +201,9 @@ let Definition = "target" in {
   def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
     DefaultFalse,
     Desc<"Enable debugging of LLDB-internal utility expressions.">;
+  def CharacterSet: Property<"charset", "String">,
+    DefaultStringValue<"ASCII">,
+    Desc<"Set Target character set.">;
 }
 
 let Definition = "process_experimental" in {

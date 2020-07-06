@@ -288,6 +288,9 @@ public:
 
   virtual CompilerType GetAtomicType(lldb::opaque_compiler_type_t type);
 
+  virtual CompilerType MutateBaseTypeSize(lldb::opaque_compiler_type_t type,
+                                          uint64_t sizeInBits);
+
   virtual CompilerType AddConstModifier(lldb::opaque_compiler_type_t type);
 
   virtual CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type);
@@ -407,7 +410,7 @@ public:
                               bool expand_pack);
 
   // Dumping types
-
+ 
 #ifndef NDEBUG
   /// Convenience LLVM-style dump method for use in the debugger only.
   LLVM_DUMP_METHOD virtual void

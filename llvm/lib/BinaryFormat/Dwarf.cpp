@@ -37,6 +37,13 @@ unsigned llvm::dwarf::getTag(StringRef TagString) {
       .Default(DW_TAG_invalid);
 }
 
+unsigned llvm::dwarf::getDecimalSign(StringRef DSString) {
+  return StringSwitch<unsigned>(DSString)
+#define HANDLE_DW_DS(ID, NAME) .Case("DW_DS_" #NAME, DW_DS_##NAME)
+#include "llvm/BinaryFormat/Dwarf.def"
+      .Default(DW_DS_Invalid);
+}
+
 unsigned llvm::dwarf::TagVersion(dwarf::Tag Tag) {
   switch (Tag) {
   default:

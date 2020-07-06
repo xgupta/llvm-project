@@ -501,6 +501,32 @@ bool Scalar::UnaryNegate() {
   return false;
 }
 
+bool Scalar::ByteSwap() {
+  switch (m_type) {
+  case e_sint:
+  case e_uint:
+  case e_slong:
+  case e_ulong:
+  case e_slonglong:
+  case e_ulonglong:
+  case e_sint128:
+  case e_uint128:
+  case e_sint256:
+  case e_uint256:
+  case e_sint512:
+  case e_uint512:
+    m_integer = m_integer.byteSwap();
+    return true;
+
+  case e_void:
+  case e_float:
+  case e_double:
+  case e_long_double:
+    break;
+  }
+  return false;
+}
+
 bool Scalar::OnesComplement() {
   if (m_type == e_int) {
     m_integer = ~m_integer;

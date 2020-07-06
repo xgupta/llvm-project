@@ -41,12 +41,12 @@ void DwarfExpression::emitConstu(uint64_t Value) {
 }
 
 void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
-  assert(DwarfReg >= 0 && "invalid negative dwarf register number");
-  assert((isUnknownLocation() || isRegisterLocation()) &&
-         "location description already locked down");
-  LocationKind = Register;
-  if (DwarfReg < 32) {
-    emitOp(dwarf::DW_OP_reg0 + DwarfReg, Comment);
+ assert(DwarfReg >= 0 && "invalid negative dwarf register number");
+ assert((isUnknownLocation() || isRegisterLocation()) &&
+        "location description already locked down");
+ LocationKind = Register;
+ if (DwarfReg < 32) {
+   emitOp(dwarf::DW_OP_reg0 + DwarfReg, Comment);
   } else {
     emitOp(dwarf::DW_OP_regx, Comment);
     emitUnsigned(DwarfReg);
@@ -482,16 +482,19 @@ static bool isMemoryLocation(DIExpressionCursor ExprCursor) {
   return true;
 }
 
-void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor) {
+void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
+                                    unsigned FragmentOffsetInBits,
+                                    SmallVectorImpl<DIE*> *DIERefOffset,) {
   addExpression(std::move(ExprCursor),
                 [](unsigned Idx, DIExpressionCursor &Cursor) -> bool {
                   llvm_unreachable("unhandled opcode found in expression");
-                });
+                }, DIERefOffset);
 }
 
 bool DwarfExpression::addExpression(
     DIExpressionCursor &&ExprCursor,
-    llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg) {
+    llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg,
+    SmallVectorImpl<DIE*> *DIERefOffset) {
   // Entry values can currently only cover the initial register location,
   // and not any other parts of the following DWARF expression.
   assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
@@ -601,6 +604,7 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_lit0:
     case dwarf::DW_OP_not:
     case dwarf::DW_OP_dup:
+    case dwarf::DW_OP_RC_byte_swap:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
     case dwarf::DW_OP_eq:
@@ -681,6 +685,16 @@ bool DwarfExpression::addExpression(
       emitUnsigned(Op->getArg(0));
       emitSigned(Op->getArg(1));
       break;
+    case dwarf::DW_OP_call2:
+    case dwarf::DW_OP_call4: {
+      assert(LocationKind != Register);
+      assert(DIERefOffset && "OP_call no references passed");
+      emitOp(Op->getOp());
+      const unsigned ref = Op->getArg(0);
+      const unsigned ref_size = Op->getOp() == dwarf::DW_OP_call2 ? 2 : 4;
+      assert(ref < DIERefOffset->size() && "fragment offset not added?");
+      emitRef((*DIERefOffset)[ref], ref_size);
+    } break;
     default:
       llvm_unreachable("unhandled opcode found in expression");
     }

@@ -9,6 +9,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Format.h"
 #include <cassert>
 #include <cstdint>
@@ -104,6 +106,14 @@ static std::vector<Desc> getOpDescriptions() {
   Descriptions[DW_OP_GNU_addr_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_const_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_entry_value] = Desc(Op::Dwarf4, Op::SizeLEB);
+  Descriptions[DW_OP_addrx] = Desc(Op::Dwarf5, Op::SizeLEB);
+  Descriptions[DW_OP_constx] = Desc(Op::Dwarf5, Op::SizeLEB);
+
+  Descriptions[DW_OP_RC_byte_swap] = Desc(Op::Dwarf5);
+  Descriptions[DW_OP_convert] = Desc(Op::Dwarf5, Op::BaseTypeRef);
+  Descriptions[DW_OP_entry_value] = Desc(Op::Dwarf5, Op::SizeLEB);
+  Descriptions[DW_OP_regval_type] =
+      Desc(Op::Dwarf5, Op::SizeLEB, Op::BaseTypeRef);
   // This Description acts as a marker that getSubOpDesc must be called
   // to fetch the final Description for the operation. Each such final
   // Description must share the same first SizeSubOpLEB operand.

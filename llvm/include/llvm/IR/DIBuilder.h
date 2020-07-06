@@ -251,6 +251,22 @@ namespace llvm {
     DIStringType *createStringType(StringRef Name,
                                    DIExpression *StringLengthExp,
                                    DIExpression *StrLocationExp = nullptr);
+    /// Create debugging information entry for a basic type with packed decimal
+    /// type.
+    /// \param Name        Type name.
+    /// \param Pic         Picture String
+    /// \param SizeInBits  Size of the type.
+    /// \param Encoding    DWARF encoding code, e.g., dwarf::DW_ATE_edited_type.
+    /// \param DigitCount  digit count
+    /// \param DecimalSign decimal sign
+    /// \param scale       scale
+    /// \param Flags       Optional DWARF attributes, e.g., DIFlagsBinaryScale
+    DIBasicType *createBasicType(StringRef Name, StringRef Pic,
+                                 uint64_t SizeInBits, unsigned Encoding,
+                                 Optional<uint16_t> DigitCount = None,
+                                 Optional<uint16_t> DecimalSign = None,
+                                 Optional<int16_t> Scale = None,
+                                 DINode::DIFlags Flags = DINode::FlagZero);
 
     /// Create debugging information entry for a qualified
     /// type, e.g. 'const int'.
@@ -594,7 +610,8 @@ namespace llvm {
         PointerUnion<DIExpression *, DIVariable *> DataLocation = nullptr,
         PointerUnion<DIExpression *, DIVariable *> Associated = nullptr,
         PointerUnion<DIExpression *, DIVariable *> Allocated = nullptr,
-        PointerUnion<DIExpression *, DIVariable *> Rank = nullptr);
+        PointerUnion<DIExpression *, DIVariable *> Rank = nullptr,
+        StringRef ArrayName = "", bool IsStringHeader = false);
 
     /// Create debugging information entry for a vector type.
     /// \param Size         Array size.
@@ -743,6 +760,22 @@ namespace llvm {
                        DINode::DIFlags Flags = DINode::FlagZero,
                        uint32_t AlignInBits = 0);
 
+    /// Create a new descriptor for an auto variable.  This is a local variable
+    /// that is not a subprogram parameter.
+    ///
+    /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
+    /// leads to a \a DISubprogram.
+    ///
+    /// If \c AlwaysPreserve, this variable will be referenced from its
+    /// containing subprogram, and will survive some optimizations.
+    DILocalVariable *
+    createAutoVariable2(DIScope *Scope, StringRef Name, DIFile *File,
+                       unsigned LineNo, unsigned LexicalScope, DIType *Ty,
+                       bool AlwaysPreserve = false,
+                       DINode::DIFlags Flags = DINode::FlagZero,
+                       DILocalVariable::DIVarFlags VarFlags = DILocalVariable::VarFlagZero,
+                       uint32_t AlignInBits = 0);
+
     /// Create a new descriptor for an label.
     ///
     /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
@@ -769,10 +802,54 @@ namespace llvm {
                             DINode::DIFlags Flags = DINode::FlagZero,
                             DINodeArray Annotations = nullptr);
 
+    /// Create a new descriptor for a parameter variable.
+    ///
+    /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
+    /// leads to a \a DISubprogram.
+    ///
+    /// \c ArgNo is the index (starting from \c 1) of this variable in the
+    /// subprogram parameters.  \c ArgNo should not conflict with other
+    /// parameters of the same subprogram.
+    ///
+    /// If \c AlwaysPreserve, this variable will be referenced from its
+    /// containing subprogram, and will survive some optimizations.
+    DILocalVariable *
+    createParameterVariable2(DIScope *Scope, StringRef Name, unsigned ArgNo,
+                            unsigned LexicalScope, DIFile *File,
+                            unsigned LineNo, DIType *Ty,
+                            bool AlwaysPreserve = false,
+                            DINode::DIFlags Flags = DINode::FlagZero,
+                            DILocalVariable::DIVarFlags VarFlags = DILocalVariable::VarFlagZero,
+                            DINodeArray Annotations = nullptr);
+
+    /// Create a new descriptor for a parameter variable.
+    ///
+    /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
+    /// leads to a \a DISubprogram.
+    ///
+    /// \c ArgNo is the index (starting from \c 1) of this variable in the
+    /// subprogram parameters.  \c ArgNo should not conflict with other
+    /// parameters of the same subprogram.
+    ///
+    /// If \c AlwaysPreserve, this variable will be referenced from its
+    /// containing subprogram, and will survive some optimizations.
+    DILocalVariable *
+    createParameterVariable2(DIScope *Scope, StringRef Name, unsigned ArgNo,
+                            unsigned LexicalScope, DIFile *File,
+                            unsigned LineNo, DIType *Ty,
+                            bool AlwaysPreserve = false,
+                            DINode::DIFlags Flags = DINode::FlagZero,
+                            DILocalVariable::DIVarFlags VarFlags = DILocalVariable::VarFlagZero,
+                            DINodeArray Annotations = nullptr);
+
     /// Create a new descriptor for the specified
     /// variable which has a complex address expression for its address.
     /// \param Addr        An array of complex address operations.
-    DIExpression *createExpression(ArrayRef<uint64_t> Addr = std::nullopt);
+    /// \param Refs        An array of Metadata ref for call2/call4 operations.
+    DIExpression *createExpression(ArrayRef<uint64_t> Addr =  std::nullopt,
+                                   ArrayRef<Metadata *> Refs =  std::nullopt);
+    DIExpression *createExpression(ArrayRef<int64_t> Addr,
+                                   ArrayRef<Metadata *> Refs =  std::nullopt);
 
     /// Create an expression for a variable that does not have an address, but
     /// does have a constant value.
