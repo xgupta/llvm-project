@@ -558,7 +558,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                          (GetLanguage() == eLanguageTypeFortran90);
 
   if (LegacyLangauage)
-    separator_idx = var_expr.find_first_of(".[=+~|&^%#@!/?,<>{}");
+    separator_idx = var_expr.find_first_of(".[(=+~|&^%#@!/?,<>{}");
   else
     separator_idx = var_expr.find_first_of(".-[=+~|&^%#@!/?,<>{}");
   StreamString var_expr_path_strm;
@@ -663,7 +663,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   while (!var_expr.empty()) {
     // Calculate the next separator index ahead of time
     ValueObjectSP child_valobj_sp;
-    const char separator_type = var_expr[0];
+    const bool is_sep_mem_select = (LegacyLangauage && (var_expr[0] == '('));
+    const char separator_type = is_sep_mem_select ? '[' : var_expr[0];
     bool expr_is_ptr = false;
     switch (separator_type) {
     case '-':
@@ -803,6 +804,11 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         return ValueObjectSP();
       }
 
+      if (var_expr.find_first_of(':') != llvm::StringRef::npos) {
+        error.SetErrorString("member select with length not supported.");
+        return ValueObjectSP();
+      }
+
       // Drop the open brace.
       var_expr = var_expr.drop_front();
       long child_index = 0;
@@ -810,7 +816,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       long old_child_index = 0;
 
       // If there's no closing brace, this is an invalid expression.
-      size_t end_pos = var_expr.find_first_of(']');
+      size_t end_pos = var_expr.find_first_of(is_sep_mem_select ? ')' : ']');
       if (end_pos == llvm::StringRef::npos) {
         error.SetErrorStringWithFormat(
             "missing closing square bracket in expression \"%s\"",
@@ -828,6 +834,15 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         error.SetErrorStringWithFormat("invalid index expression \"%s\"",
                                        index_expr.str().c_str());
         return ValueObjectSP();
+      }
+
+      // index correction of legacy languages.
+      if (is_sep_mem_select) {
+        if (child_index < 1) {
+          error.SetErrorString("invalid index.");
+          return ValueObjectSP();
+        }
+        child_index -= 1;
       }
 
       if (index_expr.empty()) {
