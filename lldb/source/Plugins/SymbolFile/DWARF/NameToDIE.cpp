@@ -33,9 +33,13 @@ void NameToDIE::Insert(ConstString name, const DIERef &die_ref) {
 
 bool NameToDIE::Find(ConstString name,
                      llvm::function_ref<bool(DIERef ref)> callback) const {
-  for (const auto &entry : m_map.equal_range(name))
-    if (!callback(entry.value))
-      return false;
+  //  for (const auto &entry : m_map.equal_range(name))
+  for (const auto &entry : m_map)
+    if (ConstString::Equals(ConstString(entry.cstring.GetCString()), name,
+                            !NameCaseInsensitive)) {
+      if (!callback(entry.value))
+        return false;
+    }
   return true;
 }
 
