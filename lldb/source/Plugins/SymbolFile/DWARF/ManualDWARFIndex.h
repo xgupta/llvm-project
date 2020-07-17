@@ -168,7 +168,19 @@ private:
                             const lldb::LanguageType cu_language,
                             IndexSet &set);
 
-  /// The DWARF file which we are indexing.
+  void SetNameCaseInsensitive() {
+    m_set.function_basenames.SetNameCaseInsensitive();
+    m_set.function_fullnames.SetNameCaseInsensitive();
+    m_set.function_methods.SetNameCaseInsensitive();
+    m_set.function_selectors.SetNameCaseInsensitive();
+    m_set.objc_class_selectors.SetNameCaseInsensitive();
+    m_set.globals.SetNameCaseInsensitive();
+    m_set.types.SetNameCaseInsensitive();
+    m_set.namespaces.SetNameCaseInsensitive();
+  }
+
+  /// The DWARF file which we are indexing. Set to nullptr after the index is
+  /// built.
   SymbolFileDWARF *m_dwarf;
   /// Which dwarf units should we skip while building the index.
   llvm::DenseSet<dw_offset_t> m_units_to_avoid;

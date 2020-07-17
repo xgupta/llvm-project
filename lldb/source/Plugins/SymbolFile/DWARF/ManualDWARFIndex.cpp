@@ -151,6 +151,10 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   }
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
+  if ((cu_language == eLanguageTypeCobol85) ||
+      (cu_language == eLanguageTypeCobol74) ||
+      (cu_language == eLanguageTypePLI))
+    SetNameCaseInsensitive();
 
   // First check if the unit has a DWO ID. If it does then we only want to index
   // the .dwo file or nothing at all. If we have a compile unit where we can't
@@ -317,9 +321,15 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           // usually the method name without the class or any parameters
           bool is_method = DWARFDIE(&unit, &die).IsMethod();
 
-          if (is_method)
+          if (is_method) {
             set.function_methods.Insert(ConstString(name), ref);
-          else
+            if ((cu_language == eLanguageTypeCobol74) ||
+                (cu_language == eLanguageTypeCobol85) ||
+                (cu_language == eLanguageTypePLI)) {
+              llvm::StringRef up_name(name);
+              set.function_methods.Insert(ConstString(up_name.upper()), ref);
+            }
+          } else
             set.function_basenames.Insert(ConstString(name), ref);
 
           if (!is_method && !mangled_cstr && !is_objc_method)
