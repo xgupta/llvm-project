@@ -323,12 +323,6 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
 
           if (is_method) {
             set.function_methods.Insert(ConstString(name), ref);
-            if ((cu_language == eLanguageTypeCobol74) ||
-                (cu_language == eLanguageTypeCobol85) ||
-                (cu_language == eLanguageTypePLI)) {
-              llvm::StringRef up_name(name);
-              set.function_methods.Insert(ConstString(up_name.upper()), ref);
-            }
           } else
             set.function_basenames.Insert(ConstString(name), ref);
 
