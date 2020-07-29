@@ -569,7 +569,7 @@ CobolInterpreter::VisitAssignmentExpr(const CobolASTAssignmentExpr *expr) {
   const auto dst_type = lhsRef->GetCompilerType().GetOpaqueQualType();
   const auto src_type = rhsVal->GetCompilerType().GetOpaqueQualType();
   const auto data_size = lhsRef->GetByteSize();
-  DataBufferSP buffer(new DataBufferHeap(data_size, 0));
+  DataBufferSP buffer(new DataBufferHeap(*data_size, 0));
   DataExtractor dest_data(buffer, ByteOrder::eByteOrderInvalid, addr_size);
   if (!legacy_ts->EncodeDataToType(m_exe_ctx, src_type, data, dst_type,
                                    dest_data))
