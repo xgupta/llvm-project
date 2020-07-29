@@ -252,7 +252,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
           }
 
           if ((byte_stride == 0) && (bit_stride == 0))
-            byte_stride = element_type->GetByteSize().getValueOr(0);
+            byte_stride = element_type->GetByteSize(nullptr).getValueOr(0);
 
           ConstString empty_name;
           CompilerType array_element_type =

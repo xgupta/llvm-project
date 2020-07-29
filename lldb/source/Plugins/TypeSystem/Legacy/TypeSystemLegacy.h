@@ -225,7 +225,8 @@ public:
   //----------------------------------------------------------------------
 
   CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
-                                   uint64_t *stride) override;
+                                   uint64_t *stride,
+                                   ExecutionContextScope *exe_scope) override;
 
   // Returns -1 if this isn't a function of if the function doesn't have a
   // prototype Returns a value >= 0 if there is a prototype.
