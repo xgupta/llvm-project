@@ -973,6 +973,17 @@ LLVMDIBuilderCreateQualifiedType(LLVMDIBuilderRef Builder, unsigned Tag,
                                  LLVMMetadataRef Type);
 
 /**
+ * Create debugging information entry for a dynamic type
+ * type, e.g. descriptor entry in PL1
+ * \param Builder     The DIBuilder.
+ * \param Type        Base Type.
+ * \param Location    DIExpression to get to raw data.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateDynamicType(LLVMDIBuilderRef Builder,
+                                               LLVMMetadataRef Type,
+                                               LLVMMetadataRef Location);
+
+/**
  * Create debugging information entry for a c++
  * style reference or rvalue reference type.
  * \param Builder   The DIBuilder.

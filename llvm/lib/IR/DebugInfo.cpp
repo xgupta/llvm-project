@@ -1532,6 +1532,13 @@ LLVMDIBuilderCreateQualifiedType(LLVMDIBuilderRef Builder, unsigned Tag,
                                                    unwrapDI<DIType>(Type)));
 }
 
+LLVMMetadataRef LLVMDIBuilderCreateDynamicType(LLVMDIBuilderRef Builder,
+                                               LLVMMetadataRef Type,
+                                               LLVMMetadataRef Location) {
+  return wrap(unwrap(Builder)->createDynamicType(
+      unwrapDI<DIType>(Type), unwrapDI<DIExpression>(Location)));
+}
+
 LLVMMetadataRef
 LLVMDIBuilderCreateReferenceType(LLVMDIBuilderRef Builder, unsigned Tag,
                                  LLVMMetadataRef Type) {

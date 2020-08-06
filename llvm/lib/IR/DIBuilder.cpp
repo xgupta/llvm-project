@@ -333,6 +333,20 @@ DIDerivedType *DIBuilder::createPtrAuthQualifiedType(
                             DINode::FlagZero);
 }
 
+DIDerivedType *DIBuilder::createDynamicType(DIType *BTy,
+                                            DIExpression *Location) {
+  return DIDerivedType::get(VMContext, dwarf::DW_TAG_dynamic_type, "", nullptr,
+                            0, nullptr, BTy, 0, 0, 0, None, DINode::FlagZero,
+                            nullptr /*ExtraData*/, Location);
+}
+
+DIDerivedType *DIBuilder::createDynamicType(DIType *BTy,
+                                            DIExpression *Location) {
+  return DIDerivedType::get(VMContext, dwarf::DW_TAG_dynamic_type, "", nullptr,
+                            0, nullptr, BTy, 0, 0, 0, None, DINode::FlagZero,
+                            nullptr /*ExtraData*/, Location);
+}
+
 DIDerivedType *
 DIBuilder::createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
                              uint32_t AlignInBits,
