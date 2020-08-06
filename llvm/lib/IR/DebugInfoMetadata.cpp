@@ -745,17 +745,18 @@ DIDerivedType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
                        uint32_t AlignInBits, uint64_t OffsetInBits,
                        std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
                        Metadata *ExtraData, Metadata *Annotations,
-                       StorageType Storage, bool ShouldCreate) {
+                       Metadata *location, StorageType Storage,
+>>>>>>> 7e963dfd1a64 (added initial support for TAG_dynamic_type.)
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
                         (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                          AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
-                         ExtraData, Annotations));
-  Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations};
-  DEFINE_GETIMPL_STORE(DIDerivedType,
-                       (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
-                        DWARFAddressSpace, Flags),
-                       Ops);
+                         ExtraData, Annotations, location));
+  Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations,
+                     location};
+  DEFINE_GETIMPL_STORE(
+      DIDerivedType, (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
+                      DWARFAddressSpace, Flags), Ops);
 }
 
 DICompositeType *DICompositeType::getImpl(
