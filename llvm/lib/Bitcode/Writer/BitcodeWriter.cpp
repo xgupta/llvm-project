@@ -1894,7 +1894,8 @@ void ModuleBitcodeWriter::writeDIStringType(const DIStringType *N,
 void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
                                              SmallVectorImpl<uint64_t> &Record,
                                              unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  const uint64_t Version = 2 << 1;
+  Record.push_back(N->isDistinct() | Version);
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
@@ -1913,6 +1914,7 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
     Record.push_back(*DWARFAddressSpace + 1);
   else
     Record.push_back(0);
+  Record.push_back(VE.getMetadataOrNullID(N->getLocation()));
 
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
 

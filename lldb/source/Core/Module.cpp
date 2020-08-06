@@ -758,8 +758,8 @@ bool Module::LookupInfo::NameMatchesLookupInfo(
   if (Language *language = Language::FindPlugin(language_type))
     return language->DemangledNameContainsPath(m_name, demangled_function_name);
 
-  llvm::StringRef function_name_ref = demangled_function_name;
-  return function_name_ref.contains(m_name);
+  llvm::StringRef function_name_ref = demangled_function_name.GetStringRef();
+  return function_name_ref.find_insensitive(m_name.GetStringRef()) != llvm::StringRef::npos;
 }
 
 void Module::LookupInfo::Prune(SymbolContextList &sc_list,

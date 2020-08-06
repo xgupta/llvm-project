@@ -1102,12 +1102,13 @@ private:
           uint32_t AlignInBits, uint64_t OffsetInBits,
           std::optional<unsigned> DWARFAddressSpace,
           std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
-          Metadata *ExtraData, DINodeArray Annotations, StorageType Storage,
-          bool ShouldCreate = true) {
+          Metadata *ExtraData, DINodeArray Annotations, Metadata *Location,
+          Metadata *Allocated, StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
                    Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
                    DWARFAddressSpace, PtrAuthData, Flags, ExtraData,
-                   Annotations.get(), Storage, ShouldCreate);
+                   Annotations.get(), Location, Allocated, Storage,
+                   ShouldCreate);
   }
   static DIDerivedType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
@@ -1115,30 +1116,30 @@ private:
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
           std::optional<unsigned> DWARFAddressSpace,
           std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
-          Metadata *ExtraData, Metadata *Annotations, StorageType Storage,
-          bool ShouldCreate = true);
+          Metadata *ExtraData, Metadata *Annotations, Metadata *Location,
+          Metadata *Allocated, StorageType Storage, bool ShouldCreate = true);
 
   TempDIDerivedType cloneImpl() const {
-    return getTemporary(getContext(), getTag(), getName(), getFile(), getLine(),
-                        getScope(), getBaseType(), getSizeInBits(),
-                        getAlignInBits(), getOffsetInBits(),
-                        getDWARFAddressSpace(), getPtrAuthData(), getFlags(),
-                        getExtraData(), getAnnotations());
+    return getTemporary(
+        getContext(), getTag(), getName(), getFile(), getLine(), getScope(),
+        getBaseType(), getSizeInBits(), getAlignInBits(), getOffsetInBits(),
+        getDWARFAddressSpace(), getPtrAuthData(), getFlags(), getExtraData(),
+        getAnnotations(), getLocation(), getAllocated());
   }
 
 public:
-  DEFINE_MDNODE_GET(DIDerivedType,
-                    (unsigned Tag, MDString *Name, Metadata *File,
-                     unsigned Line, Metadata *Scope, Metadata *BaseType,
-                     uint64_t SizeInBits, uint32_t AlignInBits,
-                     uint64_t OffsetInBits,
-                     std::optional<unsigned> DWARFAddressSpace,
-                     std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
-                     Metadata *ExtraData = nullptr,
-                     Metadata *Annotations = nullptr),
-                    (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                     AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
-                     Flags, ExtraData, Annotations))
+  DEFINE_MDNODE_GET(
+      DIDerivedType,
+      (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
+       Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
+       uint32_t AlignInBits, uint64_t OffsetInBits,
+       std::optional<unsigned> DWARFAddressSpace,
+       std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+       Metadata *ExtraData = nullptr, Metadata *Annotations = nullptr,
+       Metadata *Location = nullptr, Metadata *Allocated = nullptr),
+      (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+       OffsetInBits, DWARFAddressSpace, PtrAuthData, Flags, ExtraData,
+       Annotations, Location, Allocated))
   DEFINE_MDNODE_GET(DIDerivedType,
                     (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
                      DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
@@ -1146,12 +1147,12 @@ public:
                      std::optional<unsigned> DWARFAddressSpace,
                      std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                      Metadata *ExtraData = nullptr,
-                     DINodeArray Annotations = nullptr),
+                     DINodeArray Annotations = nullptr,
+                     Metadata *Location = nullptr,
+                     Metadata *Allocated = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                      AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
-                     Flags, ExtraData, Annotations))
-
-  TempDIDerivedType clone() const { return cloneImpl(); }
+                     Flags, ExtraData, Annotations, Location, Allocated))
 
   /// Get the base type this is derived from.
   DIType *getBaseType() const { return cast_or_null<DIType>(getRawBaseType()); }
@@ -1203,6 +1204,12 @@ public:
 
   Constant *getDiscriminantValue() const;
   /// @}
+
+  /// Get location expression associated with this derived type.
+  ///
+  /// Used for dynamic type raw data location expression.
+  Metadata *getLocation() const { return getRawLocation(); }
+  Metadata *getRawLocation() const { return getOperand(5); }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIDerivedTypeKind;

@@ -1598,23 +1598,28 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // Only look for annotations/ptrauth if both are allocated.
     // If not, we can't tell which was intended to be embedded, as both ptrauth
     // and annotations have been expected at Record[13] at various times.
-    if (Record.size() > 14) {
-      if (Record[13])
-        Annotations = getMDOrNull(Record[13]);
-      if (Record[14])
-        PtrAuthData.emplace(Record[14]);
+    if (Record.size() > 16) {
+      if (Record[15])
+        Annotations = getMDOrNull(Record[15]);
+      if (Record[16])
+        PtrAuthData.emplace(Record[16]);
     }
 
-    IsDistinct = Record[0];
+    IsDistinct = Record[0] & 0x1;
+    const unsigned Version = Record[0] & ~(0x1);
+    Metadata *Location =
+        Version == (2 << 1) ? getMDOrNull(Record[13]) : nullptr;
+    Metadata *Allocated =
+        Version == (2 << 1) ? getMDOrNull(Record[14]) : nullptr;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DIDerivedType,
-                        (Context, Record[1], getMDString(Record[2]),
-                         getMDOrNull(Record[3]), Record[4],
-                         getDITypeRefOrNull(Record[5]),
-                         getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-                         Record[9], DWARFAddressSpace, PtrAuthData, Flags,
-                         getDITypeRefOrNull(Record[11]), Annotations)),
+        GET_OR_DISTINCT(
+            DIDerivedType,
+            (Context, Record[1], getMDString(Record[2]), getMDOrNull(Record[3]),
+             Record[4], getDITypeRefOrNull(Record[5]),
+             getDITypeRefOrNull(Record[6]), Record[7], Record[8], Record[9],
+             DWARFAddressSpace, PtrAuthData, Flags,
+             getDITypeRefOrNull(Record[11]), Annotations, Location, Allocated)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
