@@ -1214,23 +1214,24 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
   visitDIScope(N);
 
   CheckDI(N.getTag() == dwarf::DW_TAG_typedef ||
-              N.getTag() == dwarf::DW_TAG_pointer_type ||
-              N.getTag() == dwarf::DW_TAG_ptr_to_member_type ||
-              N.getTag() == dwarf::DW_TAG_reference_type ||
-              N.getTag() == dwarf::DW_TAG_rvalue_reference_type ||
-              N.getTag() == dwarf::DW_TAG_const_type ||
-              N.getTag() == dwarf::DW_TAG_immutable_type ||
-              N.getTag() == dwarf::DW_TAG_volatile_type ||
-              N.getTag() == dwarf::DW_TAG_restrict_type ||
-              N.getTag() == dwarf::DW_TAG_atomic_type ||
-              N.getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ||
-              N.getTag() == dwarf::DW_TAG_member ||
+               N.getTag() == dwarf::DW_TAG_pointer_type ||
+               N.getTag() == dwarf::DW_TAG_ptr_to_member_type ||
+               N.getTag() == dwarf::DW_TAG_reference_type ||
+               N.getTag() == dwarf::DW_TAG_rvalue_reference_type ||
+               N.getTag() == dwarf::DW_TAG_const_type ||
+               N.getTag() == dwarf::DW_TAG_immutable_type ||
+               N.getTag() == dwarf::DW_TAG_volatile_type ||
+               N.getTag() == dwarf::DW_TAG_restrict_type ||
+               N.getTag() == dwarf::DW_TAG_atomic_type ||
+               N.getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ||
+               N.getTag() == dwarf::DW_TAG_member ||
               (N.getTag() == dwarf::DW_TAG_variable && N.isStaticMember()) ||
-              N.getTag() == dwarf::DW_TAG_inheritance ||
-              N.getTag() == dwarf::DW_TAG_friend ||
-              N.getTag() == dwarf::DW_TAG_set_type ||
-              N.getTag() == dwarf::DW_TAG_template_alias,
-          "invalid tag", &N);
+               N.getTag() == dwarf::DW_TAG_inheritance ||
+               N.getTag() == dwarf::DW_TAG_friend ||
+               N.getTag() == dwarf::DW_TAG_dynamic_type ||
+               N.getTag() == dwarf::DW_TAG_set_type,
+               N.getTag() == dwarf::DW_TAG_template_alias,
+           "invalid tag", &N);
   if (N.getTag() == dwarf::DW_TAG_ptr_to_member_type) {
     CheckDI(isType(N.getRawExtraData()), "invalid pointer to member type", &N,
             N.getRawExtraData());
