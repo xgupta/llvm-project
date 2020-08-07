@@ -763,12 +763,25 @@ DIDerivedType *DIDerivedType::getImpl(
                        Ops);
 }
 
-
 std::optional<DIDerivedType::PtrAuthData>
 DIDerivedType::getPtrAuthData() const {
   return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
              ? std::optional<PtrAuthData>(PtrAuthData(SubclassData32))
              : std::nullopt;
+    Optional<unsigned> DWARFAddressSpace, DIFlags Flags, Metadata *ExtraData,
+    Metadata *Annotations, Metadata *location, Metadata *Allocated,
+    StorageType Storage, bool ShouldCreate) {
+  assert(isCanonical(Name) && "Expected canonical MDString");
+  DEFINE_GETIMPL_LOOKUP(DIDerivedType,
+                        (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+                         AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
+                         ExtraData, Annotations, location, Allocated));
+  Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations,
+                     location, Allocated};
+  DEFINE_GETIMPL_STORE(
+      DIDerivedType, (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
+                      DWARFAddressSpace, Flags), Ops);
+>>>>>>> dd1692af6db1 ([DebugInfo] Added support to generate dwarf attribute  DW_AT_allocated for DW_TAG_dynamic_type)
 }
 
 DICompositeType *DICompositeType::getImpl(

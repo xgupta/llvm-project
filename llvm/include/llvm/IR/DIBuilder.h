@@ -278,7 +278,9 @@ namespace llvm {
     /// type, e.g. used in pl1 for decriptors.
     /// \param BTy         Base type.
     /// \param Location    Expression list to get to raw data.
-    DIDerivedType *createDynamicType(DIType *BTy, DIExpression *Location);
+    /// \param Allocated   Expression list to deduct allocation status.
+    DIDerivedType *createDynamicType(DIType *BTy, DIExpression *Location,
+                                     DIExpression *Allocated);
 
     /// Create debugging information entry for a pointer.
     /// \param PointeeTy         Type pointed by this pointer.

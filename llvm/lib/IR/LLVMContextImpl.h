@@ -554,6 +554,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   Metadata *ExtraData;
   Metadata *Annotations;
   Metadata *Location;
+  Metadata *Allocated;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,

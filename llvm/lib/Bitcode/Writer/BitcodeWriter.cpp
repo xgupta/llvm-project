@@ -1915,6 +1915,7 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
   else
     Record.push_back(0);
   Record.push_back(VE.getMetadataOrNullID(N->getLocation()));
+  Record.push_back(VE.getMetadataOrNullID(N->getAllocated()));
 
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
 

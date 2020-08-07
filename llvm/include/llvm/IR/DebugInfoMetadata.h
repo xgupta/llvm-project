@@ -1154,6 +1154,8 @@ public:
                      AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
                      Flags, ExtraData, Annotations, Location, Allocated))
 
+  TempDIDerivedType clone() const { return cloneImpl(); }
+
   /// Get the base type this is derived from.
   DIType *getBaseType() const { return cast_or_null<DIType>(getRawBaseType()); }
   Metadata *getRawBaseType() const { return getOperand(3); }
@@ -1210,6 +1212,12 @@ public:
   /// Used for dynamic type raw data location expression.
   Metadata *getLocation() const { return getRawLocation(); }
   Metadata *getRawLocation() const { return getOperand(5); }
+
+  /// Get allocated expression associated with this derived type.
+  ///
+  /// Used for dynamic type allocation status
+  Metadata *getAllocated() const { return getRawLocation(); }
+  Metadata *getRawAllocated() const { return getOperand(6); }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIDerivedTypeKind;

@@ -842,13 +842,22 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   if (!DTy->isForwardDecl())
     addSourceLine(Buffer, DTy);
 
-  // Add DW_AT_location expression for dynamic types.
+  // Add DW_AT_data_location expression for dynamic types.
   if (DIExpression *Expr = dyn_cast_or_null<DIExpression>(DTy->getLocation())) {
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
     DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
     DwarfExpr.setMemoryLocationKind();
     DwarfExpr.addExpression(Expr);
     addBlock(Buffer, dwarf::DW_AT_data_location, DwarfExpr.finalize());
+  }
+
+  // Add DW_AT_allocated expression for dynamic types.
+  if (DIExpression *Expr = dyn_cast_or_null<DIExpression>(DTy->getLocation())) {
+    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
+    DwarfExpr.setMemoryLocationKind();
+    DwarfExpr.addExpression(Expr);
+    addBlock(Buffer, dwarf::DW_AT_allocated, DwarfExpr.finalize());
   }
 
   // If DWARF address space value is other than None, add it.  The IR

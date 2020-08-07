@@ -2182,6 +2182,7 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printMetadata("extraData", N->getRawExtraData());
   Printer.printMetadata("location", N->getRawLocation());
+  Printer.printMetadata("allocated", N->getRawAllocated());
   if (const auto &DWARFAddressSpace = N->getDWARFAddressSpace())
     Printer.printInt("dwarfAddressSpace", *DWARFAddressSpace,
                      /* ShouldSkipZero */ false);

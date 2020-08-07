@@ -978,10 +978,12 @@ LLVMDIBuilderCreateQualifiedType(LLVMDIBuilderRef Builder, unsigned Tag,
  * \param Builder     The DIBuilder.
  * \param Type        Base Type.
  * \param Location    DIExpression to get to raw data.
+ * \param Allocated   DIExpression to get allocated status.
  */
 LLVMMetadataRef LLVMDIBuilderCreateDynamicType(LLVMDIBuilderRef Builder,
                                                LLVMMetadataRef Type,
-                                               LLVMMetadataRef Location);
+                                               LLVMMetadataRef Location,
+                                               LLVMMetadataRef Allocated);
 
 /**
  * Create debugging information entry for a c++
