@@ -551,17 +551,19 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   Metadata *ExtraData;
   Metadata *Annotations;
   Metadata *Location;
+  Metadata *Allocated;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
                 uint32_t AlignInBits, uint64_t OffsetInBits,
                 std::optional<unsigned> DWARFAddressSpace, unsigned Flags,
-                Metadata *ExtraData, Metdata *Annotations, Metadata *Location)
+                Metadata *ExtraData, Metadata *Annotations, Metadata *Location,
+                Metadata *Allocated)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), DWARFAddressSpace(DWARFAddressSpace),
         Flags(Flags), ExtraData(ExtraData), Annotations(Annotations),
-        Location(Location) {}
+        Location(Location), Allocated(Allocated) {}
   MDNodeKeyImpl(const DIDerivedType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
@@ -569,7 +571,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
         OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
         DWARFAddressSpace(N->getDWARFAddressSpace()), Flags(N->getFlags()),
         ExtraData(N->getRawExtraData()), Annotations(N->getRawAnnotations()),
-        Location(N->getRawLocation()) {}
+        Location(N->getRawLocation()), Allocated(N->getRawAllocated()) {}
 
   bool isKeyOf(const DIDerivedType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
@@ -581,7 +583,8 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
            DWARFAddressSpace == RHS->getDWARFAddressSpace() &&
            Flags == RHS->getFlags() && ExtraData == RHS->getRawExtraData() &&
            Annotations == RHS->getRawAnnotations() &&
-           Location == RHS->getRawLocation();
+           Location == RHS->getRawLocation() &&
+           Allocated == RHS->getRawAllocated();
   }
 
   unsigned getHashValue() const {

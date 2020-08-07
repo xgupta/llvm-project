@@ -1067,12 +1067,12 @@ class DIDerivedType : public DIType {
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
           uint32_t AlignInBits, uint64_t OffsetInBits,
           std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-          Metadata *ExtraData, DINodeArray Annotations,  Metadata *Location,
-          StorageType Storage, bool ShouldCreate = true) {
+          Metadata *ExtraData, DINodeArray Annotations, Metadata *Location,
+          Metadata *Allocated, StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
                    Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
                    DWARFAddressSpace, Flags, ExtraData, Annotations.get(),
-                   Location, Storage, ShouldCreate);
+                   Location, Allocated, Storage, ShouldCreate);
   }
   static DIDerivedType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
@@ -1080,14 +1080,14 @@ class DIDerivedType : public DIType {
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
           std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
           Metadata *ExtraData, Metadata *Annotations, Metadata *Location,
-          StorageType Storage, bool ShouldCreate = true);
+          Metadata *Allocated, StorageType Storage, bool ShouldCreate = true);
 
   TempDIDerivedType cloneImpl() const {
     return getTemporary(
         getContext(), getTag(), getName(), getFile(), getLine(), getScope(),
         getBaseType(), getSizeInBits(), getAlignInBits(), getOffsetInBits(),
         getDWARFAddressSpace(), getFlags(), getExtraData(), getAnnotations(),
-        getLocation());
+        getLocation(), getAllocated());
   }
 
 public:
@@ -1098,10 +1098,10 @@ public:
        uint32_t AlignInBits, uint64_t OffsetInBits,
        std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
        Metadata *ExtraData = nullptr, Metadata *Annotations = nullptr,
-       Metadata *Location = nullptr),
+       Metadata *Location = nullptr, Metadata *Allocated = nullptr),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, DWARFAddressSpace, Flags, ExtraData, Annotations,
-       Location))
+       Location, Allocated))
   DEFINE_MDNODE_GET(DIDerivedType,
                     (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
                      DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
@@ -1109,10 +1109,11 @@ public:
                      std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
                      Metadata *ExtraData = nullptr,
                      DINodeArray Annotations = nullptr,
-                     Metadata *Location = nullptr),
+                     Metadata *Location = nullptr,
+                     Metadata *Allocated = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                      AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
-                     ExtraData, Annotations, Location))
+                     ExtraData, Annotations, Location, Allocated))
 
   TempDIDerivedType clone() const { return cloneImpl(); }
 
@@ -1165,6 +1166,12 @@ public:
   /// Used for dynamic type raw data location expression.
   Metadata *getLocation() const { return getRawLocation(); }
   Metadata *getRawLocation() const { return getOperand(5); }
+
+  /// Get allocated expression associated with this derived type.
+  ///
+  /// Used for dynamic type allocation status
+  Metadata *getAllocated() const { return getRawLocation(); }
+  Metadata *getRawAllocated() const { return getOperand(6); }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIDerivedTypeKind;
