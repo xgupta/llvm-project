@@ -213,19 +213,20 @@ lldb::ValueObjectSP CobolInterpreter::VisitIdent(const CobolASTIdent *ident) {
       return nullptr;
     }
 
-    VariableListSP var_list_sp(m_frame->GetInScopeVariableList(false));
-    if (var_list_sp) {
-      var_sp = var_list_sp->FindVariable(ConstString(var_name),
-                                         /* include_static_members */ true,
-                                         /* case_sensitive */ false);
+    VariableListSP var_list_sp(m_frame->GetInScopeVariableList(true));
+    VariableList *var_list = var_list_sp.get();
+    if (var_list) {
+      var_sp = var_list->FindVariable(ConstString(var_name),
+                                      /* include_static_members */ true,
+                                      /* case_sensitive */ false);
       if (var_sp) {
         result = m_frame->GetValueObjectForFrameVariable(var_sp, m_use_dynamic);
       }
     }
 
-    if (!result) {
-      for (size_t i = 0; i < var_list_sp->GetSize(); i++) {
-        VariableSP variable_sp = var_list_sp->GetVariableAtIndex(i);
+    if (!result && var_list) {
+      for (size_t i = 0; i < var_list->GetSize(); i++) {
+        VariableSP variable_sp = var_list->GetVariableAtIndex(i);
         if (!variable_sp)
           continue;
 
