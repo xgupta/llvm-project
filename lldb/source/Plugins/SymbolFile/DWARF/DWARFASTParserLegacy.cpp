@@ -368,6 +368,69 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
           *die.GetDIERef());
         }
       } break;
+      case DW_TAG_dynamic_type: {
+        dwarf->m_die_to_type[die.GetDIE()] = DIE_IS_BEING_PARSED;
+        const size_t num_attributes = die.GetAttributes(attributes);
+        DWARFFormValue type_die_form;
+        DWARFExpression dw_location, dw_allocated;
+        ModuleSP module(die.GetModule());
+        ConstString empty_name;
+
+        for (size_t i = 0; i < num_attributes; i++) {
+          attr = attributes.AttributeAtIndex(i);
+          if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+            switch (attr) {
+            case DW_AT_type:
+              type_die_form = form_value;
+              break;
+            case DW_AT_data_location: {
+              if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
+                dwarf->GetObjectFile()->GetModule()->ReportError(
+                    "{0x%8.8x}: dynamic type tag 0x%4.4x (%s), has invalid"
+                    " DW_AT_data_location expression type."
+                    "please file a bug and attach the file at the "
+                    "start of this error message",
+                    die.GetOffset(), tag, DW_TAG_value_to_name(tag));
+              }
+
+              auto data = die.GetData();
+              uint32_t offset = form_value.BlockData() - data.GetDataStart();
+              uint32_t length = form_value.Unsigned();
+              dw_location = DWARFExpression(
+                  module, DataExtractor(data, offset, length), die.GetCU());
+            } break;
+            case DW_AT_allocated: {
+              if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
+                dwarf->GetObjectFile()->GetModule()->ReportError(
+                    "{0x%8.8x}: dynamic type tag 0x%4.4x (%s), has invalid"
+                    " DW_AT_allocated expression type."
+                    "please file a bug and attach the file at the "
+                    "start of this error message",
+                    die.GetOffset(), tag, DW_TAG_value_to_name(tag));
+              }
+
+              auto data = die.GetData();
+              uint32_t offset = form_value.BlockData() - data.GetDataStart();
+              uint32_t length = form_value.Unsigned();
+              dw_allocated = DWARFExpression(
+                  module, DataExtractor(data, offset, length), die.GetCU());
+            } break;
+            }
+          }
+        }
+        DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
+                     DW_TAG_value_to_name(tag), type_name_cstr);
+
+        Type *base_type =
+            dwarf->ResolveTypeUID(type_die_form.Reference(), true);
+        compiler_type = m_ast.CreateDynamicType(
+            base_type->GetForwardCompilerType(), dw_location, dw_allocated);
+        type_sp = std::make_shared<Type>(
+            die.GetID(), dwarf, empty_name, 0, nullptr,
+            dwarf->GetUID(type_die_form.Reference()), Type::eEncodingIsUID,
+            &decl, compiler_type, Type::ResolveState::Full);
+        type_sp->SetEncodingType(base_type);
+      } break;
       case DW_TAG_typedef:
       case DW_TAG_unspecified_type:
         dwarf->GetObjectFile()->GetModule()->LogMessage(
