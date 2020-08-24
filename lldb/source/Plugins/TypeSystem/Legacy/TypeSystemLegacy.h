@@ -25,6 +25,7 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Target.h"
@@ -380,6 +381,12 @@ public:
                                const ConstString &name,
                                const CompilerType &element_type,
                                size_t element_count, bool isVarString);
+
+  CompilerType CreateDynamicType(const CompilerType &base_type,
+                                 const DWARFExpression dw_location,
+                                 const DWARFExpression dw_allocated) {
+    return CompilerType();
+  }
 
   CompilerType GetArrayType(lldb::opaque_compiler_type_t type,
                             uint64_t size) override;
