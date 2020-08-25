@@ -383,10 +383,8 @@ public:
                                size_t element_count, bool isVarString);
 
   CompilerType CreateDynamicType(const CompilerType &base_type,
-                                 const DWARFExpression dw_location,
-                                 const DWARFExpression dw_allocated) {
-    return CompilerType();
-  }
+                                 const DWARFExpression &dw_location,
+                                 const DWARFExpression &dw_allocated);
 
   CompilerType GetArrayType(lldb::opaque_compiler_type_t type,
                             uint64_t size) override;
