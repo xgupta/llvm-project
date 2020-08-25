@@ -852,7 +852,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   }
 
   // Add DW_AT_allocated expression for dynamic types.
-  if (DIExpression *Expr = dyn_cast_or_null<DIExpression>(DTy->getLocation())) {
+  if (DIExpression *Expr = dyn_cast_or_null<DIExpression>(DTy->getAllocated())) {
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
     DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
     DwarfExpr.setMemoryLocationKind();
