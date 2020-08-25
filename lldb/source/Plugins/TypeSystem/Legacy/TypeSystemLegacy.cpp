@@ -57,6 +57,7 @@ public:
     KIND_PTR,
     KIND_FUNC,
 
+    KIND_DYNAMIC,
     KIND_INVALID,
 
     KIND_MASK = (1 << 5) - 1,
@@ -170,6 +171,26 @@ private:
   std::vector<CompilerType> m_params;
   LegacyFunction(const LegacyFunction &) = delete;
   const LegacyFunction &operator=(const LegacyFunction &) = delete;
+};
+
+class LegacyDynamic : public LegacyType {
+public:
+  LegacyDynamic(const CompilerType &base_type, DWARFExpression location,
+                DWARFExpression allocated)
+      : LegacyType(KIND_DYNAMIC, ConstString()), m_type(base_type),
+        m_location(location), m_allocated(allocated) {}
+
+  CompilerType GetBaseType() const { return m_type; }
+  DWARFExpression getAllocated() const { return m_allocated; }
+  DWARFExpression getLocation() const { return m_location; }
+
+private:
+  CompilerType m_type;
+  DWARFExpression m_location;
+  DWARFExpression m_allocated;
+
+  LegacyDynamic(const LegacyDynamic &) = delete;
+  const LegacyDynamic &operator=(const LegacyDynamic &) = delete;
 };
 
 class LegacyStruct : public LegacyType {
@@ -696,6 +717,9 @@ TypeSystemLegacy::GetTypeInfo(lldb::opaque_compiler_type_t type,
     break;
   case LegacyType::KIND_STRUCT:
     flags = eTypeHasChildren | eTypeIsStructUnion;
+    break;
+  case LegacyType::KIND_DYNAMIC:
+    flags = eTypeIsDynamic;
     break;
   case LegacyType::KIND_DECIMAL:
   case LegacyType::KIND_DISPLAY:
@@ -1391,6 +1415,15 @@ CompilerType TypeSystemLegacy::CreateArrayType(
   LegacyType *array_type = new LegacyArray(array_type_name, name, element_type,
                                            element_count, isVarString);
   return CompilerType(this, array_type);
+}
+
+CompilerType
+TypeSystemLegacy::CreateDynamicType(const CompilerType &base_type,
+                                    const DWARFExpression &dw_location,
+                                    const DWARFExpression &dw_allocated) {
+  LegacyType *dyn_type =
+      new LegacyDynamic(base_type, dw_location, dw_allocated);
+  return CompilerType(this, dyn_type);
 }
 
 CompilerType TypeSystemLegacy::GetArrayType(lldb::opaque_compiler_type_t type,
