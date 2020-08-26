@@ -1556,14 +1556,9 @@ CompilerType TypeSystemLegacy::CreateBaseType(
 // Creating related types
 //----------------------------------------------------------------------
 CompilerType TypeSystemLegacy::GetArrayElementType(opaque_compiler_type_t type,
-                                                   uint64_t *stride,
                                                    ExecutionContextScope *exe_scope) {
   LegacyArray *array = static_cast<LegacyType *>(type)->GetArray();
   if (array) {
-    if (stride) {
-      if (auto byte_size = array->GetElementType().GetByteSize(nullptr))
-        *stride = *byte_size;
-    }
     return array->GetElementType();
   }
   return CompilerType();
