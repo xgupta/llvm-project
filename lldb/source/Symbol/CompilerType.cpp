@@ -760,27 +760,21 @@ CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
   return CompilerType();
 }
 
-CompilerType
-CompilerType::DynGetBaseType(TypeSystem *type_system,
-                             lldb::opaque_compiler_type_t type) const {
+CompilerType CompilerType::DynGetBaseType() const {
   if (IsValid())
-    return m_type_system->DynGetBaseType(type);
+    return m_type_system->DynGetBaseType(m_type);
   return CompilerType();
 }
 
-DWARFExpression
-CompilerType::DynGetLocation(TypeSystem *type_system,
-                             lldb::opaque_compiler_type_t type) const {
+DWARFExpression CompilerType::DynGetLocation() const {
   if (IsValid())
-    return m_type_system->DynGetLocation(type);
+    return m_type_system->DynGetLocation(m_type);
   return DWARFExpression();
 }
 
-DWARFExpression
-CompilerType::DynGetAllocated(TypeSystem *type_system,
-                              lldb::opaque_compiler_type_t type) const {
+DWARFExpression CompilerType::DynGetAllocated() const {
   if (IsValid())
-    return m_type_system->DynGetAllocated(type);
+    return m_type_system->DynGetAllocated(m_type);
   return DWARFExpression();
 }
 
