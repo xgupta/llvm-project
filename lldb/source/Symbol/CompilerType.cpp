@@ -759,6 +759,31 @@ CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
       return type_system_sp->GetBasicTypeFromAST(basic_type);
   return CompilerType();
 }
+
+CompilerType
+CompilerType::DynGetBaseType(TypeSystem *type_system,
+                             lldb::opaque_compiler_type_t type) const {
+  if (IsValid())
+    return m_type_system->DynGetBaseType(type);
+  return CompilerType();
+}
+
+DWARFExpression
+CompilerType::DynGetLocation(TypeSystem *type_system,
+                             lldb::opaque_compiler_type_t type) const {
+  if (IsValid())
+    return m_type_system->DynGetLocation(type);
+  return DWARFExpression();
+}
+
+DWARFExpression
+CompilerType::DynGetAllocated(TypeSystem *type_system,
+                              lldb::opaque_compiler_type_t type) const {
+  if (IsValid())
+    return m_type_system->DynGetAllocated(type);
+  return DWARFExpression();
+}
+
 // Exploring the type
 
 std::optional<uint64_t>

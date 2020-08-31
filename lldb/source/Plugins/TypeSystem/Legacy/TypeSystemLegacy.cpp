@@ -1207,6 +1207,45 @@ CompilerType TypeSystemLegacy::GetBasicTypeFromAST(BasicType basic_type) {
   return CompilerType(this, type);
 }
 
+CompilerType
+TypeSystemLegacy::DynGetBaseType(lldb::opaque_compiler_type_t type) const {
+  if (!type)
+    return CompilerType();
+
+  int kind = static_cast<LegacyType *>(type)->GetLegacyKind();
+  if (kind != LegacyType::KIND_DYNAMIC)
+    return CompilerType();
+
+  const auto dyn = static_cast<LegacyDynamic *>(type);
+  return dyn->GetBaseType();
+}
+
+DWARFExpression
+TypeSystemLegacy::DynGetLocation(lldb::opaque_compiler_type_t type) const {
+  if (!type)
+    return DWARFExpression();
+
+  int kind = static_cast<LegacyType *>(type)->GetLegacyKind();
+  if (kind != LegacyType::KIND_DYNAMIC)
+    return DWARFExpression();
+
+  const auto dyn = static_cast<LegacyDynamic *>(type);
+  return dyn->getLocation();
+}
+
+DWARFExpression
+TypeSystemLegacy::DynGetAllocated(lldb::opaque_compiler_type_t type) const {
+  if (!type)
+    return DWARFExpression();
+
+  int kind = static_cast<LegacyType *>(type)->GetLegacyKind();
+  if (kind != LegacyType::KIND_DYNAMIC)
+    return DWARFExpression();
+
+  const auto dyn = static_cast<LegacyDynamic *>(type);
+  return dyn->getAllocated();
+}
+
 lldb::BasicType
 TypeSystemLegacy::GetBasicTypeEnumeration(opaque_compiler_type_t type) {
   return eBasicTypeUnsignedInt;

@@ -23,6 +23,7 @@
 #include "llvm/Support/JSON.h"
 
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
@@ -462,6 +463,14 @@ public:
   virtual CompilerType CreateGenericFunctionPrototype() {
     return CompilerType();
   }
+
+  virtual CompilerType DynGetBaseType(lldb::opaque_compiler_type_t type) const;
+
+  virtual DWARFExpression
+  DynGetLocation(lldb::opaque_compiler_type_t type) const;
+
+  virtual DWARFExpression
+  DynGetAllocated(lldb::opaque_compiler_type_t type) const;
 
   virtual CompilerType
   GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
