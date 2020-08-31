@@ -166,9 +166,37 @@ bool ValueObjectVariable::UpdateValue() {
             sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
                 target);
     }
+
     Value old_value(m_value);
-    if (expr_list.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, nullptr,
-                           nullptr, m_value, &m_error)) {
+    bool success = expr_list.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
+                                 nullptr, nullptr, m_value, &m_error);
+
+    CompilerType comp_type(GetCompilerType());
+    const bool is_dynamic = (comp_type.GetTypeInfo() & lldb::eTypeIsDynamic);
+
+    if (is_dynamic && success) {
+      DWARFExpression alloc_expr = comp_type.DynGetAllocated();
+      Value obj_addr(m_value);
+      Value allocated;
+      if (!alloc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
+                               nullptr, &obj_addr, allocated, &m_error)) {
+        m_error.SetErrorString("dynamic data allocated attribute read error");
+        return m_error.Success();
+      }
+      // check if value allocated
+    }
+
+    if (success) {
+      if (is_dynamic) {
+        DWARFExpression loc_expr = comp_type.DynGetLocation();
+        Value obj_addr(m_value);
+        if (!loc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
+                               nullptr, &obj_addr, m_value, &m_error)) {
+          m_error.SetErrorString("dynamic data location read error");
+          return m_error.Success();
+        }
+      }
+
       m_resolved_value = m_value;
       m_value.SetContext(Value::ContextType::Variable, variable);
 
