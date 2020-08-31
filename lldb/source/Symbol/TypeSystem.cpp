@@ -137,6 +137,21 @@ size_t TypeSystem::GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
   return 0;
 }
 
+CompilerType
+TypeSystem::DynGetBaseType(lldb::opaque_compiler_type_t type) const {
+  return CompilerType();
+}
+
+DWARFExpression
+TypeSystem::DynGetLocation(lldb::opaque_compiler_type_t type) const {
+  return DWARFExpression();
+}
+
+DWARFExpression
+TypeSystem::DynGetAllocated(lldb::opaque_compiler_type_t type) const {
+  return DWARFExpression();
+}
+
 TemplateArgumentKind
 TypeSystem::GetTemplateArgumentKind(opaque_compiler_type_t type, size_t idx,
                                     bool expand_pack) {

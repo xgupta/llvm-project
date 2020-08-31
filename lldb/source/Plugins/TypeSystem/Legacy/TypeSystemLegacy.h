@@ -309,6 +309,17 @@ public:
   lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override;
 
+  /// Dynamic type get base type
+  CompilerType DynGetBaseType(lldb::opaque_compiler_type_t type) const override;
+
+  /// Dynamic type get location expression
+  DWARFExpression
+  DynGetLocation(lldb::opaque_compiler_type_t type) const override;
+
+  /// Dynamic type get allocated expression
+  DWARFExpression
+  DynGetAllocated(lldb::opaque_compiler_type_t type) const override;
+
   uint32_t GetNumFields(lldb::opaque_compiler_type_t type) override {
     // TODO struct members calculation
     return 0;
