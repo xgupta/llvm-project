@@ -384,16 +384,13 @@ public:
   CompilerType AddPtrAuthModifier(uint32_t payload) const;
 
   /// Dynamic type get base type
-  CompilerType DynGetBaseType(TypeSystem *type_system,
-                              lldb::opaque_compiler_type_t type) const;
+  CompilerType DynGetBaseType() const;
 
   /// Dynamic type get location expression
-  DWARFExpression DynGetLocation(TypeSystem *type_system,
-                                 lldb::opaque_compiler_type_t type) const;
+  DWARFExpression DynGetLocation() const;
 
   /// Dynamic type get allocated expression
-  DWARFExpression DynGetAllocated(TypeSystem *type_system,
-                                  lldb::opaque_compiler_type_t type) const;
+  DWARFExpression DynGetAllocated() const;
   /// \}
 
   /// Exploring the type.
