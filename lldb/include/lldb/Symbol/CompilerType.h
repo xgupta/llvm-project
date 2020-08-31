@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Casting.h"
@@ -369,6 +370,18 @@ public:
 
   /// Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) const;
+
+  /// Dynamic type get base type
+  CompilerType DynGetBaseType(TypeSystem *type_system,
+                              lldb::opaque_compiler_type_t type) const;
+
+  /// Dynamic type get location expression
+  DWARFExpression DynGetLocation(TypeSystem *type_system,
+                                 lldb::opaque_compiler_type_t type) const;
+
+  /// Dynamic type get allocated expression
+  DWARFExpression DynGetAllocated(TypeSystem *type_system,
+                                  lldb::opaque_compiler_type_t type) const;
   /// \}
 
   /// Exploring the type.
