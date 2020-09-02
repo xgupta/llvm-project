@@ -183,7 +183,10 @@ bool ValueObjectVariable::UpdateValue() {
         m_error.SetErrorString("dynamic data allocated attribute read error");
         return m_error.Success();
       }
-      // check if value allocated
+      if (allocated.ResolveValue(&exe_ctx).IsZero()) {
+        m_error.SetErrorString("dynamic data not allocated");
+        return false;
+      }
     }
 
     if (success) {
