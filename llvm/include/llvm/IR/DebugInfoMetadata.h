@@ -1216,7 +1216,7 @@ public:
   /// Get allocated expression associated with this derived type.
   ///
   /// Used for dynamic type allocation status
-  Metadata *getAllocated() const { return getRawLocation(); }
+  Metadata *getAllocated() const { return getRawAllocated(); }
   Metadata *getRawAllocated() const { return getOperand(6); }
 
   static bool classof(const Metadata *MD) {
