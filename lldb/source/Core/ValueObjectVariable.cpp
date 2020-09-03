@@ -176,27 +176,31 @@ bool ValueObjectVariable::UpdateValue() {
 
     if (is_dynamic && success) {
       DWARFExpression alloc_expr = comp_type.DynGetAllocated();
-      Value obj_addr(m_value);
-      Value allocated;
-      if (!alloc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
-                               nullptr, &obj_addr, allocated, &m_error)) {
-        m_error.SetErrorString("dynamic data allocated attribute read error");
-        return m_error.Success();
-      }
-      if (allocated.ResolveValue(&exe_ctx).IsZero()) {
-        m_error.SetErrorString("dynamic data not allocated");
-        return false;
+      if (alloc_expr.IsValid()) {
+        Value obj_addr(m_value);
+        Value allocated;
+        if (!alloc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
+                                 nullptr, &obj_addr, allocated, &m_error)) {
+          m_error.SetErrorString("dynamic data allocated attribute read error");
+          return m_error.Success();
+        }
+        if (allocated.ResolveValue(&exe_ctx).IsZero()) {
+          m_error.SetErrorString("dynamic data not allocated");
+          return false;
+        }
       }
     }
 
     if (success) {
       if (is_dynamic) {
         DWARFExpression loc_expr = comp_type.DynGetLocation();
-        Value obj_addr(m_value);
-        if (!loc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
-                               nullptr, &obj_addr, m_value, &m_error)) {
-          m_error.SetErrorString("dynamic data location read error");
-          return m_error.Success();
+        if (loc_expr.IsValid()) {
+          Value obj_addr(m_value);
+          if (!loc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
+                                 nullptr, &obj_addr, m_value, &m_error)) {
+            m_error.SetErrorString("dynamic data location read error");
+            return m_error.Success();
+          }
         }
       }
 
