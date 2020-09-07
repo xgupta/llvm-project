@@ -419,6 +419,14 @@ bool TypeSystemLegacy::IsArrayType(opaque_compiler_type_t type,
       *size = array->GetLength();
     return true;
   }
+
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.IsArrayType(element_type, size, is_incomplete);
+  }
+
   return false;
 }
 
@@ -435,6 +443,14 @@ bool TypeSystemLegacy::IsIntegerType(opaque_compiler_type_t type,
       return true;
     }
   }
+
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.IsIntegerType(is_signed);
+  }
+
   return false;
 }
 
@@ -450,6 +466,13 @@ bool TypeSystemLegacy::IsFloatingPointType(opaque_compiler_type_t type,
       count = 1;
       return true;
     }
+  }
+
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.IsFloatingPointType(count, is_complex);
   }
   return false;
 }
@@ -467,6 +490,11 @@ bool TypeSystemLegacy::IsPointerType(opaque_compiler_type_t type,
   switch (t->GetLegacyKind()) {
   case LegacyType::KIND_PTR:
     return true;
+  case LegacyType::KIND_DYNAMIC: {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.IsPointerType(pointee_type);
+  }
   default:
     return false;
   }
@@ -481,13 +509,28 @@ bool TypeSystemLegacy::IsAggregateType(opaque_compiler_type_t type) {
   case LegacyType::KIND_STRUCT:
   case LegacyType::KIND_ARRAY:
     return true;
+  case LegacyType::KIND_DYNAMIC: {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.IsAggregateType();
+  }
   }
   return false;
 }
 
 bool TypeSystemLegacy::IsCharType(opaque_compiler_type_t type) {
-  return static_cast<LegacyType *>(type)->GetLegacyKind() ==
-         LegacyType::KIND_DISPLAY;
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DISPLAY) {
+    return true;
+  }
+
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.IsCharType();
+  }
+  return false;
 }
 
 bool TypeSystemLegacy::IsFunctionType(opaque_compiler_type_t type,
@@ -500,6 +543,13 @@ bool TypeSystemLegacy::IsFunctionType(opaque_compiler_type_t type,
     if (is_variadic_ptr)
       *is_variadic_ptr = func->IsVariadic();
     return true;
+  }
+
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.IsFunctionType(is_variadic_ptr);
   }
   return false;
 }
@@ -545,6 +595,12 @@ bool TypeSystemLegacy::IsCStringType(opaque_compiler_type_t type,
       length = array->GetLength();
       return true;
     }
+  }
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.IsCStringType(length);
   }
   return false;
 }
@@ -650,6 +706,13 @@ bool TypeSystemLegacy::GetCompleteType(opaque_compiler_type_t type) {
     SymbolFile *symbols = GetSymbolFile();
     return symbols && symbols->CompleteType(compiler_type);
   }
+
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.GetCompleteType();
+  }
   return true;
 }
 
@@ -671,6 +734,13 @@ ConstString TypeSystemLegacy::GetTypeName(opaque_compiler_type_t type) {
                                 std::string(" [") + std::to_string(length) +
                                 std::string("]"));
     return array_type_name;
+  }
+
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.GetTypeName();
   }
   return base_type->GetTypeName();
 }
@@ -718,9 +788,11 @@ TypeSystemLegacy::GetTypeInfo(lldb::opaque_compiler_type_t type,
   case LegacyType::KIND_STRUCT:
     flags = eTypeHasChildren | eTypeIsStructUnion;
     break;
-  case LegacyType::KIND_DYNAMIC:
-    flags = eTypeIsDynamic;
+  case LegacyType::KIND_DYNAMIC: {
+    const auto dyn_base_ty = static_cast<LegacyDynamic *>(type)->GetBaseType();
+    flags = eTypeIsDynamic | (dyn_base_ty.GetTypeInfo());
     break;
+  }
   case LegacyType::KIND_DECIMAL:
   case LegacyType::KIND_DISPLAY:
   case LegacyType::KIND_EDITED:
@@ -1079,6 +1151,11 @@ TypeSystemLegacy::GetBitSize(opaque_compiler_type_t type,
     return m_pointer_byte_size * 8;
   case LegacyType::KIND_STRUCT:
     return base_type->GetStruct()->GetByteSize() * 8;
+  case LegacyType::KIND_DYNAMIC: {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.GetBitSize(exe_scope);
+  }
   }
   return None;
 }
@@ -1103,6 +1180,11 @@ Format TypeSystemLegacy::GetFormat(opaque_compiler_type_t type) {
     return eFormatHex;
   case LegacyType::KIND_ARRAY:
     return eFormatVoid;
+  case LegacyType::KIND_DYNAMIC: {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.GetFormat();
+  }
   default:
     return eFormatBytes;
   }
@@ -1125,6 +1207,13 @@ Encoding TypeSystemLegacy::GetEncoding(opaque_compiler_type_t type,
   if (IsPointerType(type))
     return eEncodingUint;
 
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.GetEncoding(count);
+  }
+
   count = 0;
   return eEncodingInvalid;
 }
@@ -1144,6 +1233,13 @@ uint32_t TypeSystemLegacy::GetNumChildren(opaque_compiler_type_t type,
 
   if (LegacyStruct *struct_type = base_type->GetStruct())
     return struct_type->GetNumMembers();
+
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
+  }
 
   return 0;
 }
@@ -1275,6 +1371,14 @@ CompilerType TypeSystemLegacy::GetFieldAtIndex(opaque_compiler_type_t type,
       return field->m_type;
     }
   }
+
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.GetFieldAtIndex(
+        idx, name, bit_offset_ptr, bitfield_bit_size_ptr, is_bitfield_ptr);
+  }
   // TODO struct
   return CompilerType();
 }
@@ -1351,6 +1455,15 @@ CompilerType TypeSystemLegacy::GetChildCompilerTypeAtIndex(
     child_byte_offset = bit_offset / 8;
     return ret;
   } break;
+  case LegacyType::KIND_DYNAMIC: {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.GetChildCompilerTypeAtIndex(
+        exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+        ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+        child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
+        child_is_deref_of_parent, valobj, language_flags);
+  }
   }
   return CompilerType();
 }
@@ -1376,6 +1489,12 @@ TypeSystemLegacy::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       }
     }
   }
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.GetIndexOfChildWithName(name, omit_empty_base_classes);
+  }
   return UINT32_MAX;
 }
 
@@ -1400,6 +1519,11 @@ lldb::TypeClass TypeSystemLegacy::GetTypeClass(opaque_compiler_type_t type) {
 
   if (kind == LegacyType::KIND_FUNC)
     return eTypeClassFunction;
+
+  if (kind == LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_ty = static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_ty.GetTypeClass();
+  }
 
   switch (kind) {
   case LegacyType::KIND_FUNC:
@@ -1599,6 +1723,12 @@ CompilerType TypeSystemLegacy::GetArrayElementType(opaque_compiler_type_t type,
   LegacyArray *array = static_cast<LegacyType *>(type)->GetArray();
   if (array) {
     return array->GetElementType();
+  }
+  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
+      LegacyType::KIND_DYNAMIC) {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.GetArrayElementType(exe_scope);
   }
   return CompilerType();
 }
@@ -1922,8 +2052,13 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream *s,
     return DumpDataExtractor(data, s, byte_offset, format, byte_size, 1,
                              UINT32_MAX, LLDB_INVALID_ADDRESS,
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
+  case LegacyType::KIND_DYNAMIC: {
+    auto dyn_base_ty = static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_ty.DumpTypeValue(s, format, data, byte_offset, byte_size,
+                                     bitfield_bit_size, bitfield_bit_offset,
+                                     exe_scope);
   }
-
+  }
   Host::SystemLog(Host::eSystemLogError,
                   "Error: DumpTypeValue not handled yet.\n");
   return false;
