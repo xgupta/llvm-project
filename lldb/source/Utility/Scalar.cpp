@@ -502,14 +502,11 @@ bool Scalar::UnaryNegate() {
 }
 
 bool Scalar::ByteSwap() {
-  switch (GetCategory(m_type)) {
-  case Category::Integral:
+  if (m_type == e_int) {
     m_integer = m_integer.byteSwap();
     return true;
-  case Category::Float:
-  case Category::Void:
-    break;
   }
+
   return false;
 }
 
