@@ -7,6 +7,7 @@
 macro(FindPython3)
   # Use PYTHON_HOME as a hint to find Python 3.
   set(Python3_ROOT_DIR "${PYTHON_HOME}")
+  set(Python3_USE_STATIC_LIBS FALSE)
   find_package(Python3 COMPONENTS Interpreter Development)
   if(Python3_FOUND AND Python3_Interpreter_FOUND)
 
