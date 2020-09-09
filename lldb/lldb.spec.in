@@ -24,7 +24,7 @@ disassembler.
 mkdir -p  %{buildroot}/usr/bin/  %{buildroot}/usr/lib64/
 install -m 0755 bin/lldb* %{buildroot}/usr/bin/
 install -m 0744 lib64/liblldb.so.%{version} %{buildroot}/usr/lib64/
-cp -r lib64/python* %{buildroot}/usr/lib64/
+cp -r lib/python* %{buildroot}/usr/lib64/
 cd %{buildroot}/usr/lib64/
 ln -sf liblldb.so.%{version} liblldb.so.@LLVM_VERSION_MAJOR@git
 ln -sf liblldb.so.@LLVM_VERSION_MAJOR@.git  liblldb.so
