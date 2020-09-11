@@ -1527,6 +1527,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_LLVM_extract_bits_sext:
     case dwarf::DW_OP_LLVM_extract_bits_zext:
     case dwarf::DW_OP_RC_byte_swap:
+    case dwarf::DW_OP_RC_resolve_file_address:
     case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus_uconst:
     case dwarf::DW_OP_plus:

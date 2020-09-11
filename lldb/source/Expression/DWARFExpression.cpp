@@ -237,6 +237,7 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
   case DW_OP_call_frame_cfa:       // 0x9c DWARF3
   case DW_OP_stack_value:          // 0x9f DWARF4
   case DW_OP_RC_byte_swap:	   // 0xea RAINCODE extension
+  case DW_OP_RC_resolve_file_address:	   // 0xea RAINCODE extension
   case DW_OP_GNU_push_tls_address: // 0xe0 GNU extension
     return 0;
 
@@ -1183,7 +1184,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
         [[fallthrough]];
       case Value::ValueType::Scalar:
-      case Value::ValueType::LoadAddress:
+      case Value::eValueTypeLoadAddress:
         if (exe_ctx) {
           if (process) {
             lldb::addr_t pointer_addr =
@@ -1465,6 +1466,45 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           if (error_ptr)
             error_ptr->SetErrorString("Byte Swap failed.");
           return false;
+        }
+      }
+      break;
+
+    // OPCODE: DW_OP_RC_resolve_file_address
+    // OPERANDS: none
+    // DESCRIPTION: pops the top stack entry and tries to resolve the file
+    // address to target address for address calculations.
+    case DW_OP_RC_resolve_file_address:
+      if (stack.empty()) {
+        if (error_ptr)
+          error_ptr->SetErrorString(
+              "Expression stack needs at least 1 item for DW_OP_RC_byte_swap.");
+        return false;
+      } else {
+        if (stack.back().GetValueType() == Value::eValueTypeFileAddress) {
+          auto file_addr =
+              stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+          if (!module_sp) {
+            if (error_ptr)
+              error_ptr->SetErrorString(
+                  "need module to resolve file address for DW_OP_deref");
+            return false;
+          }
+          Address so_addr;
+          if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
+            if (error_ptr)
+              error_ptr->SetErrorString(
+                  "failed to resolve file address in module");
+            return false;
+          }
+          addr_t load_Addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
+          if (load_Addr == LLDB_INVALID_ADDRESS) {
+            if (error_ptr)
+              error_ptr->SetErrorString("failed to resolve load address");
+            return false;
+          }
+          stack.back().GetScalar() = load_Addr;
+          stack.back().SetValueType(Value::eValueTypeLoadAddress);
         }
       }
       break;
