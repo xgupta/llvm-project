@@ -1254,10 +1254,13 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
     }
   }
 
+  if (N.getTag() == dwarf::DW_TAG_dynamic_type) {
+    CheckDI(cast<DIExpression>(N.getLocation())->isValid(),
+             "missing data_location attribute in dynamic type", &N);
+  }
   CheckDI(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());
   CheckDI(isType(N.getRawBaseType()), "invalid base type", &N,
-          N.getRawBaseType());
-
+           N.getRawBaseType());
   if (N.getDWARFAddressSpace()) {
     CheckDI(N.getTag() == dwarf::DW_TAG_pointer_type ||
                 N.getTag() == dwarf::DW_TAG_reference_type ||
