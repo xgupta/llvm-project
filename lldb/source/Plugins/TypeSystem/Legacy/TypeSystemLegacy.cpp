@@ -1584,6 +1584,16 @@ CompilerType
 TypeSystemLegacy::CreateDynamicType(const CompilerType &base_type,
                                     const DWARFExpression &dw_location,
                                     const DWARFExpression &dw_allocated) {
+  if (!base_type)
+    return CompilerType();
+
+  LegacyType *type = static_cast<LegacyType *>(base_type.GetOpaqueQualType());
+  if (!type)
+    return CompilerType();
+
+  if (type->GetLegacyKind() == LegacyType::KIND_DYNAMIC)
+    return CompilerType();
+
   LegacyType *dyn_type =
       new LegacyDynamic(base_type, dw_location, dw_allocated);
   return CompilerType(this, dyn_type);
