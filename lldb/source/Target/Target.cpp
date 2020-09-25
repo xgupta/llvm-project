@@ -4821,6 +4821,12 @@ llvm::StringRef TargetProperties::GetTargetCharset() const {
                                                      llvm::StringRef());
 }
 
+bool TargetProperties::GetHideInvalidLegacyFrames() const {
+  const uint32_t idx = ePropertyHideInvalidLegacyFrames;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+}
+
 void TargetProperties::Arg0ValueChangedCallback() {
   m_launch_info.SetArg0(GetArg0());
 }
