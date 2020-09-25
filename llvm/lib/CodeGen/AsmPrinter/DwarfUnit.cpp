@@ -1471,11 +1471,20 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
     if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound)) {
       if (auto *VarDIE = getDIE(BV))
         addDIEEntry(DW_Subrange, Attr, *VarDIE);
-    } else if (auto *BE = dyn_cast_if_present<DIExpression *>(Bound)) {
+    } else if (auto *BE =  dyn_cast_if_present<DIExpression *>(Bound)) {
+      SmallVector<DIE *, 4> refs;
+      if (BE->getNumElements()) {
+        for (const Metadata *ref : BE->operands()) {
+          if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+            ref = DGV->getVariable();
+          }
+          refs.push_back(getDIE((cast<DINode>(ref))));
+        }
+      }
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
       DwarfExpr.setMemoryLocationKind();
-      DwarfExpr.addExpression(BE);
+      DwarfExpr.addExpression(BE, 0, &refs);
       addBlock(DW_Subrange, Attr, DwarfExpr.finalize());
     } else if (auto *BI = dyn_cast_if_present<ConstantInt *>(Bound)) {
       if (Attr == dwarf::DW_AT_count) {
