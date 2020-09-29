@@ -841,7 +841,8 @@ llvm::Error ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
        !m_options.m_allow_oneliner_mode || m_options.m_flat_output ||
        (m_options.m_pointer_as_array) || m_options.m_show_location)
           ? false
-          : DataVisualization::ShouldPrintAsOneLiner(valobj);
+          : ((m_options.m_format == eFormatDefault) &&
+             DataVisualization::ShouldPrintAsOneLiner(valobj));
   if (print_children && IsInstancePointer()) {
     uint64_t instance_ptr_value = valobj.GetValueAsUnsigned(0);
     if (m_printed_instance_pointers->count(instance_ptr_value)) {

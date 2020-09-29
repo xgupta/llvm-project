@@ -1255,19 +1255,15 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
   }
 
   if (N.getTag() == dwarf::DW_TAG_dynamic_type) {
-<<<<<<< HEAD
+    CheckDI(N.getLocation(), "missing data location attribute in dynamic type",
+            &N);
     CheckDI(cast<DIExpression>(N.getLocation())->isValid(),
-             "missing data_location attribute in dynamic type", &N);
-=======
-    CheckDI(N.getLocation(),
-             "missing data location attribute in dynamic type", &N);
-    CheckDI(cast<DIExpression>(N.getLocation())->isValid(),
-             "invalid data location expression in dynamic type", &N);
->>>>>>> 113a00ce4c27 ([LLVM][Verifier] Added debugInfo verifier dynamic type extra checks.)
+            "invalid data location expression in dynamic type", &N);
   }
   CheckDI(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());
   CheckDI(isType(N.getRawBaseType()), "invalid base type", &N,
            N.getRawBaseType());
+
   if (N.getDWARFAddressSpace()) {
     CheckDI(N.getTag() == dwarf::DW_TAG_pointer_type ||
                 N.getTag() == dwarf::DW_TAG_reference_type ||
