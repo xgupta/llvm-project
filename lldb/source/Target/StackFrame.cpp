@@ -1220,6 +1220,10 @@ ValueObjectSP StackFrame::GetValueObjectForFrameAggregateVariable(
   if (!valobj_sp)
     return valobj_sp;
 
+  bool is_complete;
+  if (valobj_sp->GetCompilerType().IsArrayType(nullptr, nullptr, &is_complete))
+    return nullptr;
+
   ValueObjectSP result = valobj_sp->GetChildMemberWithName(name, true);
   if (result)
     return result;
