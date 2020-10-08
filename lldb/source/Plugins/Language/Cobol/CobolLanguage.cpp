@@ -103,7 +103,7 @@ void CobolLanguage::LoadCobolFormatters(lldb::TypeCategoryImplSP category_sp) {
 
   AddCXXSummary(category_sp,
                 lldb_private::formatters::RaincodeStringSummaryProvider,
-                "string summary provider", ConstString("char \\[[0-9]+\\]"),
+                "string summary provider", ConstString("char \\[[0-9]+\\]$"),
                 summary_flags, true);
 }
 
