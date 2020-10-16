@@ -1604,10 +1604,19 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     if (auto *VarDIE = getDIE(Var))
       addDIEEntry(Buffer, dwarf::DW_AT_data_location, *VarDIE);
   } else if (DIExpression *Expr = CTy->getDataLocationExp()) {
+    SmallVector<DIE *, 4> refs;
+    if (Expr->getNumElements()) {
+      for (const Metadata *ref : Expr->operands()) {
+        if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+          ref = DGV->getVariable();
+        }
+        refs.push_back(getDIE((cast<DINode>(ref))));
+      }
+    }
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
     DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
     DwarfExpr.setMemoryLocationKind();
-    DwarfExpr.addExpression(Expr);
+    DwarfExpr.addExpression(Expr, 0, &refs);
     addBlock(Buffer, dwarf::DW_AT_data_location, DwarfExpr.finalize());
   }
 
@@ -1615,10 +1624,19 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     if (auto *VarDIE = getDIE(Var))
       addDIEEntry(Buffer, dwarf::DW_AT_associated, *VarDIE);
   } else if (DIExpression *Expr = CTy->getAssociatedExp()) {
+    SmallVector<DIE *, 4> refs;
+    if (Expr->getNumElements()) {
+      for (const Metadata *ref : Expr->operands()) {
+        if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+          ref = DGV->getVariable();
+        }
+        refs.push_back(getDIE((cast<DINode>(ref))));
+      }
+    }
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
     DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
     DwarfExpr.setMemoryLocationKind();
-    DwarfExpr.addExpression(Expr);
+    DwarfExpr.addExpression(Expr, 0, &refs);
     addBlock(Buffer, dwarf::DW_AT_associated, DwarfExpr.finalize());
   }
 
@@ -1626,10 +1644,19 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     if (auto *VarDIE = getDIE(Var))
       addDIEEntry(Buffer, dwarf::DW_AT_allocated, *VarDIE);
   } else if (DIExpression *Expr = CTy->getAllocatedExp()) {
+    SmallVector<DIE *, 4> refs;
+    if (Expr->getNumElements()) {
+      for (const Metadata *ref : Expr->operands()) {
+        if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+          ref = DGV->getVariable();
+        }
+        refs.push_back(getDIE((cast<DINode>(ref))));
+      }
+    }
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
     DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
     DwarfExpr.setMemoryLocationKind();
-    DwarfExpr.addExpression(Expr);
+    DwarfExpr.addExpression(Expr, 0, &refs);
     addBlock(Buffer, dwarf::DW_AT_allocated, DwarfExpr.finalize());
   }
 
@@ -1637,10 +1664,19 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     addSInt(Buffer, dwarf::DW_AT_rank, dwarf::DW_FORM_sdata,
             RankConst->getSExtValue());
   } else if (auto *RankExpr = CTy->getRankExp()) {
+    SmallVector<DIE *, 4> refs;
+    if (RankExpr->getNumElements()) {
+      for (const Metadata *ref : RankExpr->operands()) {
+        if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+          ref = DGV->getVariable();
+        }
+        refs.push_back(getDIE((cast<DINode>(ref))));
+      }
+    }
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
     DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
     DwarfExpr.setMemoryLocationKind();
-    DwarfExpr.addExpression(RankExpr);
+    DwarfExpr.addExpression(RankExpr, 0, &refs);
     addBlock(Buffer, dwarf::DW_AT_rank, DwarfExpr.finalize());
   }
 
