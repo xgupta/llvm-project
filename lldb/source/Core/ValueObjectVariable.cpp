@@ -181,11 +181,12 @@ bool ValueObjectVariable::UpdateValue() {
         Value allocated;
         if (!alloc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
                                  nullptr, &obj_addr, allocated, &m_error)) {
-          m_error.SetErrorString("dynamic data allocated attribute read error");
+          m_error.SetErrorString(
+              "dynamic variable allocated attribute read error");
           return m_error.Success();
         }
         if (allocated.ResolveValue(&exe_ctx).IsZero()) {
-          m_error.SetErrorString("dynamic data not allocated");
+          m_error.SetErrorString("dynamic variable not allocated");
           return false;
         }
       }
@@ -198,7 +199,7 @@ bool ValueObjectVariable::UpdateValue() {
           Value obj_addr(m_value);
           if (!loc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
                                  nullptr, &obj_addr, m_value, &m_error)) {
-            m_error.SetErrorString("dynamic data location read error");
+            m_error.SetErrorString("dynamic variable location read error");
             return m_error.Success();
           }
         }
