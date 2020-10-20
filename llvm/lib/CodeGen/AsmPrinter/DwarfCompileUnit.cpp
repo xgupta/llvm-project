@@ -951,7 +951,7 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
       }
       Refs.push_back(getDIE((cast<DINode>(ref))));
     }
-    DwarfExpr.addExpression(std::move(Cursor));
+    DwarfExpr.addExpression(std::move(Cursor), 0, &Refs);
   }
   if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
     // According to
