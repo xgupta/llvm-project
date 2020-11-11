@@ -1143,14 +1143,14 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction2(
     LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
     LLVMBool IsLocalToUnit, LLVMBool IsDefinition, unsigned ScopeLine,
     LLVMDIFlags Flags, LLVMBool IsOptimized, LLVMBool IsDescList,
-    LLVMBool IsDescLoc) {
+    LLVMBool IsDescLoc, LLVMMetadataRef StaticLinkExpr) {
   return wrap(unwrap(Builder)->createFunction(
       unwrapDI<DIScope>(Scope), { Name, NameLen },
       { LinkageName, LinkageNameLen }, unwrapDI<DIFile>(File), LineNo,
       unwrapDI<DISubroutineType>(Ty), ScopeLine, map_from_llvmDIFlags(Flags),
       pack_into_DISPFlags(IsLocalToUnit, IsDefinition, IsOptimized, IsDescList,
                           IsDescLoc),
-      nullptr, nullptr, nullptr));
+      nullptr, nullptr, nullptr, unwrapDI<DIExpression>(StaticLinkExpr)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateLexicalBlock(

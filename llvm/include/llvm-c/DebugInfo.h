@@ -411,6 +411,7 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction(
  * \param IsOptimized     True if optimization is ON.
  * \param IsDiscList      True if descriptor of parameters passed by list.
  * \param IsDiscLoc       True if descriptor of parameters passed by locator.
+ * \param StaticLinkExpr  DIExpression for static link.
  */
 LLVMMetadataRef LLVMDIBuilderCreateFunction2(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
@@ -418,7 +419,7 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction2(
     LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
     LLVMBool IsLocalToUnit, LLVMBool IsDefinition, unsigned ScopeLine,
     LLVMDIFlags Flags, LLVMBool IsOptimized, LLVMBool IsDiscList,
-    LLVMBool IsDiscLoc);
+    LLVMBool IsDiscLoc, LLVMMetadataRef StaticLinkExpr);
 
 /**
  * Create a descriptor for a lexical block with the specified parent context.
