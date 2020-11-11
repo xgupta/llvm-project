@@ -927,13 +927,14 @@ DISubprogram *DIBuilder::createFunction(
     DINode::DIFlags Flags, DISubprogram::DISPFlags SPFlags,
     DITemplateParameterArray TParams, DISubprogram *Decl,
     DITypeArray ThrownTypes, DINodeArray Annotations,
-    StringRef TargetFuncName) {
+    StringRef TargetFuncName, DIExpression *StaticLink) {
   bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
   auto *Node = getSubprogram(
       /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
       Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
-      SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl, nullptr,
-      ThrownTypes, Annotations, TargetFuncName);
+      SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl,
+      MDTuple::getTemporary(VMContext, std::nullopt).release(), ThrownTypes,
+      Annotations, TargetFuncName, StaticLink);
 
   if (IsDefinition)
     AllSubprograms.push_back(Node);
@@ -961,7 +962,7 @@ DISubprogram *DIBuilder::createMethod(
     unsigned LineNo, DISubroutineType *Ty, unsigned VIndex, int ThisAdjustment,
     DIType *VTableHolder, DINode::DIFlags Flags,
     DISubprogram::DISPFlags SPFlags, DITemplateParameterArray TParams,
-    DITypeArray ThrownTypes) {
+    DITypeArray ThrownTypes, DIExpression *StaticLink) {
   assert(getNonCompileUnitScope(Context) &&
          "Methods should have both a Context and a context that isn't "
          "the compile unit.");
@@ -971,7 +972,7 @@ DISubprogram *DIBuilder::createMethod(
       /*IsDistinct=*/IsDefinition, VMContext, cast<DIScope>(Context), Name,
       LinkageName, F, LineNo, Ty, LineNo, VTableHolder, VIndex, ThisAdjustment,
       Flags, SPFlags, IsDefinition ? CUNode : nullptr, TParams, nullptr,
-      nullptr, ThrownTypes);
+      nullptr, ThrownTypes, StaticLink);
 
   if (IsDefinition)
     AllSubprograms.push_back(SP);

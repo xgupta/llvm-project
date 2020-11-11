@@ -892,7 +892,8 @@ namespace llvm {
                    DISubprogram *Decl = nullptr,
                    DITypeArray ThrownTypes = nullptr,
                    DINodeArray Annotations = nullptr,
-                   StringRef TargetFuncName = "");
+                   StringRef TargetFuncName = "",
+                   DIExpression *StaticLink = nullptr);
 
     /// Identical to createFunction,
     /// except that the resulting DbgNode is meant to be RAUWed.
@@ -931,7 +932,8 @@ namespace llvm {
                  DINode::DIFlags Flags = DINode::FlagZero,
                  DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
                  DITemplateParameterArray TParams = nullptr,
-                 DITypeArray ThrownTypes = nullptr);
+                 DITypeArray ThrownTypes = nullptr,
+                 DIExpression *StaticLink = nullptr);
 
     /// Create common block entry for a Fortran common block.
     /// \param Scope       Scope of this common block.

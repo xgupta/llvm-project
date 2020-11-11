@@ -1150,7 +1150,7 @@ DISubprogram *DISubprogram::getImpl(
     int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
     Metadata *TemplateParams, Metadata *Declaration, Metadata *RetainedNodes,
     Metadata *ThrownTypes, Metadata *Annotations, MDString *TargetFuncName,
-    StorageType Storage, bool ShouldCreate) {
+    Metadata *StaticLink, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
   assert(isCanonical(TargetFuncName) && "Expected canonical MDString");
@@ -1159,24 +1159,27 @@ DISubprogram *DISubprogram::getImpl(
                          ContainingType, VirtualIndex, ThisAdjustment, Flags,
                          SPFlags, Unit, TemplateParams, Declaration,
                          RetainedNodes, ThrownTypes, Annotations,
-                         TargetFuncName));
+                         TargetFuncName, StaticLink));
   SmallVector<Metadata *, 13> Ops = {
       File,           Scope,          Name,        LinkageName,
       Type,           Unit,           Declaration, RetainedNodes,
       ContainingType, TemplateParams, ThrownTypes, Annotations,
-      TargetFuncName};
-  if (!TargetFuncName) {
-    Ops.pop_back();
-    if (!Annotations) {
+      TargetFuncName, StaticLink};
+  if (!StaticLink) {
+    Ops.pop_back(); 
+    if (!TargetFuncName) {
       Ops.pop_back();
-      if (!ThrownTypes) {
+      if (!Annotations) {
         Ops.pop_back();
-        if (!TemplateParams) {
+        if (!ThrownTypes) {
           Ops.pop_back();
-          if (!ContainingType)
+          if (!TemplateParams) {
             Ops.pop_back();
+            if (!ContainingType)
+              Ops.pop_back();
+          }
         }
-      }
+    }
     }
   }
   DEFINE_GETIMPL_STORE_N(

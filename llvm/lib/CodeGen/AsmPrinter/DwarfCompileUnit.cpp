@@ -546,7 +546,7 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
     case TargetFrameLowering::DwarfFrameBase::Register: {
       if (Register::isPhysicalRegister(FrameBase.Location.Reg)) {
         MachineLocation Location(FrameBase.Location.Reg);
-        addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
+        addAddress(*SPDie, dwarf::DW_AT_frame_base, Location, SP->getStaticLinkExpr());
       }
       break;
     }
@@ -1595,7 +1595,8 @@ void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
 
 /// Add an address attribute to a die based on the location provided.
 void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
-                                  const MachineLocation &Location) {
+                                  const MachineLocation &Location,
+                                  const DIExpression *StaticLink) {
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   if (Location.isIndirect())
@@ -1606,6 +1607,7 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
   if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
     return;
   DwarfExpr.addExpression(std::move(Cursor));
+  DIEDwarfExpression StaticLinkExpr(DwarfExpr);
 
   // Now attach the location information to the DIE.
   addBlock(Die, Attribute, DwarfExpr.finalize());
@@ -1613,6 +1615,19 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
   if (DwarfExpr.TagOffset)
     addUInt(Die, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
             *DwarfExpr.TagOffset);
+
+  if (StaticLink) {
+    SmallVector<DIE*, 4> refs;
+    if (StaticLink->getNumElements()) {
+      for(const Metadata *ref : StaticLink->operands()) {
+        if(auto DGV = dyn_cast<DIGlobalVariableExpression>(ref))
+          ref = DGV->getVariable();
+        refs.push_back(getDIE((cast<DINode>(ref))));
+      }
+    }
+    StaticLinkExpr.addExpression(StaticLink, 0, &refs);
+    addBlock(Die, dwarf::DW_AT_static_link, StaticLinkExpr.finalize());
+  }
 }
 
 /// Start with the address based on the location provided, and generate the

@@ -2031,6 +2031,7 @@ void ModuleBitcodeWriter::writeDISubprogram(const DISubprogram *N,
                                             unsigned Abbrev) {
   const uint64_t HasUnitFlag = 1 << 1;
   const uint64_t HasSPFlagsFlag = 1 << 2;
+  const uint64_t HasStaticLink = 1 << 3;
   Record.push_back(uint64_t(N->isDistinct()) | HasUnitFlag | HasSPFlagsFlag);
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
@@ -2051,6 +2052,7 @@ void ModuleBitcodeWriter::writeDISubprogram(const DISubprogram *N,
   Record.push_back(VE.getMetadataOrNullID(N->getThrownTypes().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawTargetFuncName()));
+  Record.push_back(VE.getMetadataOrNullID(N->getStaticLinkExpr()));
 
   Stream.EmitRecord(bitc::METADATA_SUBPROGRAM, Record, Abbrev);
   Record.clear();
