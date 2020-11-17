@@ -1607,7 +1607,6 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
   if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
     return;
   DwarfExpr.addExpression(std::move(Cursor));
-  DIEDwarfExpression StaticLinkExpr(DwarfExpr);
 
   // Now attach the location information to the DIE.
   addBlock(Die, Attribute, DwarfExpr.finalize());
@@ -1625,8 +1624,14 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
         refs.push_back(getDIE((cast<DINode>(ref))));
       }
     }
-    StaticLinkExpr.addExpression(StaticLink, 0, &refs);
-    addBlock(Die, dwarf::DW_AT_static_link, StaticLinkExpr.finalize());
+    DIELoc *SLELoc = new (DIEValueAllocator) DIELoc;
+    DIEDwarfExpression SLE(*Asm, *this, *SLELoc);
+    SLE.setMemoryLocationKind();
+    if (!SLE.addMachineRegExpression(TRI, Cursor, Location.getReg()))
+      return;
+
+    SLE.addExpression(StaticLink, 0, &refs);
+    addBlock(Die, dwarf::DW_AT_static_link, SLE.finalize());
   }
 }
 

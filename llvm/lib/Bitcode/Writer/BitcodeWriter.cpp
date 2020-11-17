@@ -2031,7 +2031,6 @@ void ModuleBitcodeWriter::writeDISubprogram(const DISubprogram *N,
                                             unsigned Abbrev) {
   const uint64_t HasUnitFlag = 1 << 1;
   const uint64_t HasSPFlagsFlag = 1 << 2;
-  const uint64_t HasStaticLink = 1 << 3;
   Record.push_back(uint64_t(N->isDistinct()) | HasUnitFlag | HasSPFlagsFlag);
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
