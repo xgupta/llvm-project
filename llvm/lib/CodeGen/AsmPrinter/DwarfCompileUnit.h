@@ -348,10 +348,13 @@ public:
   /// MachineLocation.
   void addVariableAddress(const DbgVariable &DV, DIE &Die,
                           MachineLocation Location);
+
+  /// Add DW_AT_static_link attribute for a DISubprogram.
+  void addStaticLink(DIE &Die, const DIExpression *StaticLink);
+
   /// Add an address attribute to a die based on the location provided.
   void addAddress(DIE &Die, dwarf::Attribute Attribute,
-                  const MachineLocation &Location,
-                  const DIExpression *StaticLink = nullptr);
+                  const MachineLocation &Location);
 
   /// Start with the address based on the location provided, and generate the
   /// DWARF information necessary to find the actual variable (navigating the
