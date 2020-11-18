@@ -4772,17 +4772,17 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, DwarfTagField &Result) {
 }
 
 template <>
-bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
                             DwarfDecimalSignField &Result) {
   if (Lex.getKind() == lltok::APSInt)
-    return ParseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+    return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
 
   if (Lex.getKind() != lltok::DwarfDecimalSign)
-    return TokError("expected DWARF Decimal sign");
+    return tokError("expected DWARF Decimal sign");
 
   unsigned DS = dwarf::getDecimalSign(Lex.getStrVal());
   if (DS == dwarf::DW_DS_Invalid)
-    return TokError("invalid DWARF decimal sign" + Twine(" '") +
+    return tokError("invalid DWARF decimal sign" + Twine(" '") +
                     Lex.getStrVal() + "'");
   assert(DS <= Result.Max && "Expected valid DWARF decimal sign");
 
@@ -4792,7 +4792,7 @@ bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
 }
 
 template <>
-bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
                             DwarfMacinfoTypeField &Result) {
   if (Lex.getKind() == lltok::APSInt)
     return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
@@ -5347,7 +5347,7 @@ bool LLParser::parseDIEnumerator(MDNode *&Result, bool IsDistinct) {
 ///                  encoding: DW_ATE_encoding, pic: "picture_string",
 ///                  digits: digit_count, sign: decimal_sign,
 ///                  scale: decimal/binary scale, flags: 0)
-bool LLParser::ParseDIBasicType(MDNode *&Result, bool IsDistinct) {
+bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_base_type));                     \
   OPTIONAL(name, MDStringField, );                                             \
@@ -5909,9 +5909,9 @@ bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
           if ((Op == dwarf::DW_OP_call2) || (Op == dwarf::DW_OP_call4)) {
             MDField offset;
             Lex.Lex();
-            ParseMDField("offset", offset);
+            parseMDField("offset", offset);
             if (!offset.Seen) {
-              return TokError(Twine("expected ref for DWARF op '") +
+              return tokError(Twine("expected ref for DWARF op '") +
                               dwarf::OperationEncodingString(Op) + "'");
             }
             const auto it = llvm::find(Refs, offset.Val);
