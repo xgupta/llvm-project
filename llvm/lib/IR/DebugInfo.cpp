@@ -1348,7 +1348,9 @@ LLVMDIBuilderCreateArrayType2(LLVMDIBuilderRef Builder, uint64_t Size,
                                                  NumSubscripts});
   return wrap(unwrap(Builder)->createArrayType(Size, AlignInBits,
                                                unwrapDI<DIType>(Ty), Subs,
-					       {Name, NameLen}, isVarString));
+                                               nullptr, nullptr, nullptr,
+                                               nullptr, {Name, NameLen},
+                                               isVarString));
 }
 
 LLVMMetadataRef

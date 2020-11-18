@@ -2135,9 +2135,3 @@ PersistentExpressionState *TypeSystemLegacy::GetPersistentExpressionState() {
   return nullptr;
 }
 
-UtilityFunction *TypeSystemLegacy::GetUtilityFunction(const char *text,
-                                                      const char *name) {
-  Host::SystemLog(Host::eSystemLogError,
-                  "Error: UtilityFunction not supported yet.\n");
-  return nullptr;
-}
