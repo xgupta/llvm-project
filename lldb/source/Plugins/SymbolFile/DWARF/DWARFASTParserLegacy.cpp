@@ -530,10 +530,11 @@ Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   int call_line = 0;
   int call_column = 0;
   DWARFExpression frame_base;
+  DWARFExpression static_link;
 
   if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
                                decl_column, call_file, call_line, call_column,
-                               &frame_base)) {
+                               &frame_base, &static_link)) {
     // Union of all ranges in the function DIE (if the function is
     // discontiguous)
     AddressRange func_range;
@@ -575,6 +576,8 @@ Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(CompileUnit &comp_unit,
         if (func_sp.get() != nullptr) {
           if (frame_base.IsValid())
             func_sp->GetFrameBaseExpression() = frame_base;
+          if (static_link.IsValid())
+            func_sp->GetStaticLinkExpression() = static_link;
           comp_unit.AddFunction(func_sp);
           return func_sp.get();
         }
