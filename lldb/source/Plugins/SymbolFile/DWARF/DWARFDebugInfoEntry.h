@@ -114,7 +114,8 @@ public:
                             std::optional<int> &call_file,
                             std::optional<int> &call_line,
                             std::optional<int> &call_column,
-                            DWARFExpressionList *frame_base = nullptr) const;
+                            DWARFExpressionList *frame_base = nullptr,
+      lldb_private::DWARFExpressionList *static_link = nullptr) const;
 
   const llvm::DWARFAbbreviationDeclaration *
   GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const;

@@ -2409,7 +2409,7 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
 
   if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
                                decl_column, call_file, call_line, call_column,
-                               &frame_base)) {
+                               &frame_base, nullptr)) {
     Mangled func_name;
     if (mangled)
       func_name.SetValue(ConstString(mangled));
