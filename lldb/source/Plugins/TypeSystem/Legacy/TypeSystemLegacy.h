@@ -525,9 +525,6 @@ public:
     return nullptr;
   }
 
-  UtilityFunction *GetUtilityFunction(const char *text,
-                                      const char *name) override;
-
   PersistentExpressionState *GetPersistentExpressionState() override;
 
   lldb::LanguageType GetLanguage() const { return m_lang; }
