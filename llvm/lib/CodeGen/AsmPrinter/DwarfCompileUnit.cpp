@@ -546,7 +546,7 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
     case TargetFrameLowering::DwarfFrameBase::Register: {
       if (Register::isPhysicalRegister(FrameBase.Location.Reg)) {
         MachineLocation Location(FrameBase.Location.Reg);
-        addAddress(*SPDie, dwarf::DW_AT_frame_base, Location, SP->getStaticLinkExpr());
+        addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
       }
       break;
     }
@@ -591,6 +591,8 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
   // to have concrete versions of our DW_TAG_subprogram nodes.
   DD->addSubprogramNames(*this, CUNode->getNameTableKind(), SP, *SPDie);
 
+  // Add Static link if exists.
+  addStaticLink(*SPDie, SP->getStaticLinkExpr());
   return *SPDie;
 }
 
@@ -1593,10 +1595,36 @@ void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
     addAddress(Die, dwarf::DW_AT_location, Location);
 }
 
+void DwarfCompileUnit::addStaticLink(DIE &Die,
+                                     const DIExpression *StaticLink) {
+  if (!StaticLink)
+    return;
+
+  DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+  DIEDwarfExpression SLE(*Asm, *this, *Loc);
+  SLE.setMemoryLocationKind();
+
+  DIExpressionCursor Cursor({});
+  const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
+  const auto FrameReg = TRI.getFrameRegister(*Asm->MF);
+  if (!SLE.addMachineRegExpression(TRI, Cursor, FrameReg))
+    return;
+
+  if (StaticLink->getNumElements()) {
+    SmallVector<DIE*, 4> refs;
+    for(const Metadata *ref : StaticLink->operands()) {
+      if(auto DGV = dyn_cast<DIGlobalVariableExpression>(ref))
+        ref = DGV->getVariable();
+      refs.push_back(getDIE((cast<DINode>(ref))));
+    }
+    SLE.addExpression(StaticLink, 0, &refs);
+  }
+  addBlock(Die, dwarf::DW_AT_static_link, SLE.finalize());
+}
+
 /// Add an address attribute to a die based on the location provided.
 void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
-                                  const MachineLocation &Location,
-                                  const DIExpression *StaticLink) {
+                                  const MachineLocation &Location) {
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   if (Location.isIndirect())
@@ -1614,25 +1642,6 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
   if (DwarfExpr.TagOffset)
     addUInt(Die, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
             *DwarfExpr.TagOffset);
-
-  if (StaticLink) {
-    SmallVector<DIE*, 4> refs;
-    if (StaticLink->getNumElements()) {
-      for(const Metadata *ref : StaticLink->operands()) {
-        if(auto DGV = dyn_cast<DIGlobalVariableExpression>(ref))
-          ref = DGV->getVariable();
-        refs.push_back(getDIE((cast<DINode>(ref))));
-      }
-    }
-    DIELoc *SLELoc = new (DIEValueAllocator) DIELoc;
-    DIEDwarfExpression SLE(*Asm, *this, *SLELoc);
-    SLE.setMemoryLocationKind();
-    if (!SLE.addMachineRegExpression(TRI, Cursor, Location.getReg()))
-      return;
-
-    SLE.addExpression(StaticLink, 0, &refs);
-    addBlock(Die, dwarf::DW_AT_static_link, SLE.finalize());
-  }
 }
 
 /// Start with the address based on the location provided, and generate the
