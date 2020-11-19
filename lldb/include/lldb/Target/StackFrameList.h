@@ -42,6 +42,9 @@ public:
   /// Retrieve the stack frame with the given ID \p stack_id.
   lldb::StackFrameSP GetFrameWithStackID(const StackID &stack_id);
 
+  /// Retrieve the stack frame with the given ID \p stack_id.
+  lldb::StackFrameSP GetFrameWithFrameBaseAddr(const lldb::addr_t frame_base);
+
   /// Mark a stack frame as the currently selected frame and return its index.
   uint32_t SetSelectedFrame(lldb_private::StackFrame *frame);
 
