@@ -392,7 +392,7 @@ void ValueObjectPrinter::GetValueSummaryError(std::string &value,
     }
   } else if (IsUninitialized()) {
     summary.assign("<uninitialized>");
-  } else if (m_options.m_omit_summary_depth == 0) {
+  } else if (!skip_summary && (m_options.m_omit_summary_depth == 0)) {
     TypeSummaryImpl *entry = GetSummaryFormatter();
     if (entry) {
       m_valobj->GetSummaryAsCString(entry, summary,
