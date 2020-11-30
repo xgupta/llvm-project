@@ -55,6 +55,7 @@ add_lldb_tool(lldb-server
       lldbPluginInstructionMIPS64
       lldbPluginInstructionRISCV
       ${LLDB_SYSTEM_LIBS}
+      LLVMRuntimeDyld
 
     LINK_COMPONENTS
       Option
