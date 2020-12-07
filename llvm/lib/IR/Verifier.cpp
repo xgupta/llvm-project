@@ -1260,9 +1260,10 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
     CheckDI(cast<DIExpression>(N.getLocation())->isValid(),
             "invalid data location expression in dynamic type", &N);
   }
+  
   CheckDI(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());
   CheckDI(isType(N.getRawBaseType()), "invalid base type", &N,
-           N.getRawBaseType());
+          N.getRawBaseType());
 
   if (N.getDWARFAddressSpace()) {
     CheckDI(N.getTag() == dwarf::DW_TAG_pointer_type ||
