@@ -311,6 +311,8 @@ ValueObjectSP CobolInterpreter::VisitBasicLit(const CobolASTBasicLit *expr) {
                                      value_string.str().c_str());
     return nullptr;
   case CobolLexer::LIT_INTEGER:
+    if (value_string.front() == '+')
+      value_string = value_string.drop_front(1);
     if (value_string.getAsInteger(0, iValue)) {
       m_error.SetErrorStringWithFormat("integer conversion error %s",
                                        value_string.str().c_str());
