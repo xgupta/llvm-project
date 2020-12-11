@@ -263,9 +263,11 @@ static inline uint8_t EncodePackedSign(const uint8_t in) {
   default:
     return in - '0';
   case '-':
+    return 0xD; // preferred
     return 0xB;
   case '+':
   case ' ':
+    return 0xC; // preferred
     return 0xF;
   }
 }
