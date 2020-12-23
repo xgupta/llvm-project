@@ -514,12 +514,8 @@ private:
   AccelTable<AppleAccelTableOffsetData> AccelNamespace;
   AccelTable<AppleAccelTableTypeData> AccelTypes;
 
-  /// Identify a debugger for "tuning" the debug info.
-  ///
-  /// The "tuning" should be used to set defaults for individual feature flags
-  /// in DwarfDebug; if a given feature has a more specific command-line option,
-  /// that option should take precedence over the tuning.
-  DebuggerKind DebuggerTuning = DebuggerKind::Default;
+  // Identify a debugger for "tuning" the debug info.
+  DebuggerKind DebuggerTuning = DebuggerKind::LLDB;
 
   MCDwarfDwoLineTable *getDwoLineTable(const DwarfCompileUnit &);
 
