@@ -141,8 +141,7 @@ public:
   bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
                            bool &is_complex) override;
 
-  bool IsFunctionType(lldb::opaque_compiler_type_t type,
-                      bool *is_variadic_ptr = nullptr) override;
+  bool IsFunctionType(lldb::opaque_compiler_type_t type) override;
 
   size_t
   GetNumberOfFunctionArguments(lldb::opaque_compiler_type_t type) override {
@@ -168,6 +167,10 @@ public:
 
   bool IsEnumerationType(lldb::opaque_compiler_type_t type,
                          bool &is_signed) override {
+    return false;
+  }
+
+  bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override {
     return false;
   }
 
@@ -356,6 +359,9 @@ public:
                            size_t idx) override;
 
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override;
+
+  CompilerType
+  GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,

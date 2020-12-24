@@ -535,23 +535,17 @@ bool TypeSystemLegacy::IsCharType(opaque_compiler_type_t type) {
   return false;
 }
 
-bool TypeSystemLegacy::IsFunctionType(opaque_compiler_type_t type,
-                                      bool *is_variadic_ptr) {
-  if (is_variadic_ptr)
-    *is_variadic_ptr = false;
-
-  if (LegacyFunction *func =
-          static_cast<LegacyFunction *>(type)->GetFunction()) {
-    if (is_variadic_ptr)
-      *is_variadic_ptr = func->IsVariadic();
-    return true;
-  }
-
-  if (static_cast<LegacyType *>(type)->GetLegacyKind() ==
-      LegacyType::KIND_DYNAMIC) {
-    const auto dyn_base_type =
-        static_cast<LegacyDynamic *>(type)->GetBaseType();
-    return dyn_base_type.IsFunctionType(is_variadic_ptr);
+bool TypeSystemLegacy::IsFunctionType(opaque_compiler_type_t type) {
+  switch (static_cast<LegacyType *>(type)->GetLegacyKind()) {
+    default:
+      break;
+    case LegacyType::KIND_FUNC:
+      return true;
+    case LegacyType::KIND_DYNAMIC: {
+      const auto dyn_base_type =
+          static_cast<LegacyDynamic *>(type)->GetBaseType();
+      return dyn_base_type.IsFunctionType();
+    }
   }
   return false;
 }
@@ -1752,6 +1746,11 @@ TypeSystemLegacy::GetMemberFunctionAtIndex(opaque_compiler_type_t type,
 }
 
 CompilerType TypeSystemLegacy::GetCanonicalType(opaque_compiler_type_t type) {
+  return CompilerType(this, type);
+}
+
+CompilerType
+TypeSystemLegacy::GetEnumerationIntegerType(opaque_compiler_type_t type) {
   return CompilerType(this, type);
 }
 
