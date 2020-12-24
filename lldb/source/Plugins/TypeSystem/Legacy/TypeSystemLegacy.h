@@ -556,7 +556,7 @@ public:
     if (target_sp) {
       fromcode.assign(target_sp->GetTargetCharset().str());
       icd = encode ? iconv_open(fromcode.c_str(), "")
-                   : iconv_open("", fromcode.c_str());
+                   : iconv_open("//TRANSLIT //IGNORE", fromcode.c_str());
     }
 #endif
   }
