@@ -664,7 +664,7 @@ CobolUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
       target, result_val_sp->GetValue(), ConstString());
 
   result.reset(new ExpressionVariable(ExpressionVariable::eKindCobol));
-  result->m_live_sp = result->m_frozen_sp = const_res;
+  result->m_live_sp = result->m_frozen_sp = result_val_sp;
   result->m_flags |= ExpressionVariable::EVIsProgramReference;
   PersistentExpressionState *pv =
       target->GetPersistentExpressionStateForLanguage(language);
