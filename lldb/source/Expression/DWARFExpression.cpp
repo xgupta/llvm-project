@@ -1240,7 +1240,7 @@ bool DWARFExpression::Evaluate(
 
         [[fallthrough]];
       case Value::ValueType::Scalar:
-      case Value::eValueTypeLoadAddress:
+      case Value::ValueType::LoadAddress:
         if (exe_ctx) {
           if (process) {
             lldb::addr_t pointer_addr =
@@ -1630,7 +1630,7 @@ bool DWARFExpression::Evaluate(
               "Expression stack needs at least 1 item for DW_OP_RC_byte_swap.");
         return false;
       } else {
-        if (stack.back().GetValueType() == Value::eValueTypeFileAddress) {
+        if (stack.back().GetValueType() == Value::ValueType::FileAddress) {
           auto file_addr =
               stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
           if (!module_sp) {
@@ -1653,7 +1653,7 @@ bool DWARFExpression::Evaluate(
             return false;
           }
           stack.back().GetScalar() = load_Addr;
-          stack.back().SetValueType(Value::eValueTypeLoadAddress);
+          stack.back().SetValueType(Value::ValueType::LoadAddress);
         }
       }
       break;
