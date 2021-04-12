@@ -577,7 +577,11 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
   DD->addSubprogramNames(*this, CUNode->getNameTableKind(), SP, *SPDie);
 
   // Add Static link if exists.
-  addStaticLink(*SPDie, SP->getStaticLinkExpr());
+  addStaticLink(*SPDie, dwarf::DW_AT_static_link, SP->getStaticLinkExpr());
+
+  // Add Static Link recv expression if exists, RC extension
+  addStaticLink(*SPDie, dwarf::DW_AT_RAINCODE_static_link_recv,
+                SP->getStaticLinkRecvExpr());
   return *SPDie;
 }
 
@@ -1574,7 +1578,7 @@ void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
     addAddress(Die, dwarf::DW_AT_location, Location);
 }
 
-void DwarfCompileUnit::addStaticLink(DIE &Die,
+void DwarfCompileUnit::addStaticLink(DIE &Die, dwarf::Attribute attrib,
                                      const DIExpression *StaticLink) {
   if (!StaticLink)
     return;
@@ -1598,7 +1602,7 @@ void DwarfCompileUnit::addStaticLink(DIE &Die,
     }
     SLE.addExpression(StaticLink, 0, &refs);
   }
-  addBlock(Die, dwarf::DW_AT_static_link, SLE.finalize());
+  addBlock(Die, attrib, SLE.finalize());
 }
 
 /// Add an address attribute to a die based on the location provided.

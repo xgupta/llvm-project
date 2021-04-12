@@ -787,6 +787,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   Metadata *Annotations;
   MDString *TargetFuncName;
   Metadata *StaticLinkExpr;
+  Metadata *StaticLinkRecvExpr;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *LinkageName,
                 Metadata *File, unsigned Line, Metadata *Type,
@@ -795,7 +796,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
                 unsigned SPFlags, Metadata *Unit, Metadata *TemplateParams,
                 Metadata *Declaration, Metadata *RetainedNodes,
                 Metadata *ThrownTypes, Metadata *Annotations,
-                MDString *TargetFuncName, Metadata *StaticLinkExpr)
+                MDString *TargetFuncName, Metadata *StaticLinkExpr,
+                Metadata *StaticLinkRecvExpr)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
         Line(Line), Type(Type), ScopeLine(ScopeLine),
         ContainingType(ContainingType), VirtualIndex(VirtualIndex),
@@ -803,7 +805,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
         Unit(Unit), TemplateParams(TemplateParams), Declaration(Declaration),
         RetainedNodes(RetainedNodes), ThrownTypes(ThrownTypes),
         Annotations(Annotations), TargetFuncName(TargetFuncName),
-        StaticLinkExpr(StaticLinkExpr) {}
+        StaticLinkExpr(StaticLinkExpr), StaticLinkRecvExpr(StaticLinkRecvExpr) {}
   MDNodeKeyImpl(const DISubprogram *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
         LinkageName(N->getRawLinkageName()), File(N->getRawFile()),
@@ -818,7 +820,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
         ThrownTypes(N->getRawThrownTypes()),
         Annotations(N->getRawAnnotations()),
         TargetFuncName(N->getRawTargetFuncName(),
-        StaticLinkExpr(N->getRawStaticLinkExpr()) {}
+        StaticLinkExpr(N->getRawStaticLinkExpr(),
+        StaticLinkRecvExpr(N->getRawStaticLinkRecvExpr()) {}
 
   bool isKeyOf(const DISubprogram *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
@@ -836,7 +839,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            ThrownTypes == RHS->getRawThrownTypes() &&
            Annotations == RHS->getRawAnnotations() &&
            TargetFuncName == RHS->getRawTargetFuncName() &&
-           StaticLinkExpr == RHS->getRawStaticLinkExpr();
+           StaticLinkExpr == RHS->getRawStaticLinkExpr() &&
+           StaticLinkRecvExpr == RHS->getRawStaticLinkRecvExpr();
   }
 
   bool isDefinition() const { return SPFlags & DISubprogram::SPFlagDefinition; }
