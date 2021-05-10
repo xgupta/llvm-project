@@ -647,16 +647,14 @@ PLIUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   }
 
   result_val_sp->UpdateValueIfNeeded();
-  ValueObjectSP const_res = ValueObjectConstResult::Create(
-      target, result_val_sp->GetValue(), ConstString());
-
   result.reset(new ExpressionVariable(ExpressionVariable::eKindPLI));
   result->m_live_sp = result->m_frozen_sp = result_val_sp;
   result->m_flags |= ExpressionVariable::EVIsProgramReference;
   PersistentExpressionState *pv =
       target->GetPersistentExpressionStateForLanguage(language);
   if (pv != nullptr) {
-    result->SetName(pv->GetNextPersistentVariableName());
+    if (result_val_sp->GetName().IsEmpty())
+      result->SetName(pv->GetNextPersistentVariableName());
     pv->AddVariable(result);
   }
   return lldb::eExpressionCompleted;
