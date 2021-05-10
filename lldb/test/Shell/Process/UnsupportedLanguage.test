@@ -6,3 +6,10 @@ RUN: %clang_host %t.ll -g -o %t.exe
 RUN: %lldb -o "b main" -o r -o q -b %t.exe 2>&1 | FileCheck %s
 
 CHECK: This version of LLDB has no plugin for the language "assembler"
+=======
+RUN:   | sed -e 's/DW_LANG_C99/DW_LANG_D/g' >%t.ll
+RUN: %clang_host %t.ll -g -o %t.exe
+RUN: %lldb -o "b main" -o r -o q -b %t.exe | FileCheck %s
+
+CHECK: This version of LLDB has no plugin for the d language
+>>>>>>> [LLDB][Test] fixed UnsupportedLanguage test failure.
