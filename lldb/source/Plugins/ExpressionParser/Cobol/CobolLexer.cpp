@@ -15,11 +15,15 @@ using namespace lldb_private;
 using namespace llvm;
 
 const CobolLexer::KeywordMap CobolLexer::m_keywords = {
-    {"&", OP_AMP},    {":", OP_COLON},       {"(", OP_LPAREN}, {"[", OP_LBRACK},
-    {"{", OP_LBRACE}, {")", OP_RPAREN},      {"]", OP_RBRACK}, {"}", OP_RBRACE},
-    {"*", OP_STAR},   {"+", OP_PLUS},        {"-", OP_MINUS},  {".", OP_DOT},
-    {"OF", KW_OF},    {"LENGTH", OP_SIZEOF}, {"=", OP_EQ},     {"MOVE", KW_MV},
-    {"SET", KW_SET},  {"TO", KW_TO},
+    {"&", OP_AMP},      {":", OP_COLON},       {"(", OP_LPAREN},
+    {"[", OP_LBRACK},   {"{", OP_LBRACE},      {")", OP_RPAREN},
+    {"]", OP_RBRACK},   {"}", OP_RBRACE},      {"*", OP_STAR},
+    {"+", OP_PLUS},     {"-", OP_MINUS},       {".", OP_DOT},
+    {"OF", KW_OF},      {"LENGTH", OP_SIZEOF}, {"=", OP_EQ},
+    {"MOVE", KW_MV},    {"SET", KW_SET},       {"TO", KW_TO},
+    {"IF", KW_IF},      {"EQUALS", KW_EQUALS}, {"IS", KW_IS},
+    {"NOT", KW_NOT},    {">", OP_COMP_GT},     {"<", OP_COMP_LT},
+    {">=", OP_COMP_GE}, {"<=", OP_COMP_LE},
 };
 
 CobolLexer::CobolLexer(const char *expr)

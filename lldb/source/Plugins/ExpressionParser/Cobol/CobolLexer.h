@@ -24,6 +24,10 @@ public:
     KW_MV,
     KW_SET,
     KW_TO,
+    KW_IF,
+    KW_IS,
+    KW_EQUALS,
+    KW_NOT,
     LIT_INTEGER,
     LIT_FLOAT,
     LIT_STRING,
@@ -43,6 +47,10 @@ public:
     OP_SIZEOF,
     OP_EQ,
     OP_COMPARE,
+    OP_COMP_GE,
+    OP_COMP_GT,
+    OP_COMP_LE,
+    OP_COMP_LT,
     TOK_EOF,
     TOK_INVALID,
     TOK_IDENTIFIER,
@@ -88,6 +96,8 @@ private:
     case '(':
     case ')':
     case '=':
+    case '>':
+    case '<':
       break;
     }
     return true;
