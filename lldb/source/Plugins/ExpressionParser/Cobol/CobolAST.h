@@ -29,6 +29,7 @@ public:
     eSelectorExpr,
     eFuncCallExpr,
     eAssignmentExpr,
+    eCompareExpr,
   };
 
   virtual ~CobolASTNode() = default;
@@ -280,6 +281,37 @@ private:
   const CobolASTFuncCallExpr &operator=(const CobolASTFuncCallExpr &) = delete;
 };
 
+class CobolASTCompareExpr : public CobolASTExpr {
+public:
+  CobolASTCompareExpr(CobolASTExpr *lhs, CobolASTExpr *rhs,
+                      CobolLexer::CobolLexer::TokenType tt, bool is_not = false)
+      : CobolASTExpr(eCompareExpr), m_lhsExpr(lhs), m_rhsExpr(rhs),
+        m_cmp_op(tt), is_not(is_not) {}
+
+  static bool classof(const CobolASTNode *n) {
+    return n->GetKind() == eCompareExpr;
+  }
+
+  const CobolASTExpr *GetlhsExpr() const { return m_lhsExpr.get(); }
+  void SetlhsExpr(CobolASTExpr *expr) { m_lhsExpr.reset(expr); }
+
+  const CobolASTExpr *GetrhsExpr() const { return m_rhsExpr.get(); }
+  void SetrhsExpr(CobolASTExpr *expr) { m_rhsExpr.reset(expr); }
+
+  CobolLexer::CobolLexer::TokenType GetCmpOp() const { return m_cmp_op; }
+  bool GetIsNot() const { return is_not; }
+  const char *GetKindName() const override { return "compare expression"; }
+
+private:
+  std::unique_ptr<CobolASTExpr> m_lhsExpr;
+  std::unique_ptr<CobolASTExpr> m_rhsExpr;
+  CobolLexer::CobolLexer::TokenType m_cmp_op;
+  const bool is_not;
+
+  CobolASTCompareExpr(const CobolASTCompareExpr &) = delete;
+  const CobolASTCompareExpr &operator=(const CobolASTCompareExpr &) = delete;
+};
+
 class CobolASTAssignmentExpr : public CobolASTExpr {
 public:
   CobolASTAssignmentExpr(CobolASTExpr *lhs, CobolASTExpr *rhs)
@@ -325,6 +357,8 @@ template <typename R, typename V> R CobolASTExpr::Visit(V *v) const {
   case eAssignmentExpr:
     return v->VisitAssignmentExpr(
         llvm::cast<const CobolASTAssignmentExpr>(this));
+  case eCompareExpr:
+    return v->VisitCompareExpr(llvm::cast<const CobolASTCompareExpr>(this));
   }
 }
 

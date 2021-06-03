@@ -539,6 +539,12 @@ CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {
 }
 
 ValueObjectSP
+CobolInterpreter::VisitCompareExpr(const CobolASTCompareExpr *expr) {
+  m_error.SetErrorString("Implementation pending.");
+  return nullptr;
+}
+
+ValueObjectSP
 CobolInterpreter::VisitAssignmentExpr(const CobolASTAssignmentExpr *expr) {
   ValueObjectSP lhsRef = EvaluateExpr(expr->GetlhsExpr());
   if (!lhsRef)

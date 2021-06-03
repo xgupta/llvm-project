@@ -70,6 +70,8 @@ public:
   VisitFuncCallExpr(const lldb_private::CobolASTFuncCallExpr *expr);
   lldb::ValueObjectSP
   VisitAssignmentExpr(const lldb_private::CobolASTAssignmentExpr *expr);
+  lldb::ValueObjectSP
+  VisitCompareExpr(const lldb_private::CobolASTCompareExpr *expr);
 
   void set_use_dynamic(lldb::DynamicValueType use_dynamic) {
     m_use_dynamic = use_dynamic;
