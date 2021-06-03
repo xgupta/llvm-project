@@ -58,7 +58,7 @@ CobolASTExpr *CobolParser::PrimaryExpr() {
   CobolASTExpr *l = Operand();
   CobolASTExpr *r;
   while ((r = Selector(l)) || (r = SelectorOf(l)) || (r = RefModifier(l)) ||
-         (r = Assignment(l)))
+         (r = Assignment(l)) || (r = Compare(l)))
     l = r;
   return l;
 }
@@ -181,6 +181,31 @@ CobolASTExpr *CobolParser::FuncCall(CobolASTExpr *expr) {
     if (!match(CobolLexer::OP_RPAREN))
       return r.error();
     return func;
+  }
+  return nullptr;
+}
+
+CobolASTExpr *CobolParser::Compare(CobolASTExpr *expr) {
+  Rule r("Compare", this);
+  bool is_not = false;
+  if (match(CobolLexer::KW_IS)) {
+    CobolLexer::Token t = next();
+    if (t.m_type == CobolLexer::KW_NOT) {
+      is_not = true;
+      t = next();
+    }
+
+    auto rhsVal = PrimaryExpr();
+    switch (t.m_type) {
+    default:
+      break;
+    case CobolLexer::OP_COMP_GE:
+    case CobolLexer::OP_COMP_GT:
+    case CobolLexer::OP_COMP_LE:
+    case CobolLexer::OP_COMP_LT:
+    case CobolLexer::OP_EQ:
+      return new CobolASTCompareExpr(expr, rhsVal, t.m_type, is_not);
+    }
   }
   return nullptr;
 }
