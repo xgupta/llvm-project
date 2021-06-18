@@ -20,7 +20,8 @@ const PLILexer::KeywordMap PLILexer::m_keywords = {
     {"]", OP_RBRACK}, {"}", OP_RBRACE},   {"*", OP_STAR},
     {"+", OP_PLUS},   {"-", OP_MINUS},    {".", OP_DOT},
     {"OF", KW_OF},    {"STG", OP_SIZEOF}, {"STORAGE", OP_SIZEOF},
-    {"=", OP_EQ}};
+    {"=", OP_EQ}, {">", OP_GT}, {"<", OP_LT}, {">=", OP_GE},
+    {"<=", OP_LE}, {"~", OP_NOT}, {"^", OP_NOT}, {"<>", OP_NE}};
 
 PLILexer::PLILexer(const char *expr)
     : m_start(expr), m_end(expr + strlen(expr)), m_last_token(TOK_INVALID, "") {
