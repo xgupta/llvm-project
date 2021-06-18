@@ -28,10 +28,16 @@ public:
     OP_COLON,
     OP_DOT,
     OP_EQ,
+    OP_GE,
+    OP_GT,
     OP_LPAREN,
     OP_LBRACK,
     OP_LBRACE,
+    OP_LE,
+    OP_LT,
     OP_MINUS,
+    OP_NE,
+    OP_NOT,
     OP_PLUS,
     OP_RPAREN,
     OP_RBRACK,
@@ -84,6 +90,10 @@ private:
     case '(':
     case ')':
     case '=':
+    case '>':
+    case '<':
+    case '~':
+    case '^':
       break;
     }
     return true;
