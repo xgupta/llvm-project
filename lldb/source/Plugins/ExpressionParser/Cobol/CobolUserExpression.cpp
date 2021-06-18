@@ -540,8 +540,34 @@ CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {
 
 ValueObjectSP
 CobolInterpreter::VisitCompareExpr(const CobolASTCompareExpr *expr) {
-  m_error.SetErrorString("Implementation pending.");
-  return nullptr;
+  Value valF(Scalar(0));
+  ValueObjectSP ValFalse = ValueObjectConstResult::Create(
+      m_exe_ctx.GetBestExecutionContextScope(), valF, ConstString(""));
+  TargetSP target = m_exe_ctx.GetTargetSP();
+  if (!target)
+    return ValFalse;
+
+  auto type_sys = target->GetScratchTypeSystemForLanguage(eLanguageTypeCobol85);
+  if (!type_sys)
+    return ValFalse;
+
+  TypeSystemLegacy *legacy_ts =
+      llvm::dyn_cast_or_null<TypeSystemLegacy>(&type_sys.get());
+  if (!legacy_ts)
+    return ValFalse;
+
+  Value valT(Scalar(UINT8_MAX));
+  ValueObjectSP ValTrue = ValueObjectConstResult::Create(
+      m_exe_ctx.GetBestExecutionContextScope(), valT, ConstString(""));
+  ValueObjectSP lhsVal = EvaluateExpr(expr->GetlhsExpr());
+  ValueObjectSP rhsVal = EvaluateExpr(expr->GetrhsExpr());
+  auto lhsCompTy = lhsVal->GetCompilerType();
+  auto rhsCompTy = rhsVal->GetCompilerType();
+  if (lhsCompTy == rhsCompTy) {
+    // TODO
+    return ValTrue;
+  }
+  return ValFalse;
 }
 
 ValueObjectSP
