@@ -972,6 +972,22 @@ size_t DataExtractor::Copy(DataExtractor &dest_data) const {
   return GetByteSize();
 }
 
+bool DataExtractor::Compare(DataExtractor &rhs) {
+  if (rhs.GetByteOrder() != GetByteOrder())
+    return false;
+  if (rhs.GetByteSize() != GetByteSize())
+    return false;
+
+  const uint8_t *lhs_ptr = GetDataStart();
+  const uint8_t *rhs_ptr = rhs.GetDataStart();
+
+  for(uint8_t i = 0; i<GetByteSize(); ++i) {
+    if (lhs_ptr[i] != rhs_ptr[i])
+      return false;
+  }
+  return true;
+}
+
 bool DataExtractor::Append(DataExtractor &rhs) {
   if (rhs.GetByteOrder() != GetByteOrder())
     return false;
