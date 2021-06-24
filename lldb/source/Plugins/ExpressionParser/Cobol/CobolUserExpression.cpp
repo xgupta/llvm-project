@@ -561,11 +561,16 @@ CobolInterpreter::VisitCompareExpr(const CobolASTCompareExpr *expr) {
       m_exe_ctx.GetBestExecutionContextScope(), valT, ConstString(""));
   ValueObjectSP lhsVal = EvaluateExpr(expr->GetlhsExpr());
   ValueObjectSP rhsVal = EvaluateExpr(expr->GetrhsExpr());
+
+  DataExtractor lData, rData;
+  Status error;
+  lhsVal->GetData(lData, error);
+  rhsVal->GetData(rData, error);
   auto lhsCompTy = lhsVal->GetCompilerType();
   auto rhsCompTy = rhsVal->GetCompilerType();
   if (lhsCompTy == rhsCompTy) {
-    // TODO
-    return ValTrue;
+    if (lData.Compare(rData))
+      return ValTrue;
   }
   return ValFalse;
 }
