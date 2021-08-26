@@ -1278,7 +1278,7 @@ private:
     this->RuntimeLang = RuntimeLang;
     DIType::mutate(Tag, Line, SizeInBits, AlignInBits, OffsetInBits, Flags);
   }
-
+/*
   static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, Metadata *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
@@ -1305,14 +1305,14 @@ private:
           Metadata *VTableHolder, Metadata *TemplateParams,
           MDString *Identifier, Metadata *Discriminator, Metadata *DataLocation,
           Metadata *Associated, Metadata *Allocated, Metadata *Rank,
-          StorageType Storage, bool ShouldCreate = true) {
+          Metadata *Annotations, StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                    AlignInBits, OffsetInBits, Flags, VendorDIFlagZero, Elements,
                    RuntimeLang, VTableHolder, TemplateParams, Identifier,
                    Discriminator, DataLocation, Associated, Allocated, Rank, 
-                   None, Storage, ShouldCreate);
+                   Annotations, Storage, ShouldCreate);
   }
-
+*/
   static DICompositeType *getImpl(
       LLVMContext &Context, unsigned Tag, StringRef Name, Metadata *File,
       unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
@@ -1321,14 +1321,15 @@ private:
       DIType *VTableHolder, DITemplateParameterArray TemplateParams,
       StringRef Identifier, DIDerivedType *Discriminator,
       Metadata *DataLocation, Metadata *Associated, Metadata *Allocated, 
-      Metadata *Rank, StorageType Storage, bool ShouldCreate = true) {
+      Metadata *Rank, DINodeArray Annotations, StorageType Storage,
+      bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
                    Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
                    Flags, VFlags, Elements.get(), RuntimeLang, VTableHolder,
                    TemplateParams.get(),
                    getCanonicalMDString(Context, Identifier), Discriminator,
-                   DataLocation, Associated, Allocated, Rank, Storage,
-                   ShouldCreate);
+                   DataLocation, Associated, Allocated, Rank, Annotations.get(),
+                   Storage, ShouldCreate);
   }
 
   static DICompositeType *getImpl(
@@ -1391,11 +1392,12 @@ public:
        DIType *VTableHolder, DITemplateParameterArray TemplateParams = nullptr,
        StringRef Identifier = "", DIDerivedType *Discriminator = nullptr,
        Metadata *DataLocation = nullptr, Metadata *Associated = nullptr,
-       Metadata *Allocated = nullptr, Metadata *Rank = nullptr),
+       Metadata *Allocated = nullptr, Metadata *Rank = nullptr,
+       DINodeArray Annotations = nullptr),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, VFlags, Elements, RuntimeLang, VTableHolder,
        TemplateParams, Identifier, Discriminator, DataLocation,
-       Associated, Allocated, Rank))
+       Associated, Allocated, Rank, Annotations))
   DEFINE_MDNODE_GET(
       DICompositeType,
       (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
@@ -1405,12 +1407,12 @@ public:
        Metadata *VTableHolder, Metadata *TemplateParams = nullptr,
        MDString *Identifier = nullptr, Metadata *Discriminator = nullptr,
        Metadata *DataLocation = nullptr, Metadata *Associated = nullptr,
-       Metadata *Allocated = nullptr, Metadata *Rank = nullptr),
+       Metadata *Allocated = nullptr, Metadata *Rank = nullptr,
+       Metadata *Annotations = nullptr),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, VFlags, Elements, RuntimeLang, VTableHolder,
        TemplateParams, Identifier, Discriminator, DataLocation,
-       Associated, Allocated, Rank))
->>>>>>> Regular squash.
+       Associated, Allocated, Rank, Annotations))
 
   TempDICompositeType clone() const { return cloneImpl(); }
 

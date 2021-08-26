@@ -338,7 +338,8 @@ DIDerivedType *DIBuilder::createDynamicType(DIType *BTy,
                                             DIExpression *Allocated) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_dynamic_type, "", nullptr,
                             0, nullptr, BTy, 0, 0, 0, None, DINode::FlagZero,
-                            nullptr /*ExtraData*/, Location, Allocated);
+                            nullptr /*ExtraData*/, nullptr /*Annotations*/,
+                            Location, Allocated);
 }
 
 DIDerivedType *DIBuilder::createDynamicType(DIType *BTy,
