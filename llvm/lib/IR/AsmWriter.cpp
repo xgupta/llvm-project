@@ -2315,7 +2315,8 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   Printer.printMetadata("annotations", N->getRawAnnotations());
   Printer.printString("targetFuncName", N->getTargetFuncName());
   Printer.printMetadata("staticLink", N->getRawStaticLinkExpr());
-  Printer.printMetadata("staticLinkRecv", N->getRawStaticLinkRecvExpr());
+  // Printer.printMetadata("staticLinkRecv", N->getRawStaticLinkRecvExpr());
+  Printer.printMetadata("rcFrameBase", N->getRawRcFrameBaseExpr());
   Out << ")";
 }
 

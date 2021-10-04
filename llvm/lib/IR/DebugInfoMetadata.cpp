@@ -1150,7 +1150,7 @@ DISubprogram *DISubprogram::getImpl(
     int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
     Metadata *TemplateParams, Metadata *Declaration, Metadata *RetainedNodes,
     Metadata *ThrownTypes, Metadata *Annotations, MDString *TargetFuncName,
-    Metadata *StaticLink, Metadata *StaticLinkRecv,
+    Metadata *StaticLink, Metadata *RcFrameBase,
     StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
@@ -1160,13 +1160,13 @@ DISubprogram *DISubprogram::getImpl(
                          ContainingType, VirtualIndex, ThisAdjustment, Flags,
                          SPFlags, Unit, TemplateParams, Declaration,
                          RetainedNodes, ThrownTypes, Annotations,
-                         TargetFuncName, StaticLink, StaticLinkRecv));
+                         TargetFuncName, StaticLink, RcFrameBase));
   SmallVector<Metadata *, 13> Ops = {
       File,           Scope,          Name,        LinkageName,
       Type,           Unit,           Declaration, RetainedNodes,
       ContainingType, TemplateParams, ThrownTypes, Annotations,
-      TargetFuncName, StaticLink, StaticLinkRecv};
-  if !(StaticLinkRecv) {
+      TargetFuncName, StaticLink, RcFrameBase};
+  if (!RcFrameBase) {
     Ops.pop_back();
     if (!StaticLink) {
       Ops.pop_back(); 

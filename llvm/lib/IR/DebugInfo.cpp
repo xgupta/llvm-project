@@ -1143,14 +1143,17 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction2(
     LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
     LLVMBool IsLocalToUnit, LLVMBool IsDefinition, unsigned ScopeLine,
     LLVMDIFlags Flags, LLVMBool IsOptimized, LLVMBool IsDescList,
-    LLVMBool IsDescLoc, LLVMMetadataRef StaticLinkExpr) {
+    // LLVMBool IsDescLoc, LLVMMetadataRef StaticLinkExpr) {
+    LLVMBool IsDescLoc, LLVMMetadataRef StaticLinkExpr, LLVMMetadataRef RcFrameBaseExpr) {
   return wrap(unwrap(Builder)->createFunction(
       unwrapDI<DIScope>(Scope), { Name, NameLen },
       { LinkageName, LinkageNameLen }, unwrapDI<DIFile>(File), LineNo,
       unwrapDI<DISubroutineType>(Ty), ScopeLine, map_from_llvmDIFlags(Flags),
       pack_into_DISPFlags(IsLocalToUnit, IsDefinition, IsOptimized, IsDescList,
                           IsDescLoc),
-      nullptr, nullptr, nullptr, unwrapDI<DIExpression>(StaticLinkExpr)));
+      // nullptr, nullptr, nullptr, unwrapDI<DIExpression>(StaticLinkExpr)));
+      nullptr, nullptr, nullptr, unwrapDI<DIExpression>(StaticLinkExpr),
+      unwrapDI<DIExpression>(RcFrameBaseExpr)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateLexicalBlock(
@@ -1823,6 +1826,12 @@ LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
                   unwrap<DIScope>(Scope), {Name, NameLen}, ArgNo, unwrap<DIFile>(File),
                   LineNo, unwrap<DIType>(Ty), AlwaysPreserve,
                   map_from_llvmDIFlags(Flags)));
+}
+
+void LLVMDIBuilderUpdateDISubprogramRaincodeFrameBase(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Subprogram, LLVMValueRef Storage) {
+  unwrap(Builder)->updateDISubprogramRaincodeFrameBase(
+                  unwrap<DISubprogram>(Subprogram), unwrap(Storage));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateAutoVariable2(

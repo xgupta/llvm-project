@@ -928,14 +928,15 @@ DISubprogram *DIBuilder::createFunction(
     DINode::DIFlags Flags, DISubprogram::DISPFlags SPFlags,
     DITemplateParameterArray TParams, DISubprogram *Decl,
     DITypeArray ThrownTypes, DINodeArray Annotations,
-    StringRef TargetFuncName, DIExpression *StaticLink) {
+    StringRef TargetFuncName, DIExpression *StaticLink,
+    DIExpression *RcFrameBase) {
   bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
   auto *Node = getSubprogram(
       /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
       Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
       SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl,
       MDTuple::getTemporary(VMContext, std::nullopt).release(), ThrownTypes,
-      Annotations, TargetFuncName, StaticLink);
+      Annotations, TargetFuncName, StaticLink, RcFrameBase);
 
   if (IsDefinition)
     AllSubprograms.push_back(Node);
@@ -1296,4 +1297,14 @@ void DIBuilder::replaceArrays(DICompositeType *&T, DINodeArray Elements,
     trackIfUnresolved(Elements.get());
   if (TParams)
     trackIfUnresolved(TParams.get());
+}
+
+void DIBuilder::updateDISubprogramRaincodeFrameBase(DISubprogram *SP,
+                                                    llvm::Value *Storage) {
+  // nothing to do for now
+  // now I need to convert llvm::Value to a DIExpression, how can I do that
+  // and replace SP->RcFrameBaseExpr
+  // or I can create a DIExpression where I do call on a specific variable
+  // pointing to the raincode frame base maybe
+  SP->replaceRawRcFrameBaseExpr(dyn_cast_or_null<Metadata>(ValueAsMetadata::get(Storage)));
 }

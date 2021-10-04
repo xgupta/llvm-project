@@ -650,6 +650,7 @@ HANDLE_DW_AT(0x2f12, RAINCODE_str_header, 0, RAINCODE)
 HANDLE_DW_AT(0x2f13, RAINCODE_desc_type, 0, RAINCODE)
 HANDLE_DW_AT(0x2f14, RAINCODE_lexical_scope, 0, RAINCODE)
 HANDLE_DW_AT(0x2f15, RAINCODE_static_link_recv, 0, RAINCODE)
+HANDLE_DW_AT(0x2f16, RAINCODE_frame_base, 0, RAINCODE)
 
 // Attribute form encodings.
 HANDLE_DW_FORM(0x01, addr, 2, DWARF)
