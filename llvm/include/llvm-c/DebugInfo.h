@@ -406,7 +406,8 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction2(
     LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
     LLVMBool IsLocalToUnit, LLVMBool IsDefinition, unsigned ScopeLine,
     LLVMDIFlags Flags, LLVMBool IsOptimized, LLVMBool IsDiscList,
-    LLVMBool IsDiscLoc, LLVMMetadataRef StaticLinkExpr);
+    // LLVMBool IsDiscLoc, LLVMMetadataRef StaticLinkExpr);
+    LLVMBool IsDiscLoc, LLVMMetadataRef StaticLinkExpr, LLVMMetadataRef RcFrameBaseExpr);
 
 /**
  * Create a descriptor for a lexical block with the specified parent context.
@@ -1506,6 +1507,9 @@ LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, unsigned ArgNo, LLVMMetadataRef File, unsigned LineNo,
     LLVMMetadataRef Ty, LLVMBool AlwaysPreserve, LLVMDIFlags Flags);
+
+void LLVMDIBuilderUpdateDISubprogramRaincodeFrameBase(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Subprogram, LLVMValueRef Storage);
 
 /**
  * Get the metadata of the subprogram attached to a function.

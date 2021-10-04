@@ -1809,6 +1809,7 @@ class DISubprogram : public DILocalScope {
   unsigned Line;
   unsigned ScopeLine;
   unsigned VirtualIndex;
+  // DIExpression *RcFrameBase;
 
   /// In the MS ABI, the implicit 'this' parameter is adjusted in the prologue
   /// of method overrides from secondary bases by this amount. It may be
@@ -1861,7 +1862,7 @@ private:
           DITemplateParameterArray TemplateParams, DISubprogram *Declaration,
           DINodeArray RetainedNodes, DITypeArray ThrownTypes,
           DINodeArray Annotations, StringRef TargetFuncName,
-          DIExpression *StaticLinkExpr, DIExpression *StaticLinkRecvExpr,
+          DIExpression *StaticLinkExpr, DIExpression *RcFrameBaseExpr,
           StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
@@ -1870,7 +1871,7 @@ private:
                    RetainedNodes.get(), ThrownTypes.get(), Annotations.get(),
                    getCanonicalMDString(Context, TargetFuncName),
                    dyn_cast_or_null<Metadata>(StaticLinkExpr),
-                   dyn_cast_or_null<Metadata>(StaticLinkRecvExpr),
+                   dyn_cast_or_null<Metadata>(RcFrameBaseExpr),
                    Storage, ShouldCreate);
   }
   static DISubprogram *
@@ -1881,7 +1882,7 @@ private:
           Metadata *TemplateParams, Metadata *Declaration,
           Metadata *RetainedNodes, Metadata *ThrownTypes, Metadata *Annotations,
           MDString *TargetFuncName, Metadata *StaticLinkExpr,
-          Metadata *StaticLinkRecvExpr, StorageType Storage,
+          Metadata *RcFrameBaseExpr, StorageType Storage,
           bool ShouldCreate = true);
 
   TempDISubprogram cloneImpl() const {
@@ -1892,7 +1893,7 @@ private:
                         getUnit(), getTemplateParams(), getDeclaration(),
                         getRetainedNodes(), getThrownTypes(), getAnnotations(),
                         getTargetFuncName(), getStaticLinkExpr(),
-                        getStaticLinkRecvExpr());
+                        getRcFrameBaseExpr());
   }
 
 public:
@@ -1906,11 +1907,11 @@ public:
        DISubprogram *Declaration = nullptr, DINodeArray RetainedNodes = nullptr,
        DITypeArray ThrownTypes = nullptr, DINodeArray Annotations = nullptr,
        StringRef TargetFuncName = "", DIExpression *StaticLink = nullptr,
-       DIExpression *StaticLinkRecv = nullptr),
+       DIExpression *RcFrameBase = nullptr),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
        VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
        Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName, StaticLink,
-       StaticLinkRecv))
+       RcFrameBase))
 
   DEFINE_MDNODE_GET(
       DISubprogram,
@@ -1921,11 +1922,11 @@ public:
        Metadata *TemplateParams = nullptr, Metadata *Declaration = nullptr,
        Metadata *RetainedNodes = nullptr, Metadata *ThrownTypes = nullptr,
        Metadata *Annotations = nullptr, MDString *TargetFuncName = nullptr,
-       Metadata *StaticLink = nullptr, Metadata *StaticLinkRecv = nullptr),
+       Metadata *StaticLink = nullptr, Metadata *RcFrameBase = nullptr),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
        VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
        Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName, StaticLink,
-       StaticLinkRecv))
+       RcFrameBase))
 
   TempDISubprogram clone() const { return cloneImpl(); }
 
@@ -2047,8 +2048,11 @@ public:
   DIExpression *getStaticLinkExpr() const {
     return dyn_cast_or_null<DIExpression>(getRawStaticLinkExpr());
   }
-  DIExpression *getStaticLinkRecvExpr() const {
-    return dyn_cast_or_null<DIExpression>(getRawStaticLinkRecvExpr());
+  // DIExpression *getStaticLinkRecvExpr() const {
+  //   return dyn_cast_or_null<DIExpression>(getRawStaticLinkRecvExpr());
+  // }
+  DIExpression *getRcFrameBaseExpr() const {
+    return dyn_cast_or_null<DIExpression>(getRawRcFrameBaseExpr());
   }
 
   Metadata *getRawScope() const { return getOperand(1); }
@@ -2076,7 +2080,11 @@ public:
   Metadata *getRawStaticLinkExpr() const {
     return getNumOperands() > 13 ? getOperandAs<Metadata>(13) : nullptr;
   }
-  Metadata *getRawStaticLinkRecvExpr() const {
+  // Metadata *getRawStaticLinkRecvExpr() const {
+  //   return getNumOperands() > 12 ? getOperandAs<Metadata>(12) : nullptr;
+  // }
+  Metadata *getRawRcFrameBaseExpr() const {
+    // return getNumOperands() > 13 ? getOperandAs<Metadata>(13) : nullptr;
     return getNumOperands() > 12 ? getOperandAs<Metadata>(12) : nullptr;
   }
 
@@ -2085,6 +2093,15 @@ public:
   }
   void replaceRetainedNodes(DINodeArray N) {
     replaceOperandWith(7, N.get());
+  }
+
+  void replaceRawRcFrameBaseExpr(Metadata *RcFrameBaseExpr) {
+    // if (getNumOperands() > 13)
+    //   replaceOperandWith(13, RcFrameBaseExpr);
+    if (getNumOperands() > 12) {
+      // replaceOperandWith(12, RcFrameBaseExpr);      
+      setOperand(12, RcFrameBaseExpr);      
+    }
   }
 
   /// Check if this subprogram describes the given function.
