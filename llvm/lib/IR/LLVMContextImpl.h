@@ -793,7 +793,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   Metadata *Annotations;
   MDString *TargetFuncName;
   Metadata *StaticLinkExpr;
-  Metadata *StaticLinkRecvExpr;
+  // Metadata *StaticLinkRecvExpr;
+  Metadata *RcFrameBaseExpr;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *LinkageName,
                 Metadata *File, unsigned Line, Metadata *Type,
@@ -801,17 +802,31 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
                 unsigned VirtualIndex, int ThisAdjustment, unsigned Flags,
                 unsigned SPFlags, Metadata *Unit, Metadata *TemplateParams,
                 Metadata *Declaration, Metadata *RetainedNodes,
+<<<<<<< HEAD
                 Metadata *ThrownTypes, Metadata *Annotations,
                 MDString *TargetFuncName, Metadata *StaticLinkExpr,
                 Metadata *StaticLinkRecvExpr)
+=======
+                Metadata *ThrownTypes, Metadata *Annotations, Metadata *StaticLinkExpr,
+                // Metadata *StaticLinkRecvExpr)
+                Metadata *RcFrameBaseExpr)
+>>>>>>> 2f17d6c7dcb8 (Added DW_AT_RAINCODE_frame_base)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
         Line(Line), Type(Type), ScopeLine(ScopeLine),
         ContainingType(ContainingType), VirtualIndex(VirtualIndex),
         ThisAdjustment(ThisAdjustment), Flags(Flags), SPFlags(SPFlags),
         Unit(Unit), TemplateParams(TemplateParams), Declaration(Declaration),
         RetainedNodes(RetainedNodes), ThrownTypes(ThrownTypes),
+<<<<<<< HEAD
         Annotations(Annotations), TargetFuncName(TargetFuncName),
         StaticLinkExpr(StaticLinkExpr), StaticLinkRecvExpr(StaticLinkRecvExpr) {}
+=======
+        Annotations(Annotations),
+        // StaticLinkExpr(StaticLinkExpr), StaticLinkRecvExpr(StaticLinkRecvExpr) {
+        StaticLinkExpr(StaticLinkExpr),
+        RcFrameBaseExpr(RcFrameBaseExpr) {
+  }
+>>>>>>> 2f17d6c7dcb8 (Added DW_AT_RAINCODE_frame_base)
   MDNodeKeyImpl(const DISubprogram *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
         LinkageName(N->getRawLinkageName()), File(N->getRawFile()),
@@ -825,9 +840,16 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
         RetainedNodes(N->getRawRetainedNodes()),
         ThrownTypes(N->getRawThrownTypes()),
         Annotations(N->getRawAnnotations()),
+<<<<<<< HEAD
         TargetFuncName(N->getRawTargetFuncName(),
         StaticLinkExpr(N->getRawStaticLinkExpr(),
         StaticLinkRecvExpr(N->getRawStaticLinkRecvExpr()) {}
+=======
+        StaticLinkExpr(N->getRawStaticLinkExpr()),
+        // StaticLinkRecvExpr(N->getRawStaticLinkRecvExpr()) {}
+        RcFrameBaseExpr(N->getRawRcFrameBaseExpr()) {}
+
+>>>>>>> 2f17d6c7dcb8 (Added DW_AT_RAINCODE_frame_base)
 
   bool isKeyOf(const DISubprogram *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
@@ -846,7 +868,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            Annotations == RHS->getRawAnnotations() &&
            TargetFuncName == RHS->getRawTargetFuncName() &&
            StaticLinkExpr == RHS->getRawStaticLinkExpr() &&
-           StaticLinkRecvExpr == RHS->getRawStaticLinkRecvExpr();
+          //  StaticLinkRecvExpr == RHS->getRawStaticLinkRecvExpr();
+           RcFrameBaseExpr == RHS->getRawRcFrameBaseExpr();
   }
 
   bool isDefinition() const { return SPFlags & DISubprogram::SPFlagDefinition; }

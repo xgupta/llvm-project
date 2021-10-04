@@ -1869,7 +1869,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     bool HasAnnotations = false;
     bool HasTargetFuncName = false;
     const bool HasStaticLink = Record.size() >= 22;
-    const bool HasStaticLinkRecv = Record.size() >= 23;
+    // const bool HasStaticLinkRecv = Record.size() >= 23;
+    const bool HasRcFrameBase = Record.size() >= 24;
     unsigned OffsetA = 0;
     unsigned OffsetB = 0;
     if (!HasSPFlags) {
@@ -1913,8 +1914,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                            : nullptr, // targetFuncName
          HasStaticLink ? getMDOrNull(Record[20 + OffsetB])
                        : nullptr                            // StaticLinkExpr
-         HasStaticLinkRecv ? getMDOrNull(Record[20 + OffsetB])
-                           : nullptr // StaticLinkRecvExpr
+        //  HasStaticLinkRecv ? getMDOrNull(Record[20 + OffsetB])
+        //                    : nullptr // StaticLinkRecvExpr
+        HasRcFrameBase ? getMDOrNull(Record[19 + OffsetB])
+                           : nullptr // RcFrameBaseExpr
          ));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;
