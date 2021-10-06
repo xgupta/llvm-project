@@ -580,11 +580,12 @@ bool DWARFDIE::GetDIENamesAndRanges(
     std::optional<int> &decl_column, std::optional<int> &call_file,
     std::optional<int> &call_line, std::optional<int> &call_column,
     lldb_private::DWARFExpressionList *frame_base,
-     lldb_private::DWARFExpressionList *static_link) const {
+    lldb_private::DWARFExpressionList *static_link,
+    lldb_private::DWARFExpressionList *rc_frame_base) const {
   if (IsValid()) {
     return m_die->GetDIENamesAndRanges(
         GetCU(), name, mangled, ranges, decl_file, decl_line, decl_column,
-        call_file, call_line, call_column, frame_base, static_link);
+        call_file, call_line, call_column, frame_base, static_link, rc_frame_base);
   } else
     return false;
 }
