@@ -1211,13 +1211,13 @@ public:
   ///
   /// Used for dynamic type raw data location expression.
   Metadata *getLocation() const { return getRawLocation(); }
-  Metadata *getRawLocation() const { return getOperand(5); }
+  Metadata *getRawLocation() const { return getOperand(6); }
 
   /// Get allocated expression associated with this derived type.
   ///
   /// Used for dynamic type allocation status
   Metadata *getAllocated() const { return getRawAllocated(); }
-  Metadata *getRawAllocated() const { return getOperand(6); }
+  Metadata *getRawAllocated() const { return getOperand(7); }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIDerivedTypeKind;
