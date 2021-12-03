@@ -778,6 +778,18 @@ DWARFExpression CompilerType::DynGetAllocated() const {
   return DWARFExpression();
 }
 
+DWARFExpression CompilerType::DynArrGetCountExp() const {
+  if (IsValid())
+    return m_type_system->DynArrGetCountExp(m_type);
+  return DWARFExpression();
+}
+
+bool CompilerType::DynArrUpdateLength(uint64_t length) {
+  if (IsValid())
+    return m_type_system->DynArrUpdateLength(m_type, length);
+  return false;
+}
+
 // Exploring the type
 
 std::optional<uint64_t>

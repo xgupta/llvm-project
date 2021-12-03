@@ -207,6 +207,29 @@ bool ValueObjectVariable::UpdateValue() {
           m_error.SetErrorString("dynamic variable location read error");
           return m_error.maybe_value();
           }
+          CompilerType base_type = comp_type.DynGetBaseType();
+          bool base_type_is_dyn_arr = (base_type.GetTypeInfo()
+                                       & (lldb::eTypeIsDynamic | lldb::eTypeIsArray));
+          while (base_type_is_dyn_arr) {
+            DWARFExpression count_exp = base_type.DynArrGetCountExp();
+            if (count_exp.IsValid()) {
+              Value length_value;
+              if (!count_exp.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
+                                      nullptr, &obj_addr, length_value, &m_error)) {
+                m_error.SetErrorString("dynamic array count read error");
+                return m_error.Success();
+              }
+              auto m_value = length_value.ResolveValue(&exe_ctx);
+              uint64_t length = m_value.UInt();
+              if (!base_type.DynArrUpdateLength(length)) {
+                m_error.SetErrorString("dynamic array count update error");
+                return m_error.Success();
+              }
+            }
+            base_type = base_type.GetArrayElementType(exe_ctx.GetBestExecutionContextScope());
+            base_type_is_dyn_arr = (base_type.GetTypeInfo()
+                                       & (lldb::eTypeIsDynamic | lldb::eTypeIsArray));
+          }
         }
       }
 
