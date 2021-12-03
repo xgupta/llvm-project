@@ -472,6 +472,12 @@ public:
   virtual DWARFExpression
   DynGetAllocated(lldb::opaque_compiler_type_t type) const;
 
+  virtual DWARFExpression
+  DynArrGetCountExp(lldb::opaque_compiler_type_t type) const;
+
+  virtual bool
+  DynArrUpdateLength(lldb::opaque_compiler_type_t type, uint64_t length);
+
   virtual CompilerType
   GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
                                       size_t bit_size) = 0;

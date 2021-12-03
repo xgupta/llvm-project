@@ -391,6 +391,12 @@ public:
 
   /// Dynamic type get allocated expression
   DWARFExpression DynGetAllocated() const;
+
+  /// Dynamic array type get count expression
+  DWARFExpression DynArrGetCountExp() const;
+
+  /// Dynamic array type update length
+  bool DynArrUpdateLength(uint64_t length);
   /// \}
 
   /// Exploring the type.

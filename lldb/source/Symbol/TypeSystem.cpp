@@ -152,6 +152,20 @@ TypeSystem::DynGetAllocated(lldb::opaque_compiler_type_t type) const {
   return DWARFExpression();
 }
 
+DWARFExpression
+TypeSystem::DynArrGetCountExp(lldb::opaque_compiler_type_t type) const {
+  return DWARFExpression();
+}
+
+bool
+TypeSystem::DynArrUpdateLength(lldb::opaque_compiler_type_t type, uint64_t length) {
+  return false;
+}
+
+size_t TypeSystem::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
+  return 0;
+}
+
 TemplateArgumentKind
 TypeSystem::GetTemplateArgumentKind(opaque_compiler_type_t type, size_t idx,
                                     bool expand_pack) {

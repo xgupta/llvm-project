@@ -273,10 +273,22 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
                 if (num_elements)
                   array_element_bit_stride *= num_elements;
               }
+            } else if (array_info && array_info->element_orders_exp.size() > 0) {
+              auto end = array_info->element_orders_exp.rend();
+              for (auto pos = array_info->element_orders_exp.rbegin(); pos != end;
+                   ++pos) {
+                DWARFExpression num_elements = *pos;
+                compiler_type = m_ast.CreateArrayType(
+                    type_name_const_str, empty_name, array_element_type,
+                    num_elements, isVarString);
+                array_element_type = compiler_type;
+                // if (num_elements)
+                //   array_element_bit_stride *= num_elements;
+              }
             } else
               compiler_type =
                   m_ast.CreateArrayType(type_name_const_str, empty_name,
-                                        array_element_type, 0, isVarString);
+                                        array_element_type, (size_t) 0, isVarString);
 
             type_sp = std::make_shared<Type>(
                 die.GetID(), dwarf, empty_name, array_element_bit_stride / 8,
