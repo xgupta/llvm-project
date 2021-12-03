@@ -1217,6 +1217,20 @@ LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange2(LLVMDIBuilderRef Builder,
                                                  LLVMMetadataRef Count);
 
 /**
+ * Create a descriptor for a value range.
+ * \param Builder    The DIBuilder.
+ * \param Count      DI Node of Count of elements in the subrange.
+ * \param LB         DI Node of Lower Bound of the subrange.
+ * \param UB         DI Node of Upper Bound of the subrange.
+ * \param Stride     DI Node of Stride of the subrange.
+ */
+LLVMMetadataRef  LLVMDIBuilderGetOrCreateSubrange3(LLVMDIBuilderRef Builder,
+                                                  LLVMMetadataRef Count,
+                                                  LLVMMetadataRef LB,
+                                                  LLVMMetadataRef UB,
+                                                  LLVMMetadataRef Stride);
+
+/**
  * Create an array of DI Nodes.
  * \param Builder        The DIBuilder.
  * \param Data           The DI Node elements.

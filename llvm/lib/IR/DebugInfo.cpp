@@ -1869,6 +1869,15 @@ LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange2(LLVMDIBuilderRef Builder,
   return wrap(unwrap(Builder)->getOrCreateSubrange(Lo, unwrap(Count)));
 }
 
+LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange3(LLVMDIBuilderRef Builder,
+                                                 LLVMMetadataRef Count,
+                                                 LLVMMetadataRef LB,
+                                                 LLVMMetadataRef UB,
+                                                 LLVMMetadataRef Stride) {
+  return wrap(unwrap(Builder)->getOrCreateSubrange(unwrap(Count), unwrap(LB),
+                                                   unwrap(UB), unwrap(Stride)));
+}
+
 LLVMMetadataRef LLVMDIBuilderGetOrCreateArray(LLVMDIBuilderRef Builder,
                                               LLVMMetadataRef *Data,
                                               size_t Length) {
