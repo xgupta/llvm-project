@@ -39,6 +39,7 @@ namespace lldb_private {
 class LegacyFunction;
 class LegacyArray;
 class LegacyStruct;
+class LegacyDynamicArray;
 
 class LegacyType {
 public:
@@ -99,6 +100,7 @@ public:
   LegacyFunction *GetFunction();
   LegacyArray *GetArray();
   LegacyStruct *GetStruct();
+  LegacyDynamicArray *GetDynamicArray();
 
 private:
   int m_kind;
@@ -143,6 +145,10 @@ public:
   const ConstString &GetArrayTypeName() const { return m_array_type_name; }
 
   bool isVarString() const { return m_var_string; }
+  virtual bool isDynamic() const { return false; }
+
+protected:
+  void SetLength(uint64_t length) { m_length = length; }
 
 private:
   ConstString m_array_type_name;
@@ -150,6 +156,35 @@ private:
   bool m_var_string;
   LegacyArray(const LegacyArray &) = delete;
   const LegacyArray &operator=(const LegacyArray &) = delete;
+};
+
+class LegacyDynamicArray : public LegacyArray {
+public:
+  LegacyDynamicArray(const ConstString array_type_name, const ConstString &name,
+                     const CompilerType &elem, DWARFExpression count_exp,
+                     bool isVarString = false)
+      : LegacyArray(array_type_name, name, elem, 0, isVarString),
+        m_count_exp(count_exp) {}
+
+  static bool classof(const LegacyType *type) {
+    return type->GetLegacyKind() == LegacyType::KIND_ARRAY
+            && (static_cast<const LegacyArray*>(type)->isDynamic());
+  }
+
+  DWARFExpression GetCountExp() const {
+    return m_count_exp;
+  }
+
+  void UpdateLength(uint64_t length) {
+    SetLength(length);
+  }
+
+  bool isDynamic() const { return true; }
+
+private:
+  const DWARFExpression m_count_exp;
+  LegacyDynamicArray(const LegacyDynamicArray &) = delete;
+  const LegacyDynamicArray &operator=(const LegacyDynamicArray &) = delete;
 };
 
 class LegacyFunction : public LegacyType {
@@ -235,6 +270,15 @@ private:
 LegacyArray *LegacyType::GetArray() {
   if (m_kind == KIND_ARRAY)
     return static_cast<LegacyArray *>(this);
+  return nullptr;
+}
+
+LegacyDynamicArray *LegacyType::GetDynamicArray() {
+  if (m_kind == KIND_ARRAY) {
+    LegacyArray *array = static_cast<LegacyArray *>(this);
+    if (array->isDynamic())
+      return static_cast<LegacyDynamicArray *>(array);
+  }
   return nullptr;
 }
 
@@ -772,6 +816,9 @@ TypeSystemLegacy::GetTypeInfo(lldb::opaque_compiler_type_t type,
     const auto array_type = legacy_type->GetArray();
     if (array_type->isVarString())
       flags |= eTypeIsVarString;
+
+    if (array_type->isDynamic())
+      flags |= eTypeIsDynamic;
 
     // FIXME
     uint32_t length;
@@ -1338,6 +1385,36 @@ TypeSystemLegacy::DynGetAllocated(lldb::opaque_compiler_type_t type) const {
   return dyn->getAllocated();
 }
 
+DWARFExpression
+TypeSystemLegacy::DynArrGetCountExp(lldb::opaque_compiler_type_t type) const {
+  if (!type)
+    return DWARFExpression();
+
+  int kind = static_cast<LegacyType *>(type)->GetLegacyKind();
+  if (kind != LegacyType::KIND_ARRAY
+      || !static_cast<LegacyArray *>(type)->isDynamic())
+    return DWARFExpression();
+
+  const auto dyn_arr = static_cast<LegacyDynamicArray *>(type);
+  return dyn_arr->GetCountExp();
+}
+
+bool
+TypeSystemLegacy::DynArrUpdateLength(lldb::opaque_compiler_type_t type, uint64_t length) {
+  if (!type)
+    return false;
+
+  int kind = static_cast<LegacyType *>(type)->GetLegacyKind();
+  if (kind != LegacyType::KIND_ARRAY
+      || !static_cast<LegacyArray *>(type)->isDynamic())
+    return false;
+
+  const auto dyn_array = static_cast<LegacyDynamicArray *>(type);
+  dyn_array->UpdateLength(length);
+  return true;
+}
+
+
 lldb::BasicType
 TypeSystemLegacy::GetBasicTypeEnumeration(opaque_compiler_type_t type) {
   return eBasicTypeUnsignedInt;
@@ -1573,6 +1650,18 @@ CompilerType TypeSystemLegacy::CreateArrayType(
 
   LegacyType *array_type = new LegacyArray(array_type_name, name, element_type,
                                            element_count, isVarString);
+  return CompilerType(this, array_type);
+}
+
+CompilerType TypeSystemLegacy::CreateArrayType(
+    const ConstString &array_type_name, const ConstString &name,
+    const CompilerType &element_type, DWARFExpression element_count,
+    bool isVarString) {
+  if (!element_type.IsValid())
+    return CompilerType();
+
+  LegacyType *array_type = new LegacyDynamicArray(array_type_name, name, element_type,
+                                                  element_count, isVarString);
   return CompilerType(this, array_type);
 }
 

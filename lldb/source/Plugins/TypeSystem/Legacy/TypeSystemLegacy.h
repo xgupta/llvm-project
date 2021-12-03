@@ -323,6 +323,14 @@ public:
   DWARFExpression
   DynGetAllocated(lldb::opaque_compiler_type_t type) const override;
 
+  /// Dynamic array type get count expression
+  DWARFExpression
+  DynArrGetCountExp(lldb::opaque_compiler_type_t type) const override;
+
+  /// Dynamic array type update length value
+  bool
+  DynArrUpdateLength(lldb::opaque_compiler_type_t type, uint64_t length) override;
+
   uint32_t GetNumFields(lldb::opaque_compiler_type_t type) override {
     // TODO struct members calculation
     return 0;
@@ -397,6 +405,11 @@ public:
                                const ConstString &name,
                                const CompilerType &element_type,
                                size_t element_count, bool isVarString);
+
+  CompilerType CreateArrayType(const ConstString &array_type_name,
+                               const ConstString &name,
+                               const CompilerType &element_type,
+                               DWARFExpression element_count, bool isVarString);
 
   CompilerType CreateDynamicType(const CompilerType &base_type,
                                  const DWARFExpression &dw_location,
