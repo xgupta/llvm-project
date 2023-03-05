@@ -768,7 +768,7 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
               GetLocationExpression(func_load_addr, pc)) {
         return DWARFExpression::Evaluate(
             exe_ctx, reg_ctx, module_sp, *expr, m_dwarf_cu, m_reg_kind,
-            object_address_ptr, stack, result, error_ptr);
+            initial_value_ptr, object_address_ptr, stack, result, error_ptr);
       }
     }
     if (error_ptr)
@@ -778,7 +778,7 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
 
   // Not a location list, just a single expression.
   return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, m_data,
-                                   m_dwarf_cu, m_reg_kind, object_address_ptr,
+                                   m_dwarf_cu, m_reg_kind, initial_value_ptr, object_address_ptr,
                                    stack, result, error_ptr);
 }
 
@@ -906,6 +906,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   }
   if (reg_ctx == nullptr && frame)
     reg_ctx = frame->GetRegisterContext().get();
+
+  if (initial_value_ptr)
+    stack.push_back(*initial_value_ptr);
 
   lldb::offset_t offset = 0;
   Value tmp;
@@ -2166,7 +2169,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       dw_offset_t die_ref_offset =
           opcodes.GetU16(&offset) + dwarf_cu->GetOffset();
       EvaluateCall(exe_ctx, reg_ctx, module_sp, dwarf_cu, die_ref_offset,
-                   reg_kind, object_address_ptr, stack, error_ptr);
+                   reg_kind, initial_value_ptr, object_address_ptr, stack, error_ptr);
     } break;
 
     // OPCODE: DW_OP_call4
@@ -2192,7 +2195,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       dw_offset_t die_ref_offset =
           opcodes.GetU32(&offset) + dwarf_cu->GetOffset();
       EvaluateCall(exe_ctx, reg_ctx, module_sp, dwarf_cu, die_ref_offset,
-                   reg_kind, object_address_ptr, stack, error_ptr);
+                   reg_kind, initial_value_ptr, object_address_ptr, stack, error_ptr);
     } break;
 
     // OPCODE: DW_OP_stack_value
@@ -2421,6 +2424,7 @@ bool DWARFExpression::EvaluateCall(ExecutionContext *exe_ctx,
                                    const DWARFUnit *dwarf_cu,
                                    dw_offset_t die_ref_offset,
                                    const RegisterKind reg_kind,
+                                   const Value *initial_value_ptr,
                                    const Value *object_address_ptr,
                                    std::vector<Value> &stack,
                                    Status *error_ptr) {
@@ -2456,7 +2460,7 @@ bool DWARFExpression::EvaluateCall(ExecutionContext *exe_ctx,
   return Evaluate(
       exe_ctx, reg_ctx, module_sp,
       DataExtractor(ref_debug_info_data, location_offset, location_length),
-      dwarf_cu, reg_kind, object_address_ptr, stack, result, error_ptr, true);
+      dwarf_cu, reg_kind, initial_value_ptr, object_address_ptr, stack, result, error_ptr, true);
 }
 
 static DataExtractor ToDataExtractor(const llvm::DWARFLocationExpression &loc,

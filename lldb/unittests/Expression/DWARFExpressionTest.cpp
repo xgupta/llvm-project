@@ -38,7 +38,7 @@ static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
   std::vector<Value> stack;
   if (!DWARFExpression::Evaluate(exe_ctx, /*reg_ctx*/ nullptr, module_sp,
                                  extractor, unit, lldb::eRegisterKindLLDB,
-                                 /*object_address_ptr*/ nullptr, stack,
+                                 /*object_address_ptr*/ nullptr, nullptr, stack,
                                  result, &status))
     return status.ToError();
 

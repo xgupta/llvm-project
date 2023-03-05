@@ -54,8 +54,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
   if (type_is_new_ptr)
     *type_is_new_ptr = false;
 
-  Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
-                                        DWARF_LOG_LOOKUPS));
+  Log *log(GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups));
   if (die) {
     SymbolFileDWARF *dwarf = die.GetDWARF();
     if (log) {
@@ -527,8 +526,9 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
   return type_sp;
 }
 
-Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(CompileUnit &comp_unit,
-                                                       const DWARFDIE &die) {
+lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
+                                                       const DWARFDIE &die,
+                                                       const lldb_private::AddressRange &func_range) {
   if (die.Tag() != DW_TAG_subprogram)
     return nullptr;
 

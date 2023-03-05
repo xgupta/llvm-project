@@ -342,13 +342,6 @@ DIDerivedType *DIBuilder::createDynamicType(DIType *BTy,
                             Location, Allocated);
 }
 
-DIDerivedType *DIBuilder::createDynamicType(DIType *BTy,
-                                            DIExpression *Location) {
-  return DIDerivedType::get(VMContext, dwarf::DW_TAG_dynamic_type, "", nullptr,
-                            0, nullptr, BTy, 0, 0, 0, None, DINode::FlagZero,
-                            nullptr /*ExtraData*/, Location);
-}
-
 DIDerivedType *
 DIBuilder::createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
                              uint32_t AlignInBits,
@@ -974,7 +967,7 @@ DISubprogram *DIBuilder::createMethod(
       /*IsDistinct=*/IsDefinition, VMContext, cast<DIScope>(Context), Name,
       LinkageName, F, LineNo, Ty, LineNo, VTableHolder, VIndex, ThisAdjustment,
       Flags, SPFlags, IsDefinition ? CUNode : nullptr, TParams, nullptr,
-      nullptr, ThrownTypes, StaticLink);
+      nullptr, ThrownTypes, nullptr, StaticLink);
 
   if (IsDefinition)
     AllSubprograms.push_back(SP);

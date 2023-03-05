@@ -3503,6 +3503,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   DWARFFormValue const_value_form, location_form;
   Variable::RangeList scope_ranges;
   uint8_t lexical_scope = 0;
+  VariableSP var_sp;
+  DWARFDIE spec_die;
 
   for (size_t i = 0; i < attributes.Size(); ++i) {
     dw_attr_t attr = attributes.AttributeAtIndex(i);
@@ -3558,6 +3560,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     case DW_AT_endianity:
     case DW_AT_segment:
     case DW_AT_specification:
+      spec_die = form_value.Reference();
+      break;
     case DW_AT_visibility:
     default:
     case DW_AT_abstract_origin:
@@ -3759,6 +3763,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   GetDIEToVariable()[die.GetDIE()] = var_sp;
   if (spec_die)
     GetDIEToVariable()[spec_die.GetDIE()] = var_sp;
+  return var_sp;
 }
 
 DWARFDIE

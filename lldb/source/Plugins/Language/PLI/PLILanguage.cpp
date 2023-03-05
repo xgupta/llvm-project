@@ -37,15 +37,15 @@ void PLILanguage::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString PLILanguage::GetPluginNameStatic() {
-  static ConstString g_name("PLI");
+llvm::StringRef PLILanguage::GetPluginNameStatic() {
+  static llvm::StringRef g_name("PLI");
   return g_name;
 }
 
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------
-lldb_private::ConstString PLILanguage::GetPluginName() {
+llvm::StringRef PLILanguage::GetPluginName() {
   return GetPluginNameStatic();
 }
 
@@ -66,7 +66,7 @@ lldb::TypeCategoryImplSP PLILanguage::GetFormatters() {
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {
-    DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
+    DataVisualization::Categories::GetCategory(ConstString(GetPluginName()), g_category);
     if (g_category) {
       LoadPLIFormatters(g_category);
     }

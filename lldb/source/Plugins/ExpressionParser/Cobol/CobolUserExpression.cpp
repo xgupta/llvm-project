@@ -358,7 +358,7 @@ ValueObjectSP CobolInterpreter::VisitBasicLit(const CobolASTBasicLit *expr) {
   uint8_t addr_size = target->GetArchitecture().GetAddressByteSize();
 
   DataBufferSP buffer(new DataBufferHeap(data_length, 0));
-  DataEncoder enc(buffer, byte_order, addr_size);
+  DataEncoder enc(buffer->GetBytes(), data_length, byte_order, addr_size);
   enc.PutData(0, data_ptr, data_length);
   DataExtractor data(buffer, byte_order, addr_size);
 
@@ -517,7 +517,7 @@ CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {
   if (!param)
     return nullptr;
 
-  auto data_size = param->GetByteSize();
+  uint32_t data_size = param->GetByteSize().getValue();
   DataBufferSP buffer(new DataBufferHeap(sizeof(data_size), 0));
   TargetSP target = m_exe_ctx.GetTargetSP();
   if (!target)
@@ -529,7 +529,7 @@ CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {
 
   ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
   uint8_t addr_size = target->GetArchitecture().GetAddressByteSize();
-  DataEncoder enc(buffer, byte_order, addr_size);
+  DataEncoder enc(buffer->GetBytes(), data_size, byte_order, addr_size);
   enc.PutData(0, &data_size, sizeof(uint64_t));
   DataExtractor data(buffer, byte_order, addr_size);
 

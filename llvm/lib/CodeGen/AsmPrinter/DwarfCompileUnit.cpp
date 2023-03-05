@@ -1710,7 +1710,6 @@ void DwarfCompileUnit::applyCommonDbgVariableAttributes(const DbgVariable &Var,
 	      dwarf::DW_FORM_udata, LexicalScope);
   }
     addAnnotation(VariableDie, DIVar->getAnnotations());
-  }
 
   addSourceLine(VariableDie, DIVar);
   addType(VariableDie, Var.getType());

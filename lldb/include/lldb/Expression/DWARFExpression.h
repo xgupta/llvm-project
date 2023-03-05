@@ -135,15 +135,18 @@ public:
   ///     details of the failure are provided through it.
   static llvm::Expected<Value>
   Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
-           lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-           const plugin::dwarf::DWARFUnit *dwarf_cu,
-           const lldb::RegisterKind reg_set, const Value *initial_value_ptr,
-           const Value *object_address_ptr, std::vector<Value> &stack, bool expression_call = false);
+                       lldb::ModuleSP module_sp, const DataExtractor &opcodes,
+                       const plugin::dwarf::DWARFUnit *dwarf_cu,
+                       const lldb::RegisterKind reg_set,
+                       const Value *initial_value_ptr,
+                       const Value *object_address_ptr,
+                       std::vector<Value> &stack, bool expression_call = false);
 
   static bool EvaluateCall(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
                            lldb::ModuleSP module_sp, const DWARFUnit *dwarf_cu,
                            dw_offset_t die_ref_offset,
                            const lldb::RegisterKind reg_set,
+                           const Value *initial_value_ptr,
                            const Value *object_address_ptr,
                            std::vector<Value> &stack, Status *error_ptr);
 
