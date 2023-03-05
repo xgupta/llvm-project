@@ -56,11 +56,11 @@ public:
   //------------------------------------------------------------------
   // PluginInterface functions
   //------------------------------------------------------------------
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override;
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic();
 
-  uint32_t GetPluginVersion() override;
+  uint32_t GetPluginVersion();
 
   DWARFASTParser *GetDWARFParser() override;
 
@@ -543,7 +543,7 @@ public:
     assert(0);
     return nullptr;
   }
-
+  void Dump(llvm::raw_ostream &output) override {}
   PersistentExpressionState *GetPersistentExpressionState() override;
 
   lldb::LanguageType GetLanguage() const { return m_lang; }

@@ -36,15 +36,15 @@ void CobolLanguage::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString CobolLanguage::GetPluginNameStatic() {
-  static ConstString g_name("Cobol");
+llvm::StringRef CobolLanguage::GetPluginNameStatic() {
+  static llvm::StringRef g_name("Cobol");
   return g_name;
 }
 
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------
-lldb_private::ConstString CobolLanguage::GetPluginName() {
+llvm::StringRef CobolLanguage::GetPluginName() {
   return GetPluginNameStatic();
 }
 
@@ -64,7 +64,7 @@ lldb::TypeCategoryImplSP CobolLanguage::GetFormatters() {
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {
-    DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
+    DataVisualization::Categories::GetCategory(ConstString(GetPluginName()), g_category);
     if (g_category) {
       LoadCobolFormatters(g_category);
     }
@@ -111,6 +111,9 @@ bool formatters::RaincodeStringSummaryProvider(ValueObject &valobj,
                                                Stream &stream,
                                                const TypeSummaryOptions &opts) {
   ProcessSP process_sp = valobj.GetProcessSP();
+  TargetSP target_sp = valobj.GetTargetSP();
+  if (!target_sp)
+    return false;
   if (!process_sp)
     return false;
 
@@ -133,7 +136,7 @@ bool formatters::RaincodeStringSummaryProvider(ValueObject &valobj,
   lldb::DataBufferSP buffer_sp(new DataBufferHeap(length, 0));
   char *buffer = reinterpret_cast<char *>(buffer_sp->GetBytes());
 
-  process_sp->ReadStringFromMemory(valobj_addr, buffer, length, error, 1);
+  target_sp->ReadStringFromMemory(valobj_addr, buffer, length, error, 1);
 
   // this is for PLI var string.
   const Flags type_flags(valobj.GetTypeInfo());

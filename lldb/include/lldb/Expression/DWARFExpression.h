@@ -137,6 +137,7 @@ public:
                        lldb::ModuleSP module_sp, const DataExtractor &opcodes,
                        const plugin::dwarf::DWARFUnit *dwarf_cu,
                        const lldb::RegisterKind reg_set,
+                       const Value *initial_value_ptr,
                        const Value *object_address_ptr,
                        std::vector<Value> &stack, Value &result,
                        Status *error_ptr, bool expression_call = false);
@@ -145,6 +146,7 @@ public:
                            lldb::ModuleSP module_sp, const DWARFUnit *dwarf_cu,
                            dw_offset_t die_ref_offset,
                            const lldb::RegisterKind reg_set,
+                           const Value *initial_value_ptr,
                            const Value *object_address_ptr,
                            std::vector<Value> &stack, Status *error_ptr);
 

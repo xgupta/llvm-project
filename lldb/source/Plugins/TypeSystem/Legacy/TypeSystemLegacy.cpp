@@ -1854,11 +1854,11 @@ TypeSystemLegacy::~TypeSystemLegacy() {}
 //------------------------------------------------------------------
 
 uint32_t TypeSystemLegacy::GetPluginVersion() { return 1; }
-ConstString TypeSystemLegacy::GetPluginNameStatic() {
-  return ConstString("legacy");
+llvm::StringRef TypeSystemLegacy::GetPluginNameStatic() {
+  return llvm::StringRef("legacy");
 }
 
-ConstString TypeSystemLegacy::GetPluginName() {
+llvm::StringRef TypeSystemLegacy::GetPluginName() {
   return TypeSystemLegacy::GetPluginNameStatic();
 }
 

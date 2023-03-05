@@ -1147,7 +1147,7 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction2(
       pack_into_DISPFlags(IsLocalToUnit, IsDefinition, IsOptimized, IsDescList,
                           IsDescLoc),
       // nullptr, nullptr, nullptr, unwrapDI<DIExpression>(StaticLinkExpr)));
-      nullptr, nullptr, nullptr, unwrapDI<DIExpression>(StaticLinkExpr),
+      nullptr, nullptr, nullptr, nullptr, unwrapDI<DIExpression>(StaticLinkExpr),
       unwrapDI<DIExpression>(RcFrameBaseExpr)));
 }
 
