@@ -3727,7 +3727,7 @@ private:
   TempDILocalVariable cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getFile(),
                         getLine(), getType(), getArg(), getFlags(),
-                        getAlignInBits());
+                        getAlignInBits(), getAnnotations());
   }
 
 public:
@@ -3736,40 +3736,38 @@ public:
                      unsigned Line, DIType *Type, unsigned Arg, DIFlags Flags,
                      uint32_t AlignInBits, DINodeArray Annotations),
                     (Scope, Name, File, Line, Type, Arg, 0, Flags, VarFlagZero,
-		     AlignInBits,
-                     Annotations))
+		                 AlignInBits, Annotations))
   DEFINE_MDNODE_GET(DILocalVariable,
                     (Metadata * Scope, MDString *Name, Metadata *File,
                      unsigned Line, Metadata *Type, unsigned Arg, DIFlags Flags,
                      uint32_t AlignInBits, Metadata *Annotations),
                     (Scope, Name, File, Line, Type, Arg, 0, Flags, VarFlagZero,
-		     AlignInBits))
+		                 AlignInBits, Annotations))
   DEFINE_MDNODE_GET(DILocalVariable,
                     (DILocalScope * Scope, StringRef Name, DIFile *File,
                      unsigned Line, DIType *Type, unsigned Arg, DIFlags Flags,
-                     DIVarFlags VarFlags, uint32_t AlignInBits),
+                     DIVarFlags VarFlags, uint32_t AlignInBits, DINodeArray Annotations),
                     (Scope, Name, File, Line, Type, Arg, 0, Flags, VarFlags,
-		     AlignInBits))
+		                 AlignInBits, Annotations))
   DEFINE_MDNODE_GET(DILocalVariable,
                     (Metadata * Scope, MDString *Name, Metadata *File,
                      unsigned Line, Metadata *Type, unsigned Arg,
-                     DIFlags Flags, DIVarFlags VarFlags, uint32_t AlignInBits),
+                     DIFlags Flags, DIVarFlags VarFlags, uint32_t AlignInBits, Metadata *Annotations),
                     (Scope, Name, File, Line, Type, Arg, 0, Flags, VarFlags,
-		     AlignInBits))
+		                 AlignInBits, Annotations))
   DEFINE_MDNODE_GET(DILocalVariable,
                     (DILocalScope * Scope, StringRef Name, DIFile *File,
                      unsigned Line, DIType *Type, unsigned Arg, unsigned LexScope,
-                     DIFlags Flags, DIVarFlags VarFlags, uint32_t AlignInBits),
+                     DIFlags Flags, DIVarFlags VarFlags, uint32_t AlignInBits, DINodeArray Annotations),
                     (Scope, Name, File, Line, Type, Arg, LexScope, Flags,
-		     VarFlags, AlignInBits))
+		                 VarFlags, AlignInBits, Annotations))
   DEFINE_MDNODE_GET(DILocalVariable,
                     (Metadata * Scope, MDString *Name, Metadata *File,
                      unsigned Line, Metadata *Type, unsigned Arg,
                      unsigned LexScope, DIFlags Flags, DIVarFlags VarFlags,
-                     uint32_t AlignInBits),
+                     uint32_t AlignInBits, Metadata *Annotations),
                     (Scope, Name, File, Line, Type, Arg, LexScope, Flags,
-		     VarFlags, AlignInBits,
-                     Annotations))
+		                 VarFlags, AlignInBits, Annotations))
 
   TempDILocalVariable clone() const { return cloneImpl(); }
 

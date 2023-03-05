@@ -830,26 +830,6 @@ namespace llvm {
                             DILocalVariable::DIVarFlags VarFlags = DILocalVariable::VarFlagZero,
                             DINodeArray Annotations = nullptr);
 
-    /// Create a new descriptor for a parameter variable.
-    ///
-    /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
-    /// leads to a \a DISubprogram.
-    ///
-    /// \c ArgNo is the index (starting from \c 1) of this variable in the
-    /// subprogram parameters.  \c ArgNo should not conflict with other
-    /// parameters of the same subprogram.
-    ///
-    /// If \c AlwaysPreserve, this variable will be referenced from its
-    /// containing subprogram, and will survive some optimizations.
-    DILocalVariable *
-    createParameterVariable2(DIScope *Scope, StringRef Name, unsigned ArgNo,
-                            unsigned LexicalScope, DIFile *File,
-                            unsigned LineNo, DIType *Ty,
-                            bool AlwaysPreserve = false,
-                            DINode::DIFlags Flags = DINode::FlagZero,
-                            DILocalVariable::DIVarFlags VarFlags = DILocalVariable::VarFlagZero,
-                            DINodeArray Annotations = nullptr);
-
     /// Create a new descriptor for the specified
     /// variable which has a complex address expression for its address.
     /// \param Addr        An array of complex address operations.

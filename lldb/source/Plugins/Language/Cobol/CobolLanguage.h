@@ -47,16 +47,16 @@ public:
 
   static lldb_private::Language *CreateInstance(lldb::LanguageType language);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic();
 
   static void LoadCobolFormatters(lldb::TypeCategoryImplSP category_sp);
 
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------
-  ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override;
 
-  uint32_t GetPluginVersion() override;
+  uint32_t GetPluginVersion();
 };
 
 namespace formatters {

@@ -2476,9 +2476,6 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
                               AsmWriterContext &WriterCtx) {
   Out << "!DIExpression(";
   FieldSeparator FS;
-  MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
-  // FixMe
-  Printer.FS.Skip = false;
   if (N->isValid()) {
     for (const DIExpression::ExprOperand &Op : N->expr_ops()) {
       auto OpStr = dwarf::OperationEncodingString(Op.getOp());

@@ -484,7 +484,7 @@ static bool isMemoryLocation(DIExpressionCursor ExprCursor) {
 
 void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
                                     unsigned FragmentOffsetInBits,
-                                    SmallVectorImpl<DIE*> *DIERefOffset,) {
+                                    SmallVectorImpl<DIE*> *DIERefOffset) {
   addExpression(std::move(ExprCursor),
                 [](unsigned Idx, DIExpressionCursor &Cursor) -> bool {
                   llvm_unreachable("unhandled opcode found in expression");

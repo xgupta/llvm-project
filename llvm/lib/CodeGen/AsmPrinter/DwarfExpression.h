@@ -294,17 +294,13 @@ public:
 
   /// Emit all remaining operations in the DIExpressionCursor. The
   /// cursor must not contain any DW_OP_LLVM_arg operations.
-  void addExpression(DIExpressionCursor &&Expr);
-
-  /// Emit all remaining operations in the DIExpressionCursor.
-  ///
   /// \param FragmentOffsetInBits     If this is one fragment out of multiple
   ///                                 locations, this is the offset of the
   ///                                 fragment inside the entire variable.
   void addExpression(DIExpressionCursor &&Expr,
                      unsigned FragmentOffsetInBits = 0,
                      SmallVectorImpl<DIE*> *DIERefOffset = nullptr);
-  void
+  bool
   addExpression(DIExpressionCursor &&Expr,
                 llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg,
                 SmallVectorImpl<DIE*> *DIERefOffset = nullptr);

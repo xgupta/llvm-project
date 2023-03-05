@@ -1913,10 +1913,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          HasTargetFuncName ? getMDString(Record[19 + OffsetB])
                            : nullptr, // targetFuncName
          HasStaticLink ? getMDOrNull(Record[20 + OffsetB])
-                       : nullptr                            // StaticLinkExpr
-        //  HasStaticLinkRecv ? getMDOrNull(Record[20 + OffsetB])
-        //                    : nullptr // StaticLinkRecvExpr
-        HasRcFrameBase ? getMDOrNull(Record[19 + OffsetB])
+                       : nullptr,  // StaticLinkExpr
+        HasRcFrameBase ? getMDOrNull(Record[21 + OffsetB])
                            : nullptr // RcFrameBaseExpr
          ));
     MetadataList.assignValue(SP, NextMetadataNo);
