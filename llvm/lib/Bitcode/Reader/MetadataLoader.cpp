@@ -1582,7 +1582,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_DERIVED_TYPE: {
-    if (Record.size() < 12 || Record.size() > 15)
+    if (Record.size() < 12 || Record.size() > 16)
       return error("Invalid record");
 
     // DWARF address space is encoded as N->getDWARFAddressSpace() + 1. 0 means
@@ -1597,11 +1597,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // Only look for annotations/ptrauth if both are allocated.
     // If not, we can't tell which was intended to be embedded, as both ptrauth
     // and annotations have been expected at Record[13] at various times.
-    if (Record.size() > 15) {
-      if (Record[14])
-        Annotations = getMDOrNull(Record[14]);
+    if (Record.size() > 16) {
       if (Record[15])
-        PtrAuthData.emplace(Record[15]);
+        Annotations = getMDOrNull(Record[15]);
+      if (Record[16])
+        PtrAuthData.emplace(Record[16]);
     }
 
     IsDistinct = Record[0] & 0x1;
