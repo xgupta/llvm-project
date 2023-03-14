@@ -1575,7 +1575,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_DERIVED_TYPE: {
-    if (Record.size() < 12 || Record.size() > 15)
+    if (Record.size() < 12 || Record.size() > 16)
       return error("Invalid record");
 
     // DWARF address space is encoded as N->getDWARFAddressSpace() + 1. 0 means
@@ -1585,8 +1585,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       DWARFAddressSpace = Record[12] - 1;
 
     Metadata *Annotations = nullptr;
-    if (Record.size() > 14 && Record[14])
-      Annotations = getMDOrNull(Record[14]);
+    if (Record.size() > 15 && Record[15])
+      Annotations = getMDOrNull(Record[15]);
 
     IsDistinct = Record[0] & 0x1;
     const unsigned Version = Record[0] & ~(0x1);
