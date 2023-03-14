@@ -1914,7 +1914,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                            : nullptr, // targetFuncName
          HasStaticLink ? getMDOrNull(Record[20 + OffsetB])
                        : nullptr,  // StaticLinkExpr
-        HasRcFrameBase ? getMDOrNull(Record[21 + OffsetB])
+         HasRcFrameBase ? getMDOrNull(Record[21 + OffsetB])
                            : nullptr // RcFrameBaseExpr
          ));
     MetadataList.assignValue(SP, NextMetadataNo);

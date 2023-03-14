@@ -2022,8 +2022,11 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
   Out << "!DISubrange(";
   MDFieldPrinter Printer(Out, WriterCtx);
 
-  if (auto *CE = N->getCount().dyn_cast<ConstantInt *>())
-    Printer.printInt("count", CE->getSExtValue(), /* ShouldSkipZero */ false);
+  auto *Count = N->getRawCountNode();
+  if (auto *CE = dyn_cast_or_null<ConstantAsMetadata>(Count)) {
+   auto *CV = cast<ConstantInt>(CE->getValue());
+   Printer.printInt("count", CV->getSExtValue(), /* ShouldSkipZero */ false);
+  }
   else
     Printer.printMetadata("count", N->getRawCountNode(),
                           /*ShouldSkipNull */ true);
