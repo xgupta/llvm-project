@@ -296,13 +296,13 @@ DIStringType *DIBuilder::createStringType(StringRef Name,
 
 DIBasicType *DIBuilder::createBasicType(StringRef Name, StringRef Pic,
                                         uint64_t SizeInBits, unsigned Encoding,
-                                        Optional<uint16_t> DigitCount,
-                                        Optional<uint16_t> DecimalSign,
-                                        Optional<int16_t> Scale,
+                                        std::optional<uint16_t> DigitCount,
+                                        std::optional<uint16_t> DecimalSign,
+                                        std::optional<int16_t> Scale,
                                         DINode::DIFlags Flags) {
   assert(!Name.empty() && "Unable to create type without name");
-  assert((!Pic.empty() || DigitCount != None || DecimalSign != None ||
-          Scale != None) &&
+  assert((!Pic.empty() || DigitCount != std::nullopt || DecimalSign != std::nullopt ||
+          Scale != std::nullopt) &&
          "Unable to create decimal info with empty attributes");
 
   MDString *PicString = nullptr;
@@ -337,7 +337,7 @@ DIDerivedType *DIBuilder::createDynamicType(DIType *BTy,
                                             DIExpression *Location,
                                             DIExpression *Allocated) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_dynamic_type, "", nullptr,
-                            0, nullptr, BTy, 0, 0, 0, None, DINode::FlagZero,
+                            0, nullptr, BTy, 0, 0, 0, std::nullopt, DINode::FlagZero,
                             nullptr /*ExtraData*/, nullptr /*Annotations*/,
                             Location, Allocated);
 }
@@ -967,7 +967,7 @@ DISubprogram *DIBuilder::createMethod(
       /*IsDistinct=*/IsDefinition, VMContext, cast<DIScope>(Context), Name,
       LinkageName, F, LineNo, Ty, LineNo, VTableHolder, VIndex, ThisAdjustment,
       Flags, SPFlags, IsDefinition ? CUNode : nullptr, TParams, nullptr,
-      nullptr, ThrownTypes, nullptr, StaticLink);
+      nullptr, ThrownTypes, nullptr, "", StaticLink);
 
   if (IsDefinition)
     AllSubprograms.push_back(SP);

@@ -210,10 +210,10 @@ public:
   // Accessors
   //----------------------------------------------------------------------
 
-  ConstString GetTypeName(lldb::opaque_compiler_type_t type) override;
+  ConstString GetTypeName(lldb::opaque_compiler_type_t type, bool BaseOnly) override;
 
   ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) override {
-    return GetTypeName(type);
+    return GetTypeName(type, true);
   }
 
   uint32_t GetTypeInfo(lldb::opaque_compiler_type_t type,
@@ -289,14 +289,14 @@ public:
     return llvm::APFloatBase::Bogus();
   }
 
-  llvm::Optional<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
+  std::optional<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
                                        ExecutionContextScope *exe_scope) {
-    if (llvm::Optional<uint64_t> bit_size = GetBitSize(type, exe_scope))
+    if (std::optional<uint64_t> bit_size = GetBitSize(type, exe_scope))
       return (*bit_size + 7) / 8;
-    return llvm::None;
+    return std::nullopt;
   }
 
-  llvm::Optional<uint64_t>
+  std::optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
 
@@ -316,15 +316,15 @@ public:
   CompilerType DynGetBaseType(lldb::opaque_compiler_type_t type) const override;
 
   /// Dynamic type get location expression
-  DWARFExpression
+  DWARFExpressionList
   DynGetLocation(lldb::opaque_compiler_type_t type) const override;
 
   /// Dynamic type get allocated expression
-  DWARFExpression
+  DWARFExpressionList
   DynGetAllocated(lldb::opaque_compiler_type_t type) const override;
 
   /// Dynamic array type get count expression
-  DWARFExpression
+  DWARFExpressionList
   DynArrGetCountExp(lldb::opaque_compiler_type_t type) const override;
 
   /// Dynamic array type update length value
@@ -409,11 +409,11 @@ public:
   CompilerType CreateArrayType(const ConstString &array_type_name,
                                const ConstString &name,
                                const CompilerType &element_type,
-                               DWARFExpression element_count, bool isVarString);
+                               DWARFExpressionList element_count, bool isVarString);
 
   CompilerType CreateDynamicType(const CompilerType &base_type,
-                                 const DWARFExpression &dw_location,
-                                 const DWARFExpression &dw_allocated);
+                                 const DWARFExpressionList &dw_location,
+                                 const DWARFExpressionList &dw_allocated);
 
   CompilerType GetArrayType(lldb::opaque_compiler_type_t type,
                             uint64_t size) override;
@@ -491,7 +491,7 @@ public:
   bool IsCStringType(lldb::opaque_compiler_type_t type,
                      uint32_t &length) override;
 
-  llvm::Optional<size_t>
+  std::optional<size_t>
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                   ExecutionContextScope *exe_scope) override;
 

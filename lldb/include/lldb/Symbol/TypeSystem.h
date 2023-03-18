@@ -466,13 +466,13 @@ public:
 
   virtual CompilerType DynGetBaseType(lldb::opaque_compiler_type_t type) const;
 
-  virtual DWARFExpression
+  virtual DWARFExpressionList
   DynGetLocation(lldb::opaque_compiler_type_t type) const;
 
-  virtual DWARFExpression
+  virtual DWARFExpressionList
   DynGetAllocated(lldb::opaque_compiler_type_t type) const;
 
-  virtual DWARFExpression
+  virtual DWARFExpressionList
   DynArrGetCountExp(lldb::opaque_compiler_type_t type) const;
 
   virtual bool

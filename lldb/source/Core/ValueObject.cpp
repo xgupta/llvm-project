@@ -999,7 +999,7 @@ uint16_t ValueObject::GetVarStringLength(Status &error) {
   if (!type_flags.Test(eTypeIsVarString))
     return UINT16_MAX;
 
-  lldb::DataBufferSP buffer_sp;
+  lldb::WritableDataBufferSP buffer_sp;
   auto result = ReadPointedString(buffer_sp, error, 2, true);
   if (result.first != 2)
     return UINT16_MAX;

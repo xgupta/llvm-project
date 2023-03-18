@@ -28,6 +28,7 @@
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -350,7 +351,7 @@ ValueObjectSP PLIInterpreter::VisitBasicLit(const PLIASTBasicLit *expr) {
     return nullptr;
 
   TypeSystemLegacy *legacy_type_system =
-      llvm::dyn_cast_or_null<TypeSystemLegacy>(&type_sys.get());
+      llvm::dyn_cast_or_null<TypeSystemLegacy>(type_sys->get());
   if (!legacy_type_system)
     return nullptr;
 
@@ -511,7 +512,7 @@ PLIInterpreter::VisitFuncCallExpr(const PLIASTFuncCallExpr *expr) {
   if (!param)
     return nullptr;
 
-  uint32_t data_size = param->GetByteSize().getValue();
+  uint32_t data_size = param->GetByteSize().value();
   DataBufferSP buffer(new DataBufferHeap(sizeof(data_size), 0));
   TargetSP target = m_exe_ctx.GetTargetSP();
   if (!target)
@@ -527,7 +528,7 @@ PLIInterpreter::VisitFuncCallExpr(const PLIASTFuncCallExpr *expr) {
   enc.PutData(0, &data_size, sizeof(uint64_t));
   DataExtractor data(buffer, byte_order, addr_size);
 
-  CompilerType comp_type = type_sys->GetBasicTypeFromAST(eBasicTypeUnsignedInt);
+  CompilerType comp_type = type_sys->get()->GetBasicTypeFromAST(eBasicTypeUnsignedInt);
   return ValueObject::CreateValueObjectFromData(llvm::StringRef(), data,
                                                 m_exe_ctx, comp_type);
 }
@@ -558,7 +559,7 @@ PLIInterpreter::VisitAssignmentExpr(const PLIASTAssignmentExpr *expr) {
     return nullptr;
 
   TypeSystemLegacy *legacy_ts =
-      llvm::dyn_cast_or_null<TypeSystemLegacy>(&type_sys.get());
+      llvm::dyn_cast_or_null<TypeSystemLegacy>(type_sys->get());
   if (!legacy_ts)
     return nullptr;
 
@@ -607,8 +608,7 @@ PLIUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
                              lldb::UserExpressionSP &shared_ptr_to_me,
                              lldb::ExpressionVariableSP &result) {
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |
-                                                  LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   lldb_private::ExecutionPolicy execution_policy = options.GetExecutionPolicy();
   lldb::ExpressionResults execution_results = lldb::eExpressionSetupError;

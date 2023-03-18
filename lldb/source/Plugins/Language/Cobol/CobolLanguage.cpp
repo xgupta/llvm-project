@@ -133,7 +133,7 @@ bool formatters::RaincodeStringSummaryProvider(ValueObject &valobj,
   Status error;
   length++; // null terminated
   ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
-  lldb::DataBufferSP buffer_sp(new DataBufferHeap(length, 0));
+  lldb::WritableDataBufferSP buffer_sp(new DataBufferHeap(length, 0));
   char *buffer = reinterpret_cast<char *>(buffer_sp->GetBytes());
 
   target_sp->ReadStringFromMemory(valobj_addr, buffer, length, error, 1);
@@ -149,9 +149,8 @@ bool formatters::RaincodeStringSummaryProvider(ValueObject &valobj,
   ExecutionContextScope *exe_scope = process_sp.get();
   TargetCharsetReader Conv(exe_scope->CalculateTarget());
   if (!Conv.IsValid()) {
-    Host::SystemLog(Host::eSystemLogWarning,
-                    "WARNING: Invalid target charset %s.\n",
-                    Conv.getTargetFormat().GetCString());
+    Host::SystemLog(StringRef(std::string("WARNING: Invalid target charset ") + 
+                    std::string(Conv.getTargetFormat().GetCString()) + std::string("\n")));
     return false;
   }
 

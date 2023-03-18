@@ -1218,7 +1218,7 @@ bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
       ExecutionContext exe_ctx(shared_from_this());
       Value expr_value;
       addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
-      if (m_sc.function->GetStaticLinkExpression().IsLocationList())
+      if (m_sc.function->GetStaticLinkExpression().IsValid())
         loclist_base_addr =
             m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
                 exe_ctx.GetTargetPtr());
@@ -1247,7 +1247,7 @@ bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
   return m_static_link_error.Success();
 }
 
-DWARFExpression *StackFrame::GetStaticLinkExpression(Status *error_ptr) {
+DWARFExpressionList *StackFrame::GetStaticLinkExpression(Status *error_ptr) {
   if (!m_sc.function) {
     if (error_ptr) {
       error_ptr->SetErrorString("No function in symbol context.");
@@ -1353,7 +1353,7 @@ ValueObjectSP StackFrame::TrackGlobalVariable(const VariableSP &variable_sp,
       GetValueObjectForFrameVariable(variable_sp, use_dynamic));
   if (!valobj_sp) {
     // We aren't already tracking this global
-    VariableList *var_list = GetVariableList(true);
+    VariableList *var_list = GetVariableList(true, nullptr);
     // If this frame has no variables, create a new list
     if (var_list == nullptr)
       m_variable_list_sp = std::make_shared<VariableList>();

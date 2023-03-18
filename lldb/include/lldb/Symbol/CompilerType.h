@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/APSInt.h"
@@ -387,13 +388,13 @@ public:
   CompilerType DynGetBaseType() const;
 
   /// Dynamic type get location expression
-  DWARFExpression DynGetLocation() const;
+  DWARFExpressionList DynGetLocation() const;
 
   /// Dynamic type get allocated expression
-  DWARFExpression DynGetAllocated() const;
+  DWARFExpressionList DynGetAllocated() const;
 
   /// Dynamic array type get count expression
-  DWARFExpression DynArrGetCountExp() const;
+  DWARFExpressionList DynArrGetCountExp() const;
 
   /// Dynamic array type update length
   bool DynArrUpdateLength(uint64_t length);

@@ -1478,7 +1478,7 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
           "invalid reference flags", &N);
 
-  AssertDI(!(N.isDescLocSubProgram() && N.isDescListSubProgram()),
+  CheckDI(!(N.isDescLocSubProgram() && N.isDescListSubProgram()),
            "subprogram cannot have both descriptor list and descriptor locator",
            &N);
 

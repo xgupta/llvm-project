@@ -32,6 +32,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
+using namespace lldb_private::dwarf;
 
 LLDB_PLUGIN_DEFINE(TypeSystemLegacy)
 
@@ -161,7 +162,7 @@ private:
 class LegacyDynamicArray : public LegacyArray {
 public:
   LegacyDynamicArray(const ConstString array_type_name, const ConstString &name,
-                     const CompilerType &elem, DWARFExpression count_exp,
+                     const CompilerType &elem, DWARFExpressionList count_exp,
                      bool isVarString = false)
       : LegacyArray(array_type_name, name, elem, 0, isVarString),
         m_count_exp(count_exp) {}
@@ -171,7 +172,7 @@ public:
             && (static_cast<const LegacyArray*>(type)->isDynamic());
   }
 
-  DWARFExpression GetCountExp() const {
+  DWARFExpressionList GetCountExp() const {
     return m_count_exp;
   }
 
@@ -182,7 +183,7 @@ public:
   bool isDynamic() const { return true; }
 
 private:
-  const DWARFExpression m_count_exp;
+  const DWARFExpressionList m_count_exp;
   LegacyDynamicArray(const LegacyDynamicArray &) = delete;
   const LegacyDynamicArray &operator=(const LegacyDynamicArray &) = delete;
 };
@@ -210,19 +211,19 @@ private:
 
 class LegacyDynamic : public LegacyType {
 public:
-  LegacyDynamic(const CompilerType &base_type, DWARFExpression location,
-                DWARFExpression allocated)
+  LegacyDynamic(const CompilerType &base_type, DWARFExpressionList location,
+                DWARFExpressionList allocated)
       : LegacyType(KIND_DYNAMIC, ConstString()), m_type(base_type),
         m_location(location), m_allocated(allocated) {}
 
   CompilerType GetBaseType() const { return m_type; }
-  DWARFExpression getAllocated() const { return m_allocated; }
-  DWARFExpression getLocation() const { return m_location; }
+  DWARFExpressionList getAllocated() const { return m_allocated; }
+  DWARFExpressionList getLocation() const { return m_location; }
 
 private:
   CompilerType m_type;
-  DWARFExpression m_location;
-  DWARFExpression m_allocated;
+  DWARFExpressionList m_location;
+  DWARFExpressionList m_allocated;
 
   LegacyDynamic(const LegacyDynamic &) = delete;
   const LegacyDynamic &operator=(const LegacyDynamic &) = delete;
@@ -661,15 +662,15 @@ CompilerType TypeSystemLegacy::MutateBaseTypeSize(opaque_compiler_type_t type,
     return CompilerType();
   if (IsAggregateType(type))
     return CompilerType();
-  ConstString dst_type_name(GetTypeName(type).GetCString() +
+  ConstString dst_type_name(GetTypeName(type, true).GetCString() +
                             std::string(".m.") + std::to_string(sizeInBits));
   LegacyType *dst_type = (*m_mutated_types)[dst_type_name].get();
   if (dst_type)
-    return CompilerType(this, dst_type);
+    return CompilerType(weak_from_this(), dst_type);
 
   LegacyType *src_type = static_cast<LegacyType *>(type);
   if (src_type->GetTypeBitSize() == sizeInBits)
-    return CompilerType(this, type);
+    return CompilerType(weak_from_this(), type);
 
   dst_type =
       new LegacyType(src_type->GetLegacyKind(), src_type->GetTypeName(),
@@ -677,7 +678,7 @@ CompilerType TypeSystemLegacy::MutateBaseTypeSize(opaque_compiler_type_t type,
                      src_type->GetScale(), src_type->GetDigitCount(),
                      src_type->GetTypeByteOrder(), src_type->is_binary_scale());
   (*m_mutated_types)[dst_type_name].reset(dst_type);
-  return CompilerType(this, dst_type);
+  return CompilerType(weak_from_this(), dst_type);
 }
 
 CompilerType
@@ -702,13 +703,13 @@ CompilerType TypeSystemLegacy::GetPointerType(opaque_compiler_type_t type) {
   LegacyType *base_type = static_cast<LegacyType *>(type);
   LegacyType *pointer = (*m_types)[base_type].get();
   if (pointer == nullptr) {
-    ConstString type_name = GetTypeName(type);
+    ConstString type_name = GetTypeName(type, true);
     ConstString pointer_name(std::string("*") + type_name.GetCString());
     pointer = new LegacyElem(LegacyType::KIND_PTR, pointer_name,
-                             CompilerType(this, type));
+                             CompilerType(weak_from_this(), type));
     (*m_types)[base_type].reset(pointer);
   }
-  return CompilerType(this, pointer);
+  return CompilerType(weak_from_this(), pointer);
 }
 
 CompilerType
@@ -717,8 +718,7 @@ TypeSystemLegacy::GetLValueReferenceType(opaque_compiler_type_t type) {
     return CompilerType();
 
   // TODOa
-  Host::SystemLog(Host::eSystemLogWarning,
-                  "Warning: DW_TAG_reference_type not supported.");
+  Host::SystemLog("Warning: DW_TAG_reference_type not supported.");
   return CompilerType();
 }
 
@@ -728,7 +728,7 @@ CompilerType TypeSystemLegacy::GetTypedefedType(opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemLegacy::GetNonReferenceType(opaque_compiler_type_t type) {
-  return CompilerType(this, type);
+  return CompilerType(weak_from_this(), type);
 }
 
 bool TypeSystemLegacy::GetCompleteType(opaque_compiler_type_t type) {
@@ -742,7 +742,7 @@ bool TypeSystemLegacy::GetCompleteType(opaque_compiler_type_t type) {
   if (LegacyStruct *s = t->GetStruct()) {
     if (s->IsComplete())
       return true;
-    CompilerType compiler_type(this, s);
+    CompilerType compiler_type(weak_from_this(), s);
     SymbolFile *symbols = GetSymbolFile();
     return symbols && symbols->CompleteType(compiler_type);
   }
@@ -756,7 +756,7 @@ bool TypeSystemLegacy::GetCompleteType(opaque_compiler_type_t type) {
   return true;
 }
 
-ConstString TypeSystemLegacy::GetTypeName(opaque_compiler_type_t type) {
+ConstString TypeSystemLegacy::GetTypeName(opaque_compiler_type_t type, bool baseType) {
   if (!type)
     return ConstString();
 
@@ -926,7 +926,7 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
                                         DataExtractor &dest_data,
                                         const LanguageType lang) {
   if (!VerifyEncodeType(src_type, dest_type)) {
-    Host::SystemLog(Host::eSystemLogWarning, "Wrong assignment type.\n");
+    Host::SystemLog("Wrong assignment type.\n");
     return false;
   }
 
@@ -977,7 +977,7 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
       break;
     }
     DataExtractor temp(&iu, ty_length, src_byte_order, GetPointerByteSize());
-    temp.CopyByteOrderedData(0, temp.GetByteSize(), dest_buffer->GetBytes(),
+    temp.CopyByteOrderedData(0, temp.GetByteSize(), (void*)dest_buffer->GetBytes(),
                              ty_length, type_byte_order);
     return true;
   }
@@ -988,8 +988,7 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     else if (src_type_kind == LegacyType::KIND_DOUBLE)
       value = src_data.GetDouble(&offset);
     else {
-      Host::SystemLog(Host::eSystemLogWarning,
-                      "Invalid float src data type.\n");
+      Host::SystemLog("Invalid float src data type.\n");
       return false;
     }
 
@@ -999,7 +998,7 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     }
     DataExtractor temp(&value, sizeof(value), src_byte_order,
                        GetPointerByteSize());
-    temp.CopyByteOrderedData(0, temp.GetByteSize(), dest_buffer->GetBytes(),
+    temp.CopyByteOrderedData(0, temp.GetByteSize(), (void*)dest_buffer->GetBytes(),
                              sizeof(value), type_byte_order);
     return true;
   }
@@ -1010,8 +1009,7 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     else if (src_type_kind == LegacyType::KIND_DOUBLE)
       value = src_data.GetDouble(&offset);
     else {
-      Host::SystemLog(Host::eSystemLogWarning,
-                      "Invalid float src data type.\n");
+      Host::SystemLog("Invalid float src data type.\n");
       return false;
     }
     if (type_scale) {
@@ -1020,7 +1018,7 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     }
     DataExtractor temp(&value, sizeof(value), src_byte_order,
                        GetPointerByteSize());
-    temp.CopyByteOrderedData(0, temp.GetByteSize(), dest_buffer->GetBytes(),
+    temp.CopyByteOrderedData(0, temp.GetByteSize(), (void*)dest_buffer->GetBytes(),
                              sizeof(value), type_byte_order);
     return true;
   }
@@ -1031,8 +1029,7 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
                                                    type_scale, is_binscale));
     uint16_t str_length = val_str.size();
     if (str_length > arr_len) {
-      Host::SystemLog(Host::eSystemLogWarning,
-                      "Assignment string longer then available.\n");
+      Host::SystemLog("Assignment string longer then available.\n");
       val_str.erase(arr_len, 100);
       str_length = val_str.size();
     }
@@ -1043,14 +1040,12 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
 
     TargetCharsetReader Conv(exe_scope.GetTargetSP(), true);
     if (!Conv.IsValid()) {
-      Host::SystemLog(Host::eSystemLogWarning,
-                      "Assignment charset encoding failure.\n");
+      Host::SystemLog("Assignment charset encoding failure.\n");
       return false;
     }
 
     if (!Conv.convert(val_str)) {
-      Host::SystemLog(Host::eSystemLogWarning,
-                      "Assignment charset encoding convertion failure.\n");
+      Host::SystemLog("Assignment charset encoding convertion failure.\n");
       return false;
     }
 
@@ -1064,7 +1059,7 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     }
     DataExtractor temp(val_str.c_str(), val_str.size(), type_byte_order,
                        GetPointerByteSize());
-    temp.CopyByteOrderedData(0, temp.GetByteSize(), dest_buffer->GetBytes(),
+    temp.CopyByteOrderedData(0, temp.GetByteSize(), (void*)dest_buffer->GetBytes(),
                              val_str.size(), type_byte_order);
     return true;
   } break;
@@ -1139,20 +1134,18 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     } else {
       TargetCharsetReader Conv(exe_scope.GetTargetSP(), true);
       if (!Conv.IsValid()) {
-        Host::SystemLog(Host::eSystemLogWarning,
-                        "Assignment charset encoding failure.\n");
+        Host::SystemLog("Assignment charset encoding failure.\n");
         return false;
       }
       if (!Conv.convert(val_str)) {
-        Host::SystemLog(Host::eSystemLogWarning,
-                        "Assignment charset encoding convertion failure.\n");
+        Host::SystemLog("Assignment charset encoding convertion failure.\n");
         return false;
       }
       count = val_str.size();
       val_str.copy((char *)buffer, count);
     }
     DataExtractor temp(buffer, count, src_byte_order, GetPointerByteSize());
-    temp.CopyByteOrderedData(0, temp.GetByteSize(), dest_buffer->GetBytes(),
+    temp.CopyByteOrderedData(0, temp.GetByteSize(), (void*)dest_buffer->GetBytes(),
                              count, type_byte_order);
     return true;
   }
@@ -1162,11 +1155,11 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
 //----------------------------------------------------------------------
 // Exploring the type
 //----------------------------------------------------------------------
-Optional<uint64_t>
+std::optional<uint64_t>
 TypeSystemLegacy::GetBitSize(opaque_compiler_type_t type,
                              ExecutionContextScope *exe_scope) {
   if (!type)
-    return None;
+    return std::nullopt;
 
   LegacyType *base_type = static_cast<LegacyType *>(type);
   int kind = base_type->GetLegacyKind();
@@ -1185,10 +1178,10 @@ TypeSystemLegacy::GetBitSize(opaque_compiler_type_t type,
   }
   case LegacyType::KIND_ARRAY: {
     LegacyArray *array = base_type->GetArray();
-    if (llvm::Optional<uint64_t> bit_size =
+    if (std::optional<uint64_t> bit_size =
             array->GetElementType().GetBitSize(exe_scope))
       return array->GetLength() * (*bit_size);
-    return None;
+    return std::nullopt;
   }
   case LegacyType::KIND_PTR:
     return m_pointer_byte_size * 8;
@@ -1200,7 +1193,7 @@ TypeSystemLegacy::GetBitSize(opaque_compiler_type_t type,
     return dyn_base_type.GetBitSize(exe_scope);
   }
   }
-  return None;
+  return std::nullopt;
 }
 
 Format TypeSystemLegacy::GetFormat(opaque_compiler_type_t type) {
@@ -1287,7 +1280,7 @@ uint32_t TypeSystemLegacy::GetNumChildren(opaque_compiler_type_t type,
   return 0;
 }
 
-llvm::Optional<size_t>
+std::optional<size_t>
 TypeSystemLegacy::GetTypeBitAlign(opaque_compiler_type_t type,
                                   ExecutionContextScope *exe_scope) {
   return 0;
@@ -1296,7 +1289,7 @@ TypeSystemLegacy::GetTypeBitAlign(opaque_compiler_type_t type,
 CompilerType TypeSystemLegacy::GetBasicTypeFromAST(BasicType basic_type) {
   LegacyType *type = (*m_basic_types)[basic_type].get();
   if (type)
-    return CompilerType(this, type);
+    return CompilerType(weak_from_this(), type);
 
   switch (basic_type) {
   default:
@@ -1343,7 +1336,7 @@ CompilerType TypeSystemLegacy::GetBasicTypeFromAST(BasicType basic_type) {
     (*m_basic_types)[basic_type].reset(type);
     break;
   }
-  return CompilerType(this, type);
+  return CompilerType(weak_from_this(), type);
 }
 
 CompilerType
@@ -1359,41 +1352,41 @@ TypeSystemLegacy::DynGetBaseType(lldb::opaque_compiler_type_t type) const {
   return dyn->GetBaseType();
 }
 
-DWARFExpression
+DWARFExpressionList
 TypeSystemLegacy::DynGetLocation(lldb::opaque_compiler_type_t type) const {
   if (!type)
-    return DWARFExpression();
+    return DWARFExpressionList();
 
   int kind = static_cast<LegacyType *>(type)->GetLegacyKind();
   if (kind != LegacyType::KIND_DYNAMIC)
-    return DWARFExpression();
+    return DWARFExpressionList();
 
   const auto dyn = static_cast<LegacyDynamic *>(type);
   return dyn->getLocation();
 }
 
-DWARFExpression
+DWARFExpressionList
 TypeSystemLegacy::DynGetAllocated(lldb::opaque_compiler_type_t type) const {
   if (!type)
-    return DWARFExpression();
+    return DWARFExpressionList();
 
   int kind = static_cast<LegacyType *>(type)->GetLegacyKind();
   if (kind != LegacyType::KIND_DYNAMIC)
-    return DWARFExpression();
+    return DWARFExpressionList();
 
   const auto dyn = static_cast<LegacyDynamic *>(type);
   return dyn->getAllocated();
 }
 
-DWARFExpression
+DWARFExpressionList
 TypeSystemLegacy::DynArrGetCountExp(lldb::opaque_compiler_type_t type) const {
   if (!type)
-    return DWARFExpression();
+    return DWARFExpressionList();
 
   int kind = static_cast<LegacyType *>(type)->GetLegacyKind();
   if (kind != LegacyType::KIND_ARRAY
       || !static_cast<LegacyArray *>(type)->isDynamic())
-    return DWARFExpression();
+    return DWARFExpressionList();
 
   const auto dyn_arr = static_cast<LegacyDynamicArray *>(type);
   return dyn_arr->GetCountExp();
@@ -1493,7 +1486,7 @@ CompilerType TypeSystemLegacy::GetChildCompilerTypeAtIndex(
       }
 
       if (idx == 0) {
-        if (Optional<uint64_t> size =
+        if (std::optional<uint64_t> size =
                 pointee_type.GetByteSize(get_exe_scope())) {
           child_byte_size = *size;
           child_byte_offset = 0;
@@ -1522,7 +1515,7 @@ CompilerType TypeSystemLegacy::GetChildCompilerTypeAtIndex(
     uint64_t bit_offset;
     CompilerType ret =
         GetFieldAtIndex(type, idx, child_name, &bit_offset, nullptr, nullptr);
-    if (Optional<uint64_t> byte_size = ret.GetByteSize(
+    if (std::optional<uint64_t> byte_size = ret.GetByteSize(
             exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
       child_byte_size = *byte_size;
     child_byte_offset = bit_offset / 8;
@@ -1624,7 +1617,7 @@ unsigned TypeSystemLegacy::GetTypeQualifiers(opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemLegacy::GetFullyUnqualifiedType(opaque_compiler_type_t type) {
-  return CompilerType(this, type);
+  return CompilerType(weak_from_this(), type);
 }
 
 //----------------------------------------------------------------------
@@ -1638,10 +1631,11 @@ CompilerType TypeSystemLegacy::CreateArrayType(
     return CompilerType();
 
   if (element_count == 0) {
-    Host::SystemLog(Host::eSystemLogWarning,
-                    "Warning: need to add support for "
-                    "DW_TAG_array_type '%s' with dynamic size",
-                    name.GetCString());
+    char buffer[64];
+    sprintf(buffer, "Warning: need to add support for "
+		    "DW_TAG_array_type '%s' with dynamic size",
+		    name.GetCString());
+    Host::SystemLog(std::string(buffer));
     return CompilerType();
   }
 
@@ -1650,25 +1644,25 @@ CompilerType TypeSystemLegacy::CreateArrayType(
 
   LegacyType *array_type = new LegacyArray(array_type_name, name, element_type,
                                            element_count, isVarString);
-  return CompilerType(this, array_type);
+  return CompilerType(weak_from_this(), array_type);
 }
 
 CompilerType TypeSystemLegacy::CreateArrayType(
     const ConstString &array_type_name, const ConstString &name,
-    const CompilerType &element_type, DWARFExpression element_count,
+    const CompilerType &element_type, DWARFExpressionList element_count,
     bool isVarString) {
   if (!element_type.IsValid())
     return CompilerType();
 
   LegacyType *array_type = new LegacyDynamicArray(array_type_name, name, element_type,
                                                   element_count, isVarString);
-  return CompilerType(this, array_type);
+  return CompilerType(weak_from_this(), array_type);
 }
 
 CompilerType
 TypeSystemLegacy::CreateDynamicType(const CompilerType &base_type,
-                                    const DWARFExpression &dw_location,
-                                    const DWARFExpression &dw_allocated) {
+                                    const DWARFExpressionList &dw_location,
+                                    const DWARFExpressionList &dw_allocated) {
   if (!base_type)
     return CompilerType();
 
@@ -1681,7 +1675,7 @@ TypeSystemLegacy::CreateDynamicType(const CompilerType &base_type,
 
   LegacyType *dyn_type =
       new LegacyDynamic(base_type, dw_location, dw_allocated);
-  return CompilerType(this, dyn_type);
+  return CompilerType(weak_from_this(), dyn_type);
 }
 
 CompilerType TypeSystemLegacy::GetArrayType(lldb::opaque_compiler_type_t type,
@@ -1695,8 +1689,8 @@ CompilerType TypeSystemLegacy::GetArrayType(lldb::opaque_compiler_type_t type,
   LegacyType *element_type = static_cast<LegacyType *>(type);
   LegacyType *array_type =
       new LegacyArray(ConstString(), ConstString(""),
-                      CompilerType(this, element_type), size, false);
-  return CompilerType(this, array_type);
+                      CompilerType(weak_from_this(), element_type), size, false);
+  return CompilerType(weak_from_this(), array_type);
 }
 
 void TypeSystemLegacy::AddFieldToStruct(const CompilerType &struct_type,
@@ -1730,7 +1724,7 @@ void TypeSystemLegacy::CompleteStructType(const CompilerType &struct_type) {
 CompilerType TypeSystemLegacy::CreateStructType(const ConstString &name,
                                                 uint32_t byte_size) {
   LegacyStruct *type = new LegacyStruct(name, byte_size);
-  return CompilerType(this, type);
+  return CompilerType(weak_from_this(), type);
 }
 
 CompilerType TypeSystemLegacy::CreateFunctionType(const ConstString &name,
@@ -1739,7 +1733,7 @@ CompilerType TypeSystemLegacy::CreateFunctionType(const ConstString &name,
                                                   bool is_variadic) {
   LegacyType *type =
       new LegacyFunction(name, params, params_count, is_variadic);
-  return CompilerType(this, type);
+  return CompilerType(weak_from_this(), type);
 }
 
 CompilerType TypeSystemLegacy::CreateBaseType(
@@ -1795,19 +1789,21 @@ CompilerType TypeSystemLegacy::CreateBaseType(
   }
 
   if (kind == LegacyType::KIND_INVALID) {
-    Host::SystemLog(Host::eSystemLogWarning,
-                    "Warning: need to add support for "
+    char buffer[128];
+    sprintf(buffer, "Warning: need to add support for "
                     "DW_TAG_base_type '%s' encoded with "
                     "DW_ATE = 0x%x, bit_size = %u\n, "
                     "sign = %u, scale = %d, byte_order = %u.\n",
                     name.GetCString(), dw_ate, bitsize, dw_sign, scale,
                     byte_order);
+    std::string message(buffer);
+    Host::SystemLog(message);
     return CompilerType();
   }
 
   LegacyType *type = new LegacyType(kind, name, pic_string, bitsize, sign,
                                     scale, digit_count, byte_order, bin_scale);
-  return CompilerType(this, type);
+  return CompilerType(weak_from_this(), type);
 }
 
 //----------------------------------------------------------------------
@@ -1835,12 +1831,12 @@ TypeSystemLegacy::GetMemberFunctionAtIndex(opaque_compiler_type_t type,
 }
 
 CompilerType TypeSystemLegacy::GetCanonicalType(opaque_compiler_type_t type) {
-  return CompilerType(this, type);
+  return CompilerType(weak_from_this(), type);
 }
 
 CompilerType
 TypeSystemLegacy::GetEnumerationIntegerType(opaque_compiler_type_t type) {
-  return CompilerType(this, type);
+  return CompilerType(weak_from_this(), type);
 }
 
 TypeSystemLegacy::TypeSystemLegacy(TargetSP target)
@@ -1918,7 +1914,7 @@ void TypeSystemLegacy::Finalize() {}
 
 DWARFASTParser *TypeSystemLegacy::GetDWARFParser() {
   if (!m_dwarf_ast_parser_ap)
-    m_dwarf_ast_parser_ap.reset(new DWARFASTParserLegacy(*this));
+    m_dwarf_ast_parser_ap.reset(new DWARFASTParserLegacy(std::static_pointer_cast<TypeSystemLegacy>(weak_from_this().lock())));
   return m_dwarf_ast_parser_ap.get();
 }
 
@@ -1948,7 +1944,7 @@ void TypeSystemLegacy::DumpValue(
   case LegacyType::KIND_ARRAY: {
     const auto array_type = base_type->GetArray();
     CompilerType elem_type = array_type->GetElementType();
-    Optional<uint64_t> element_byte_size =
+    std::optional<uint64_t> element_byte_size =
         elem_type.GetByteSize(exe_ctx->GetBestExecutionContextScope());
     if (!element_byte_size)
       return;
@@ -2063,8 +2059,7 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream *s,
       uint8_t buffer[64];
 
       if (byte_size > 64) {
-        Host::SystemLog(Host::eSystemLogError,
-                        "Error: Display/Decimal type with invalid width"
+        Host::SystemLog("Error: Display/Decimal type with invalid width"
                         ", Displaying only first 64 bytes.\n");
         byte_size = 64;
       }
@@ -2073,9 +2068,10 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream *s,
       if (!skipIconv && exe_scope) {
         TargetCharsetReader Conv(exe_scope->CalculateTarget());
         if (!Conv.IsValid()) {
-          Host::SystemLog(Host::eSystemLogWarning,
-                          "WARNING: Invalid target charset %s.\n",
-                          Conv.getTargetFormat().GetCString());
+          char buffer[64];
+	  sprintf(buffer, "WARNING: Invalid target charset %s.\n",
+			  Conv.getTargetFormat().GetCString());
+          Host::SystemLog(std::string(buffer));
         } else
           Conv.convert(reinterpret_cast<char *>(buffer), byte_size);
       }
@@ -2159,8 +2155,7 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream *s,
                                      exe_scope);
   }
   }
-  Host::SystemLog(Host::eSystemLogError,
-                  "Error: DumpTypeValue not handled yet.\n");
+  Host::SystemLog("Error: DumpTypeValue not handled yet.\n");
   return false;
 }
 
@@ -2176,7 +2171,7 @@ void TypeSystemLegacy::DumpTypeDescription(opaque_compiler_type_t type,
   if (!type)
     return;
 
-  ConstString name = GetTypeName(type);
+  ConstString name = GetTypeName(type, true);
   s->PutCString(name.AsCString());
 }
 
@@ -2185,8 +2180,7 @@ void TypeSystemLegacy::DumpSummary(opaque_compiler_type_t type,
                                    const DataExtractor &data,
                                    offset_t data_offset,
                                    size_t data_byte_size) {
-  Host::SystemLog(Host::eSystemLogError,
-                  "Error: DumpSummary not supported yet.\n");
+  Host::SystemLog("Error: DumpSummary not supported yet.\n");
   return;
 }
 
@@ -2196,15 +2190,16 @@ UserExpression *TypeSystemLegacy::GetUserExpression(
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
   TargetSP target = m_target_wp.lock();
   if (target) {
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    Log *log = GetLog(LLDBLog::Expressions);
+
     LLDB_LOGF(log, "LegacyTypeSystem: UserExpression %s for %s.\n",
               expr.str().c_str(), Language::GetNameForLanguageType(language));
     switch (language) {
     default:
-      Host::SystemLog(
-          Host::eSystemLogError,
-          "LegacyTypeSystem: UserExpression for language %s not supported.\n",
-          Language::GetNameForLanguageType(language));
+      char buffer[64];
+      sprintf(buffer, "LegacyTypeSystem: UserExpression for language %s not supported.\n",
+                      Language::GetNameForLanguageType(language));
+      Host::SystemLog(std::string(buffer));
       break;
     case eLanguageTypeCobol74:
     case eLanguageTypeCobol85:
@@ -2216,8 +2211,7 @@ UserExpression *TypeSystemLegacy::GetUserExpression(
     }
   }
 
-  Host::SystemLog(Host::eSystemLogError,
-                  "LegacyTypeSystem: UserExpression error.\n");
+  Host::SystemLog("LegacyTypeSystem: UserExpression error.\n");
   return nullptr;
 }
 

@@ -234,18 +234,18 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
               uint32_t block_offset =
                   form_value.BlockData() - data.GetDataStart();
               uint32_t block_length = form_value.Unsigned();
-              *static_link = DWARFExpression(
+              *static_link = DWARFExpressionList(
                   module, DataExtractor(data, block_offset, block_length), cu);
             } else {
               DataExtractor data = cu->GetLocationData();
               const dw_offset_t offset = form_value.Unsigned();
               if (data.ValidOffset(offset)) {
                 data = DataExtractor(data, offset, data.GetByteSize() - offset);
-                *static_link = DWARFExpression(module, data, cu);
+                *static_link = DWARFExpressionList(module, data, cu);
                 if (lo_pc != LLDB_INVALID_ADDRESS) {
                   assert(lo_pc >= cu->GetBaseAddress());
-                  static_link->SetLocationListAddresses(cu->GetBaseAddress(),
-                                                       lo_pc);
+                  // static_link->SetLocationListAddresses(cu->GetBaseAddress(),
+                  //                                      lo_pc);
                 } else {
                   set_static_link_loclist_addr = true;
                 }
@@ -286,7 +286,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
               uint32_t block_offset =
                   form_value.BlockData() - data.GetDataStart();
               uint32_t block_length = form_value.Unsigned();
-              *rc_frame_base = DWARFExpression(
+              *rc_frame_base = DWARFExpressionList(
                   module, DataExtractor(data, block_offset, block_length), cu);
             }
 	  }
@@ -311,7 +311,6 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   if (set_static_link_loclist_addr) {
     dw_addr_t lowest_range_pc = ranges.GetMinRangeBase(0);
     assert(lowest_range_pc >= cu->GetBaseAddress());
-    static_link->SetLocationListAddresses(cu->GetBaseAddress(), lowest_range_pc);
   }
 
   if (set_frame_base_loclist_addr) {

@@ -27,6 +27,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Discriminator.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include <cassert>
 #include <climits>
 #include <cstddef>
@@ -582,7 +583,7 @@ public:
   enum ChecksumKind {
     // The first variant was originally CSK_None, encoded as 0. The new
     // internal representation removes the need for this by wrapping the
-    // ChecksumInfo in an Optional, but to preserve Bitcode compatibility the 0
+    // ChecksumInfo in an std::optional, but to preserve Bitcode compatibility the 0
     // encoding is reserved.
     CSK_MD5 = 1,
     CSK_SHA1 = 2,
@@ -608,7 +609,7 @@ public:
 
 private:
   std::optional<ChecksumInfo<MDString *>> Checksum;
-  /// An optional source. A nullptr means none.
+  /// An std::optional source. A nullptr means none.
   MDString *Source;
 
   DIFile(LLVMContext &C, StorageType Storage,
@@ -818,13 +819,13 @@ class DIBasicType : public DIType {
   friend class MDNode;
 
 public:
-  /// Basic Type decimal info, used to record optional dwarf decimal attributes
+  /// Basic Type decimal info, used to record std::optional dwarf decimal attributes
   /// such as picture_string, digit_counts, decimal_sign, decimal_scale all or
-  /// some can be absent and optional depending on encoding type.
+  /// some can be absent and std::optional depending on encoding type.
   struct DecimalInfo {
-    Optional<uint16_t> DigitCount;
-    Optional<uint16_t> DecimalSign;
-    Optional<int16_t> Scale;
+    std::optional<uint16_t> DigitCount;
+    std::optional<uint16_t> DecimalSign;
+    std::optional<int16_t> Scale;
 
     bool operator==(const DecimalInfo &RHS) const {
       return DigitCount == RHS.DigitCount && DecimalSign == RHS.DecimalSign &&
@@ -834,11 +835,11 @@ public:
 
 private:
   unsigned Encoding;
-  Optional<DecimalInfo> DecimalAttrInfo;
+  std::optional<DecimalInfo> DecimalAttrInfo;
 
   DIBasicType(LLVMContext &C, StorageType Storage, unsigned Tag,
               uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
-              DIFlags Flags, Optional<DecimalInfo> DecimalAttrInfo,
+              DIFlags Flags, std::optional<DecimalInfo> DecimalAttrInfo,
               ArrayRef<Metadata *> Ops)
       : DIType(C, DIBasicTypeKind, Storage, Tag, 0, SizeInBits, AlignInBits, 0,
                Flags, Ops),
@@ -851,14 +852,14 @@ private:
                               DIFlags Flags, StorageType Storage,
                               bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), nullptr,
-                   SizeInBits, AlignInBits, Encoding, Flags, None, Storage,
+                   SizeInBits, AlignInBits, Encoding, Flags, std::nullopt, Storage,
                    ShouldCreate);
   }
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               MDString *Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
                               DIFlags Flags,
-                              Optional<DecimalInfo> DecimalAttrInfo,
+                              std::optional<DecimalInfo> DecimalAttrInfo,
                               StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, Name, nullptr, SizeInBits, AlignInBits,
                    Encoding, Flags, DecimalAttrInfo, Storage, ShouldCreate);
@@ -868,7 +869,7 @@ private:
                               StringRef Name, MDString *PictureString,
                               uint64_t SizeInBits, uint32_t AlignInBits,
                               unsigned Encoding, DIFlags Flags,
-                              Optional<DecimalInfo> DecimalAttrInfo,
+                              std::optional<DecimalInfo> DecimalAttrInfo,
                               StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
                    PictureString, SizeInBits, AlignInBits, Encoding, Flags,
@@ -879,7 +880,7 @@ private:
                               MDString *Name, MDString *PictureString,
                               uint64_t SizeInBits, uint32_t AlignInBits,
                               unsigned Encoding, DIFlags Flags,
-                              Optional<DecimalInfo> DecimalAttrInfo,
+                              std::optional<DecimalInfo> DecimalAttrInfo,
                               StorageType Storage, bool ShouldCreate = true);
 
   TempDIBasicType cloneImpl() const {
@@ -897,7 +898,7 @@ public:
                     (Tag, Name, SizeInBits, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, FlagZero, None))
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero, std::nullopt))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
@@ -905,19 +906,19 @@ public:
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags, None))
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags, std::nullopt))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, MDString *PictureString,
                      uint64_t SizeInBits, uint32_t AlignInBits,
                      unsigned Encoding, DIFlags Flags,
-                     Optional<DecimalInfo> ExtInfo),
+                     std::optional<DecimalInfo> ExtInfo),
                     (Tag, Name, PictureString, SizeInBits, AlignInBits,
                      Encoding, Flags, ExtInfo))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, MDString *PictureString,
                      uint64_t SizeInBits, uint32_t AlignInBits,
                      unsigned Encoding, DIFlags Flags,
-                     Optional<DecimalInfo> ExtInfo),
+                     std::optional<DecimalInfo> ExtInfo),
                     (Tag, Name, PictureString, SizeInBits, AlignInBits,
                      Encoding, Flags, ExtInfo))
 
@@ -931,21 +932,21 @@ public:
   /// neither signed nor unsigned.
   std::optional<Signedness> getSignedness() const;
 
-  bool hasDecimalInfo() const { return DecimalAttrInfo.hasValue(); }
-  Optional<DecimalInfo> getDecimalInfo() const { return DecimalAttrInfo; }
+  bool hasDecimalInfo() const { return DecimalAttrInfo.has_value(); }
+  std::optional<DecimalInfo> getDecimalInfo() const { return DecimalAttrInfo; }
   StringRef getPictureString() const { return getStringOperand(3); }
   MDString *getRawPictureString() const { return getOperandAs<MDString>(3); }
 
-  Optional<uint16_t> getDigitCount() const {
-    return DecimalAttrInfo.getValue().DigitCount;
+  std::optional<uint16_t> getDigitCount() const {
+    return DecimalAttrInfo.value().DigitCount;
   }
 
-  Optional<uint16_t> getDecimalSign() const {
-    return DecimalAttrInfo.getValue().DecimalSign;
+  std::optional<uint16_t> getDecimalSign() const {
+    return DecimalAttrInfo.value().DecimalSign;
   }
 
-  Optional<int16_t> getScale() const {
-    return DecimalAttrInfo.getValue().Scale;
+  std::optional<int16_t> getScale() const {
+    return DecimalAttrInfo.value().Scale;
   }
 
   static bool classof(const Metadata *MD) {
@@ -2136,12 +2137,8 @@ public:
   Metadata *getRawStaticLinkExpr() const {
     return getNumOperands() > 13 ? getOperandAs<Metadata>(13) : nullptr;
   }
-  // Metadata *getRawStaticLinkRecvExpr() const {
-  //   return getNumOperands() > 12 ? getOperandAs<Metadata>(12) : nullptr;
-  // }
   Metadata *getRawRcFrameBaseExpr() const {
-    // return getNumOperands() > 13 ? getOperandAs<Metadata>(13) : nullptr;
-    return getNumOperands() > 12 ? getOperandAs<Metadata>(12) : nullptr;
+    return getNumOperands() > 14 ? getOperandAs<Metadata>(14) : nullptr;
   }
 
   void replaceRawLinkageName(MDString *LinkageName) {
@@ -2152,11 +2149,8 @@ public:
   }
 
   void replaceRawRcFrameBaseExpr(Metadata *RcFrameBaseExpr) {
-    // if (getNumOperands() > 13)
-    //   replaceOperandWith(13, RcFrameBaseExpr);
-    if (getNumOperands() > 12) {
-      // replaceOperandWith(12, RcFrameBaseExpr);      
-      setOperand(12, RcFrameBaseExpr);      
+    if (getNumOperands() > 14) {
+      setOperand(14, RcFrameBaseExpr);
     }
   }
 
@@ -3260,12 +3254,12 @@ public:
     EntryValue = 1 << 3
   };
 
-  /// Prepend \p DIExpr with a deref and offset operation and optionally turn it
+  /// Prepend \p DIExpr with a deref and offset operation and std::optionally turn it
   /// into a stack value or/and an entry value.
   static DIExpression *prepend(const DIExpression *Expr, uint8_t Flags,
                                int64_t Offset = 0);
 
-  /// Prepend \p DIExpr with the given opcodes and optionally turn it into a
+  /// Prepend \p DIExpr with the given opcodes and std::optionally turn it into a
   /// stack value.
   static DIExpression *prependOpcodes(const DIExpression *Expr,
                                       SmallVectorImpl<uint64_t> &Ops,
@@ -4342,7 +4336,7 @@ template <> struct DenseMapInfo<DebugVariable> {
     return DebugVariable(nullptr, std::nullopt, nullptr);
   }
 
-  /// Difference in tombstone is that the Optional is meaningful.
+  /// Difference in tombstone is that the std::optional is meaningful.
   static inline DebugVariable getTombstoneKey() {
     return DebugVariable(nullptr, {{0, 0}}, nullptr);
   }

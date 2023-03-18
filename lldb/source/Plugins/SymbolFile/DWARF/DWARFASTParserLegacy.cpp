@@ -40,8 +40,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-DWARFASTParserLegacy::DWARFASTParserLegacy(TypeSystemLegacy &ast)
+using namespace lldb_private::dwarf;
+DWARFASTParserLegacy::DWARFASTParserLegacy(std::weak_ptr<TypeSystemLegacy> ast)
     : m_ast(ast) {}
 DWARFASTParserLegacy::~DWARFASTParserLegacy() {}
 
@@ -50,6 +50,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
                                          const DWARFDIE &die,
                                          bool *type_is_new_ptr) {
   TypeSP type_sp;
+
 
   if (type_is_new_ptr)
     *type_is_new_ptr = false;
@@ -171,7 +172,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
         switch (tag) {
         default:
         case DW_TAG_base_type:
-          compiler_type = m_ast.CreateBaseType(
+          compiler_type = m_ast.lock()->CreateBaseType(
               type_name_const_str, pic_const_str, encoding, bit_size, sign,
               scale, digit_count, byte_order, bin_scale);
           resolve_state = Type::ResolveState::Full;
@@ -184,8 +185,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
           break;
         }
 
-        type_sp = std::make_shared<Type>(
-            die.GetID(), dwarf, type_name_const_str, (bit_size + 7) / 8,
+        type_sp = dwarf->MakeType(
+            die.GetID(), type_name_const_str, (bit_size + 7) / 8,
             nullptr, dwarf->GetUID(encoding_uid.Reference()),
             encoding_data_type, &decl, compiler_type, resolve_state);
 
@@ -251,7 +252,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
           }
 
           if ((byte_stride == 0) && (bit_stride == 0))
-            byte_stride = element_type->GetByteSize(nullptr).getValueOr(0);
+            byte_stride = element_type->GetByteSize(nullptr).value_or(0);
 
           ConstString empty_name;
           CompilerType array_element_type =
@@ -265,7 +266,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
               for (auto pos = array_info->element_orders.rbegin(); pos != end;
                    ++pos) {
                 num_elements = *pos;
-                compiler_type = m_ast.CreateArrayType(
+                compiler_type = m_ast.lock()->CreateArrayType(
                     type_name_const_str, empty_name, array_element_type,
                     num_elements, isVarString);
                 array_element_type = compiler_type;
@@ -276,8 +277,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
               auto end = array_info->element_orders_exp.rend();
               for (auto pos = array_info->element_orders_exp.rbegin(); pos != end;
                    ++pos) {
-                DWARFExpression num_elements = *pos;
-                compiler_type = m_ast.CreateArrayType(
+                DWARFExpressionList num_elements = *pos;
+                compiler_type = m_ast.lock()->CreateArrayType(
                     type_name_const_str, empty_name, array_element_type,
                     num_elements, isVarString);
                 array_element_type = compiler_type;
@@ -286,11 +287,11 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
               }
             } else
               compiler_type =
-                  m_ast.CreateArrayType(type_name_const_str, empty_name,
+                  m_ast.lock()->CreateArrayType(type_name_const_str, empty_name,
                                         array_element_type, (size_t) 0, isVarString);
 
-            type_sp = std::make_shared<Type>(
-                die.GetID(), dwarf, empty_name, array_element_bit_stride / 8,
+            type_sp = dwarf->MakeType(
+                die.GetID(), empty_name, array_element_bit_stride / 8,
                 nullptr, dwarf->GetUID(type_die_form.Reference()),
                 Type::eEncodingIsUID, &decl, compiler_type,
                 Type::ResolveState::Full);
@@ -350,15 +351,15 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
 
         bool compiler_type_was_created = false;
         compiler_type.SetCompilerType(
-            &m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+            m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
         if (!compiler_type) {
           compiler_type_was_created = true;
           compiler_type =
-              m_ast.CreateStructType(type_name_const_str, byte_size);
+              m_ast.lock()->CreateStructType(type_name_const_str, byte_size);
         }
-
-        type_sp = std::make_shared<Type>(
-            die.GetID(), dwarf, type_name_const_str, byte_size, nullptr,
+        SymbolFileDWARF *dwarf = die.GetDWARF();
+        type_sp = dwarf->MakeType(
+            die.GetID(), type_name_const_str, byte_size, nullptr,
             LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, compiler_type,
             Type::ResolveState::Forward);
 
@@ -370,7 +371,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
                                                  *unique_ast_entry_ap);
 
         if (!die.HasChildren())
-          m_ast.CompleteStructType(compiler_type);
+          m_ast.lock()->CompleteStructType(compiler_type);
         else if (compiler_type_was_created) {
           dwarf->GetForwardDeclDieToClangType()[die.GetDIE()] =
               compiler_type.GetOpaqueQualType();
@@ -383,7 +384,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
         dwarf->m_die_to_type[die.GetDIE()] = DIE_IS_BEING_PARSED;
         const size_t num_attributes = die.GetAttributes(attributes);
         DWARFFormValue type_die_form;
-        DWARFExpression dw_location, dw_allocated;
+        DWARFExpressionList dw_location, dw_allocated;
         ModuleSP module(die.GetModule());
         ConstString empty_name;
 
@@ -407,7 +408,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
               auto data = die.GetData();
               uint32_t offset = form_value.BlockData() - data.GetDataStart();
               uint32_t length = form_value.Unsigned();
-              dw_location = DWARFExpression(
+              dw_location = DWARFExpressionList(
                   module, DataExtractor(data, offset, length), die.GetCU());
             } break;
             case DW_AT_allocated: {
@@ -423,7 +424,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
               auto data = die.GetData();
               uint32_t offset = form_value.BlockData() - data.GetDataStart();
               uint32_t length = form_value.Unsigned();
-              dw_allocated = DWARFExpression(
+              dw_allocated = DWARFExpressionList(
                   module, DataExtractor(data, offset, length), die.GetCU());
             } break;
             }
@@ -434,10 +435,10 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
 
         Type *base_type =
             dwarf->ResolveTypeUID(type_die_form.Reference(), true);
-        compiler_type = m_ast.CreateDynamicType(
+        compiler_type = m_ast.lock()->CreateDynamicType(
             base_type->GetForwardCompilerType(), dw_location, dw_allocated);
-        type_sp = std::make_shared<Type>(
-            die.GetID(), dwarf, empty_name, 0, nullptr,
+        type_sp = dwarf->MakeType(
+            die.GetID(), empty_name, 0, nullptr,
             dwarf->GetUID(type_die_form.Reference()), Type::eEncodingIsUID,
             &decl, compiler_type, Type::ResolveState::Full);
         type_sp->SetEncodingType(base_type);
@@ -477,12 +478,11 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
           ParseChildParameters(*sc.comp_unit, die, is_variadic,
                                function_params_types);
 
-        compiler_type = m_ast.CreateFunctionType(
+        compiler_type = m_ast.lock()->CreateFunctionType(
             type_name_const_str, function_params_types.data(),
             function_params_types.size(), is_variadic);
-
-        type_sp = std::make_shared<Type>(
-            die.GetID(), dwarf, type_name_const_str, 0, nullptr,
+        type_sp = dwarf->MakeType(
+            die.GetID(), type_name_const_str, 0, nullptr,
             LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, compiler_type,
             Type::ResolveState::Full);
 
@@ -541,9 +541,9 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(lldb_privat
   int call_file = 0;
   int call_line = 0;
   int call_column = 0;
-  DWARFExpression frame_base;
-  DWARFExpression rc_frame_base;
-  DWARFExpression static_link;
+  DWARFExpressionList frame_base;
+  DWARFExpressionList rc_frame_base;
+  DWARFExpressionList static_link;
 
   if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
                                decl_column, call_file, call_line, call_column,
@@ -617,7 +617,7 @@ bool DWARFASTParserLegacy::CompleteTypeFromDWARF(const DWARFDIE &die,
     if (die.HasChildren())
       ParseChildMembers(die, comp_type);
 
-    m_ast.CompleteStructType(comp_type);
+    m_ast.lock()->CompleteStructType(comp_type);
     return true;
   }
   return false;
@@ -691,7 +691,7 @@ DWARFASTParserLegacy::ParseChildMembers(const DWARFDIE &parent_die,
       Type *member_type = die.ResolveTypeUID(encoding_uid.Reference());
       if (member_type) {
         CompilerType member_full_type = member_type->GetFullCompilerType();
-        m_ast.AddFieldToStruct(struct_compiler_type, ConstString(name),
+        m_ast.lock()->AddFieldToStruct(struct_compiler_type, ConstString(name),
                                member_full_type, member_offset_in_bits);
       }
       ++member_idx;

@@ -720,67 +720,6 @@ static llvm::Error Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   return llvm::Error::success();
 }
 
-bool DWARFExpression::Evaluate(ExecutionContextScope *exe_scope,
-                               lldb::addr_t loclist_base_load_addr,
-                               const Value *initial_value_ptr,
-                               const Value *object_address_ptr, Value &result,
-                               Status *error_ptr) const {
-  ExecutionContext exe_ctx(exe_scope);
-  return Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, initial_value_ptr,
-                  object_address_ptr, result, error_ptr);
-}
-
-bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
-                               RegisterContext *reg_ctx,
-                               lldb::addr_t func_load_addr,
-                               const Value *initial_value_ptr,
-                               const Value *object_address_ptr, Value &result,
-                               Status *error_ptr) const {
-  ModuleSP module_sp = m_module_wp.lock();
-  std::vector<Value> stack;
-  if (initial_value_ptr)
-    stack.push_back(*initial_value_ptr);
-
-  if (IsLocationList()) {
-    addr_t pc;
-    StackFrame *frame = nullptr;
-    if (reg_ctx)
-      pc = reg_ctx->GetPC();
-    else {
-      frame = exe_ctx->GetFramePtr();
-      if (!frame)
-        return false;
-      RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
-      if (!reg_ctx_sp)
-        return false;
-      pc = reg_ctx_sp->GetPC();
-    }
-
-    if (func_load_addr != LLDB_INVALID_ADDRESS) {
-      if (pc == LLDB_INVALID_ADDRESS) {
-        if (error_ptr)
-          error_ptr->SetErrorString("Invalid PC in frame.");
-        return false;
-      }
-
-      if (llvm::Optional<DataExtractor> expr =
-              GetLocationExpression(func_load_addr, pc)) {
-        return DWARFExpression::Evaluate(
-            exe_ctx, reg_ctx, module_sp, *expr, m_dwarf_cu, m_reg_kind,
-            initial_value_ptr, object_address_ptr, stack, result, error_ptr);
-      }
-    }
-    if (error_ptr)
-      error_ptr->SetErrorString("variable not available");
-    return false;
-  }
-
-  // Not a location list, just a single expression.
-  return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, m_data,
-                                   m_dwarf_cu, m_reg_kind, initial_value_ptr, object_address_ptr,
-                                   stack, result, error_ptr);
-}
-
 namespace {
 /// The location description kinds described by the DWARF v5
 /// specification.  Composite locations are handled out-of-band and

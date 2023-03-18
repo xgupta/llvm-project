@@ -258,7 +258,7 @@ void DwarfCompileUnit::addLocationAttribute(
       DwarfExpr = std::make_unique<DIEDwarfExpression>(*Asm, *this, *Loc);
     }
 
-    if (Expr->getFragmentInfo() != None) {
+    if (Expr->getFragmentInfo() != std::nullopt) {
       // According to
       // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
       // cuda-gdb requires DW_AT_address_class for all variables to be able to

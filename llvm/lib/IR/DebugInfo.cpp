@@ -1151,8 +1151,7 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction2(
       unwrapDI<DISubroutineType>(Ty), ScopeLine, map_from_llvmDIFlags(Flags),
       pack_into_DISPFlags(IsLocalToUnit, IsDefinition, IsOptimized, IsDescList,
                           IsDescLoc),
-      // nullptr, nullptr, nullptr, unwrapDI<DIExpression>(StaticLinkExpr)));
-      nullptr, nullptr, nullptr, nullptr, unwrapDI<DIExpression>(StaticLinkExpr),
+      nullptr, nullptr, nullptr, nullptr, "", unwrapDI<DIExpression>(StaticLinkExpr),
       unwrapDI<DIExpression>(RcFrameBaseExpr)));
 }
 
@@ -1383,9 +1382,9 @@ LLVMMetadataRef LLVMDIBuilderCreateDecimalType(
     LLVMDWARFTypeEncoding Encoding, uint32_t digits, LLVMDWARFDecimalSign sign,
     int32_t scale, LLVMBool isScalePresent, LLVMDIFlags Flags) {
 
-  Optional<uint16_t> DigitCount;
-  Optional<uint16_t> DecimalSign;
-  Optional<int16_t> Scale;
+  std::optional<uint16_t> DigitCount;
+  std::optional<uint16_t> DecimalSign;
+  std::optional<int16_t> Scale;
 
   if (digits)
     DigitCount = digits;

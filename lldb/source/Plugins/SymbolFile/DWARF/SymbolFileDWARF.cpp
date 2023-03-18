@@ -3726,7 +3726,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
 
   var_sp = std::make_shared<Variable>(
       die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
-      scope_ranges, &decl, location, is_external, is_artificial,
+      scope_ranges, &decl, location_list, is_external, is_artificial,
       location_is_const_value_data, is_static_member, has_descriptor,
       lexical_scope);
   // Cache var_sp even if NULL (the variable was just a specification or was

@@ -5630,8 +5630,8 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(retainedNodes, MDField, );                                          \
   OPTIONAL(thrownTypes, MDField, );                                            \
   OPTIONAL(annotations, MDField, );                                            \
-  OPTIONAL(targetFuncName, MDStringField, );
-  OPTIONAL(staticLink, MDField, );
+  OPTIONAL(targetFuncName, MDStringField, );                                   \
+  OPTIONAL(staticLink, MDField, );                                             \
   OPTIONAL(rcFrameBase, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS

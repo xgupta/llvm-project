@@ -142,28 +142,24 @@ TypeSystem::DynGetBaseType(lldb::opaque_compiler_type_t type) const {
   return CompilerType();
 }
 
-DWARFExpression
+DWARFExpressionList
 TypeSystem::DynGetLocation(lldb::opaque_compiler_type_t type) const {
-  return DWARFExpression();
+  return DWARFExpressionList();
 }
 
-DWARFExpression
+DWARFExpressionList
 TypeSystem::DynGetAllocated(lldb::opaque_compiler_type_t type) const {
-  return DWARFExpression();
+  return DWARFExpressionList();
 }
 
-DWARFExpression
+DWARFExpressionList
 TypeSystem::DynArrGetCountExp(lldb::opaque_compiler_type_t type) const {
-  return DWARFExpression();
+  return DWARFExpressionList();
 }
 
 bool
 TypeSystem::DynArrUpdateLength(lldb::opaque_compiler_type_t type, uint64_t length) {
   return false;
-}
-
-size_t TypeSystem::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
-  return 0;
 }
 
 TemplateArgumentKind

@@ -263,9 +263,9 @@ namespace llvm {
     /// \param Flags       Optional DWARF attributes, e.g., DIFlagsBinaryScale
     DIBasicType *createBasicType(StringRef Name, StringRef Pic,
                                  uint64_t SizeInBits, unsigned Encoding,
-                                 Optional<uint16_t> DigitCount = None,
-                                 Optional<uint16_t> DecimalSign = None,
-                                 Optional<int16_t> Scale = None,
+                                 std::optional<uint16_t> DigitCount = std::nullopt,
+                                 std::optional<uint16_t> DecimalSign = std::nullopt,
+                                 std::optional<int16_t> Scale = std::nullopt,
                                  DINode::DIFlags Flags = DINode::FlagZero);
 
     /// Create debugging information entry for a qualified
