@@ -195,7 +195,7 @@ public:
 
   /// Add a DIE attribute data and value.
   void addDIEEntry(DIEValueList &Die, dwarf::Attribute Attribute,
-                   Optional<dwarf::Form> Form, DIEEntry Entry);
+                   std::optional<dwarf::Form> Form, DIEEntry Entry);
 
   /// Add a DIE attribute data and value.
   void addDIEEntry(DIE &Die, dwarf::Attribute Attribute, DIE &Entry);

@@ -244,7 +244,7 @@ public:
   ///
   /// \return
   ///   Returns the corresponding DWARF expression, or NULL.
-  DWARFExpression *GetStaticLinkExpression(Status *error_ptr);
+  DWARFExpressionList *GetStaticLinkExpression(Status *error_ptr);
 
   /// Get the current lexical scope block for this StackFrame, if possible.
   ///

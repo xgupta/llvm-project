@@ -250,7 +250,7 @@ void DwarfUnit::addSInt(DIELoc &Die, std::optional<dwarf::Form> Form,
 }
 
 void DwarfUnit::addDIEEntry(DIEValueList &Die, dwarf::Attribute Attribute,
-                            Optional<dwarf::Form> Form, DIEEntry Entry) {
+                            std::optional<dwarf::Form> Form, DIEEntry Entry) {
   Die.addValue(DIEValueAllocator, Attribute, *Form, Entry);
 }
 

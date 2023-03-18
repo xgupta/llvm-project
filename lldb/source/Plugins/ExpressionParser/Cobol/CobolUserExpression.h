@@ -10,12 +10,6 @@
 #ifndef liblldb_CobolUserExpression_h_
 #define liblldb_CobolUserExpression_h_
 
-// C Includes
-// C++ Includes
-#include <memory>
-
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -25,6 +19,7 @@
 
 #include "Plugins/ExpressionParser/Cobol/CobolAST.h"
 #include "Plugins/ExpressionParser/Cobol/CobolParser.h"
+#include <memory>
 
 namespace lldb_private {
 /// TODO - not used yet.

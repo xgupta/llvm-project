@@ -1839,9 +1839,9 @@ TEST_F(DIBasicTypeTest, getOptionalDecimalInfo) {
   EXPECT_EQ(dwarf::DW_ATE_numeric_string, N->getEncoding());
   EXPECT_EQ(DINode::FlagZero, N->getFlags());
   EXPECT_EQ("S999V99", N->getPictureString());
-  EXPECT_EQ(dwarf::DW_DS_trailing_overpunch, N->getDecimalSign().getValue());
-  EXPECT_EQ(-2, N->getScale().getValue());
-  EXPECT_EQ(5, N->getDigitCount().getValue());
+  EXPECT_EQ(dwarf::DW_DS_trailing_overpunch, N->getDecimalSign().value());
+  EXPECT_EQ(-2, N->getScale().value());
+  EXPECT_EQ(5, N->getDigitCount().value());
 
   EXPECT_EQ(N, DIBasicType::get(
                    Context, dwarf::DW_TAG_base_type, "ext1",

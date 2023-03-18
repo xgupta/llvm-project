@@ -762,31 +762,36 @@ CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
 
 CompilerType CompilerType::DynGetBaseType() const {
   if (IsValid())
-    return m_type_system->DynGetBaseType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->DynGetBaseType(m_type);
   return CompilerType();
 }
 
-DWARFExpression CompilerType::DynGetLocation() const {
+DWARFExpressionList CompilerType::DynGetLocation() const {
   if (IsValid())
-    return m_type_system->DynGetLocation(m_type);
-  return DWARFExpression();
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->DynGetLocation(m_type);
+  return DWARFExpressionList();
 }
 
-DWARFExpression CompilerType::DynGetAllocated() const {
+DWARFExpressionList CompilerType::DynGetAllocated() const {
   if (IsValid())
-    return m_type_system->DynGetAllocated(m_type);
-  return DWARFExpression();
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->DynGetAllocated(m_type);
+  return DWARFExpressionList();
 }
 
-DWARFExpression CompilerType::DynArrGetCountExp() const {
+DWARFExpressionList CompilerType::DynArrGetCountExp() const {
   if (IsValid())
-    return m_type_system->DynArrGetCountExp(m_type);
-  return DWARFExpression();
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->DynArrGetCountExp(m_type);
+  return DWARFExpressionList();
 }
 
 bool CompilerType::DynArrUpdateLength(uint64_t length) {
   if (IsValid())
-    return m_type_system->DynArrUpdateLength(m_type, length);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->DynArrUpdateLength(m_type, length);
   return false;
 }
 

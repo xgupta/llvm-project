@@ -211,7 +211,7 @@ bool ValueObjectVariable::UpdateValue() {
           bool base_type_is_dyn_arr = (base_type.GetTypeInfo()
                                        & (lldb::eTypeIsDynamic | lldb::eTypeIsArray));
           while (base_type_is_dyn_arr) {
-            DWARFExpression count_exp = base_type.DynArrGetCountExp();
+            DWARFExpressionList count_exp = base_type.DynArrGetCountExp();
             if (count_exp.IsValid()) {
               Value length_value;
               if (!count_exp.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,

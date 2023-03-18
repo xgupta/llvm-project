@@ -467,12 +467,12 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   uint32_t AlignInBits;
   unsigned Encoding;
   unsigned Flags;
-  Optional<DIBasicType::DecimalInfo> DecimalAttrInfo;
+  std::optional<DIBasicType::DecimalInfo> DecimalAttrInfo;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, MDString *PictureString,
                 uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
                 unsigned Flags,
-                Optional<DIBasicType::DecimalInfo> DecimalAttrInfo)
+                std::optional<DIBasicType::DecimalInfo> DecimalAttrInfo)
       : Tag(Tag), Name(Name), PictureString(PictureString),
         SizeInBits(SizeInBits), AlignInBits(AlignInBits), Encoding(Encoding),
         Flags(Flags), DecimalAttrInfo(DecimalAttrInfo) {}
@@ -793,7 +793,6 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   Metadata *Annotations;
   MDString *TargetFuncName;
   Metadata *StaticLinkExpr;
-  // Metadata *StaticLinkRecvExpr;
   Metadata *RcFrameBaseExpr;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *LinkageName,
@@ -804,7 +803,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
                 Metadata *Declaration, Metadata *RetainedNodes,
                 Metadata *ThrownTypes, Metadata *Annotations,
                 MDString *TargetFuncName, Metadata *StaticLinkExpr,
-                Metadata *StaticLinkRecvExpr, Metadata *RcFrameBaseExpr)
+                Metadata *RcFrameBaseExpr)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
         Line(Line), Type(Type), ScopeLine(ScopeLine),
         ContainingType(ContainingType), VirtualIndex(VirtualIndex),
@@ -812,7 +811,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
         Unit(Unit), TemplateParams(TemplateParams), Declaration(Declaration),
         RetainedNodes(RetainedNodes), ThrownTypes(ThrownTypes),
         Annotations(Annotations), TargetFuncName(TargetFuncName),
-        StaticLinkExpr(StaticLinkExpr), StaticLinkRecvExpr(StaticLinkRecvExpr), RcFrameBaseExpr(RcFrameBaseExpr) {}
+        StaticLinkExpr(StaticLinkExpr), RcFrameBaseExpr(RcFrameBaseExpr) {}
   MDNodeKeyImpl(const DISubprogram *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
         LinkageName(N->getRawLinkageName()), File(N->getRawFile()),
@@ -826,9 +825,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
         RetainedNodes(N->getRawRetainedNodes()),
         ThrownTypes(N->getRawThrownTypes()),
         Annotations(N->getRawAnnotations()),
-        TargetFuncName(N->getRawTargetFuncName(),
-        StaticLinkExpr(N->getRawStaticLinkExpr(),
-        //StaticLinkRecvExpr(N->getRawStaticLinkRecvExpr()) {}
+        TargetFuncName(N->getRawTargetFuncName()),
+        StaticLinkExpr(N->getRawStaticLinkExpr()),
         RcFrameBaseExpr(N->getRawRcFrameBaseExpr()) {}
 
   bool isKeyOf(const DISubprogram *RHS) const {
@@ -848,7 +846,6 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            Annotations == RHS->getRawAnnotations() &&
            TargetFuncName == RHS->getRawTargetFuncName() &&
            StaticLinkExpr == RHS->getRawStaticLinkExpr() &&
-          //  StaticLinkRecvExpr == RHS->getRawStaticLinkRecvExpr();
            RcFrameBaseExpr == RHS->getRawRcFrameBaseExpr();
   }
 
@@ -1511,7 +1508,7 @@ public:
   /// The minimum hotness value a diagnostic needs in order to be included in
   /// optimization diagnostics.
   ///
-  /// The threshold is an Optional value, which maps to one of the 3 states:
+  /// The threshold is an std::optional value, which maps to one of the 3 states:
   /// 1). 0            => threshold disabled. All emarks will be printed.
   /// 2). positive int => manual threshold by user. Remarks with hotness exceed
   ///                     threshold will be printed.
@@ -1564,7 +1561,7 @@ public:
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
 #include "llvm/IR/Metadata.def"
 
-  // Optional map for looking up composite types by identifier.
+  // std::optional map for looking up composite types by identifier.
   std::optional<DenseMap<const MDString *, DICompositeType *>> DITypeMap;
 
   // MDNodes may be uniqued or not uniqued.  When they're not uniqued, they
