@@ -28,6 +28,7 @@
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -350,7 +351,7 @@ ValueObjectSP CobolInterpreter::VisitBasicLit(const CobolASTBasicLit *expr) {
     return nullptr;
 
   TypeSystemLegacy *legacy_type_system =
-      llvm::dyn_cast_or_null<TypeSystemLegacy>(&type_sys.get());
+      llvm::dyn_cast_or_null<TypeSystemLegacy>(type_sys->get());
   if (!legacy_type_system)
     return nullptr;
 
@@ -471,7 +472,7 @@ CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
       return nullptr;
 
     // FIXME: mutate type with proper size
-    result_type = type_sys->MutateBaseTypeSize(
+    result_type = type_sys->get()->MutateBaseTypeSize(
         var->GetCompilerType().GetOpaqueQualType(), len * 8);
     result_data.SetData(var_data, start, len);
   } else {
@@ -517,7 +518,7 @@ CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {
   if (!param)
     return nullptr;
 
-  uint32_t data_size = param->GetByteSize().getValue();
+  uint32_t data_size = param->GetByteSize().value();
   DataBufferSP buffer(new DataBufferHeap(sizeof(data_size), 0));
   TargetSP target = m_exe_ctx.GetTargetSP();
   if (!target)
@@ -533,7 +534,7 @@ CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {
   enc.PutData(0, &data_size, sizeof(uint64_t));
   DataExtractor data(buffer, byte_order, addr_size);
 
-  CompilerType comp_type = type_sys->GetBasicTypeFromAST(eBasicTypeUnsignedInt);
+  CompilerType comp_type = type_sys->get()->GetBasicTypeFromAST(eBasicTypeUnsignedInt);
   return ValueObject::CreateValueObjectFromData(llvm::StringRef(), data,
                                                 m_exe_ctx, comp_type);
 }
@@ -552,7 +553,7 @@ CobolInterpreter::VisitCompareExpr(const CobolASTCompareExpr *expr) {
     return ValFalse;
 
   TypeSystemLegacy *legacy_ts =
-      llvm::dyn_cast_or_null<TypeSystemLegacy>(&type_sys.get());
+      llvm::dyn_cast_or_null<TypeSystemLegacy>(type_sys->get());
   if (!legacy_ts)
     return ValFalse;
 
@@ -601,7 +602,7 @@ CobolInterpreter::VisitAssignmentExpr(const CobolASTAssignmentExpr *expr) {
     return nullptr;
 
   TypeSystemLegacy *legacy_ts =
-      llvm::dyn_cast_or_null<TypeSystemLegacy>(&type_sys.get());
+      llvm::dyn_cast_or_null<TypeSystemLegacy>(type_sys->get());
   if (!legacy_ts)
     return nullptr;
 
@@ -631,8 +632,7 @@ bool CobolUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 ExecutionPolicy execution_policy,
                                 bool keep_result_in_memory,
                                 bool generate_debug_info) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-
+  Log *log = GetLog(LLDBLog::Expressions);
   InstallContext(exe_ctx);
   m_interpreter.reset(new CobolInterpreter(exe_ctx, GetUserText()));
   if (m_interpreter->Parse())
@@ -651,8 +651,7 @@ CobolUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
                                lldb::UserExpressionSP &shared_ptr_to_me,
                                lldb::ExpressionVariableSP &result) {
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |
-                                                  LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   lldb_private::ExecutionPolicy execution_policy = options.GetExecutionPolicy();
   lldb::ExpressionResults execution_results = lldb::eExpressionSetupError;

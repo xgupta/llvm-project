@@ -175,7 +175,7 @@ bool ValueObjectVariable::UpdateValue() {
     const bool is_dynamic = (comp_type.GetTypeInfo() & lldb::eTypeIsDynamic);
 
     if (is_dynamic && success) {
-      DWARFExpression alloc_expr = comp_type.DynGetAllocated();
+      DWARFExpressionList alloc_expr = comp_type.DynGetAllocated();
       if (alloc_expr.IsValid()) {
         Value obj_addr(m_value);
         Value allocated;
@@ -194,7 +194,7 @@ bool ValueObjectVariable::UpdateValue() {
 
     if (success) {
       if (is_dynamic) {
-        DWARFExpression loc_expr = comp_type.DynGetLocation();
+        DWARFExpressionList loc_expr = comp_type.DynGetLocation();
         if (loc_expr.IsValid()) {
           Value obj_addr(m_value);
           if (!loc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
@@ -206,7 +206,7 @@ bool ValueObjectVariable::UpdateValue() {
           bool base_type_is_dyn_arr = (base_type.GetTypeInfo()
                                        & (lldb::eTypeIsDynamic | lldb::eTypeIsArray));
           while (base_type_is_dyn_arr) {
-            DWARFExpression count_exp = base_type.DynArrGetCountExp();
+            DWARFExpressionList count_exp = base_type.DynArrGetCountExp();
             if (count_exp.IsValid()) {
               Value length_value;
               if (!count_exp.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,

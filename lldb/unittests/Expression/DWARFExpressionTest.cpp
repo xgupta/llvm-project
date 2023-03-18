@@ -428,11 +428,12 @@ TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
                           /*addr_size*/ 4);
   Value result;
   Status status;
+  std::vector<Value> stack;
   ASSERT_TRUE(DWARFExpression::Evaluate(
       &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor,
       /*unit*/ nullptr, lldb::eRegisterKindLLDB,
       /*initial_value_ptr*/ nullptr,
-      /*object_address_ptr*/ nullptr, result, &status))
+      /*object_address_ptr*/ nullptr, stack, result, &status))
       << status.ToError();
 
   ASSERT_EQ(result.GetValueType(), Value::ValueType::LoadAddress);
@@ -501,6 +502,19 @@ DWARF:
                                             platform_sp, target_sp);
 
   ExecutionContext exe_ctx(target_sp, false);
+  // DW_OP_addrx takes a single leb128 operand, the index in the addr table:
+  uint8_t expr[] = {DW_OP_addrx, 0x01};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 4);
+  Value result;
+  Status status;
+  std::vector<Value> stack;
+  ASSERT_TRUE(DWARFExpression::Evaluate(
+      &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor, dwarf_cu,
+      lldb::eRegisterKindLLDB,
+      /*initial_value_ptr*/ nullptr,
+      /*object_address_ptr*/ nullptr, stack, result, &status))
+      << status.ToError();
 
   auto evaluate = [&](DWARFExpression &expr, Status &status, Value &result) {
     DataExtractor extractor;

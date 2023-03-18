@@ -665,7 +665,7 @@ DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                                   MDString *Name, MDString *PictureString,
                                   uint64_t SizeInBits, uint32_t AlignInBits,
                                   unsigned Encoding, DIFlags Flags,
-                                  Optional<DIBasicType::DecimalInfo> DAInfo,
+                                  std::optional<DIBasicType::DecimalInfo> DAInfo,
                                   StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIBasicType, (Tag, Name, PictureString, SizeInBits,
@@ -745,17 +745,8 @@ DIDerivedType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
                        uint32_t AlignInBits, uint64_t OffsetInBits,
                        std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
                        Metadata *ExtraData, Metadata *Annotations,
-                       Metadata *location, StorageType Storage,
->>>>>>> 7e963dfd1a64 (added initial support for TAG_dynamic_type.)
-=======
-DIDerivedType *DIDerivedType::getImpl(
-    LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
-    unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-    uint32_t AlignInBits, uint64_t OffsetInBits,
-    Optional<unsigned> DWARFAddressSpace, DIFlags Flags, Metadata *ExtraData,
-    Metadata *Annotations, Metadata *location, Metadata *Allocated,
-    StorageType Storage, bool ShouldCreate) {
->>>>>>> bee5308e625d ([DebugInfo] Added support to generate dwarf attribute  DW_AT_allocated for DW_TAG_dynamic_type)
+                       Metadata *location, Metadata *Allocated,
+                       StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
                         (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
@@ -1037,7 +1028,8 @@ DISubprogram::DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
 }
 DISubprogram::DISPFlags
 DISubprogram::toSPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized,
-                        unsigned Virtuality, bool IsMainSubprogram) {
+                        unsigned Virtuality, bool IsMainSubprogram,
+                        bool IsDescList, bool IsDescLoc) {
   // We're assuming virtuality is the low-order field.
   static_assert(int(SPFlagVirtual) == int(dwarf::DW_VIRTUALITY_virtual) &&
                     int(SPFlagPureVirtual) ==

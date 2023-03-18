@@ -35,7 +35,7 @@ class DWARFDIECollection;
 
 class DWARFASTParserLegacy : public DWARFASTParser {
 public:
-  DWARFASTParserLegacy(lldb_private::TypeSystemLegacy &ast);
+  DWARFASTParserLegacy(std::weak_ptr<lldb_private::TypeSystemLegacy> ast);
 
   ~DWARFASTParserLegacy() override;
 
@@ -68,8 +68,12 @@ public:
   void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) override {}
 
+  lldb_private::ConstString
+  GetDIEClassTemplateParams(const DWARFDIE &die) override {}
+  lldb_private::ConstString
+  ConstructDemangledNameFromDWARF(const DWARFDIE &die) override {}
 private:
-  lldb_private::TypeSystemLegacy &m_ast;
+  std::weak_ptr<lldb_private::TypeSystemLegacy> m_ast;
 
   size_t ParseChildParameters(
       lldb_private::CompileUnit &comp_unit, const DWARFDIE &parent_die,

@@ -524,26 +524,26 @@ public:
   /// \return
   ///     A location expression that describes the function frame
   ///     base.
-  DWARFExpression &GetRCFrameBaseExpression() { return m_rc_frame_base; }
+  DWARFExpressionList &GetRCFrameBaseExpression() { return m_rc_frame_base; }
 
   /// Get const accessor for the RC frame base location.
   ///
   /// \return
   ///     A const compile unit object pointer.
-  const DWARFExpression &GetRCFrameBaseExpression() const { return m_rc_frame_base; }
+  const DWARFExpressionList &GetRCFrameBaseExpression() const { return m_rc_frame_base; }
 
   /// Get accessor for the static link location.
   ///
   /// \return
   ///     A location expression that describes the nestee function frame
   ///     base.
-  DWARFExpression &GetStaticLinkExpression() { return m_static_link; }
+  DWARFExpressionList &GetStaticLinkExpression() { return m_static_link; }
 
   /// Get const accessor for the static link location.
   ///
   /// \return
   ///     A const compile unit object pointer.
-  const DWARFExpression &GetStaticLinkExpression() const { return m_static_link; }
+  const DWARFExpressionList &GetStaticLinkExpression() const { return m_static_link; }
 
   ConstString GetName() const;
 
@@ -685,11 +685,11 @@ protected:
 
   /// The raincode frame base expression for variables that are relative to the 
   /// frame pointer.
-  DWARFExpression m_rc_frame_base;
+  DWARFExpressionList m_rc_frame_base;
 
   /// The static link expression for lexical nested subroutine pointing to the
   /// nestee frame
-  DWARFExpression m_static_link;
+  DWARFExpressionList m_static_link;
 
   Flags m_flags;
 

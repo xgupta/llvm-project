@@ -4022,31 +4022,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.Kind = ValID::t_Constant;
     return false;
   }
- 
-  // Unary Operators.
-  case lltok::kw_fneg: {
-    unsigned Opc = Lex.getUIntVal();
-    Constant *Val;
-    Lex.Lex();
-    if (parseToken(lltok::lparen, "expected '(' in unary constantexpr") ||
-        parseGlobalTypeAndValue(Val) ||
-        parseToken(lltok::rparen, "expected ')' in unary constantexpr"))
-      return true;
-    
-    // Check that the type is valid for the operator.
-    switch (Opc) {
-    case Instruction::FNeg:
-      if (!Val->getType()->isFPOrFPVectorTy())
-        return error(ID.Loc, "constexpr requires fp operands");
-      break;
-    default: llvm_unreachable("Unknown unary operator!");
-    }
-    unsigned Flags = 0;
-    Constant *C = ConstantExpr::get(Opc, Val, Flags);
-    ID.ConstantVal = C;
-    ID.Kind = ValID::t_Constant;
-    return false;
-  }
   // Binary Operators.
   case lltok::kw_add:
   case lltok::kw_sub:
@@ -5384,8 +5359,8 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(retainedNodes, MDField, );                                          \
   OPTIONAL(thrownTypes, MDField, );                                            \
   OPTIONAL(annotations, MDField, );                                            \
-  OPTIONAL(targetFuncName, MDStringField, );
-  OPTIONAL(staticLink, MDField, );
+  OPTIONAL(targetFuncName, MDStringField, );                                   \
+  OPTIONAL(staticLink, MDField, );                                             \
   OPTIONAL(rcFrameBase, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
