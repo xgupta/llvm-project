@@ -21,6 +21,7 @@
 #if defined(__linux__)
 #include <iconv.h>
 #define USE_BUILTIN_ICONV
+#include "llvm/Support/Errno.h"
 #endif
 
 // Other libraries and framework includes
@@ -30,6 +31,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Core/Debugger.h"
 
 namespace lldb_private {
 
@@ -565,7 +567,7 @@ private:
   const TypeSystemLegacy &operator=(const TypeSystemLegacy &) = delete;
 };
 
-/// TODO cleanup, seperate iconv
+/// TODO cleanup, separate iconv
 class TargetCharsetReader {
 public:
   TargetCharsetReader(lldb::TargetSP target_sp, bool encode = false)
@@ -592,22 +594,30 @@ public:
 
     bool Converted = false;
 #if defined(USE_BUILTIN_ICONV)
+    size_t buffer_size = inp.length();
     size_t in_size = inp.length();
     char *src_ptr = const_cast<char *>(inp.c_str());
     std::vector<char> buffer(buffer_size);
     std::string dst;
-    while (in_size) {
-      char *dst_ptr = &buffer[0];
-      size_t out_size = buffer_size;
-      size_t result = iconv(icd, &src_ptr, &in_size, &dst_ptr, &out_size);
-      if (result == (size_t)-1)
-        return false;
 
-      size_t out_len = buffer_size - out_size;
-      if (out_len) {
-        dst.append(&buffer[0], out_len);
-        Converted |= true;
-      }
+    char *dst_ptr = &buffer[0];
+    size_t out_size = buffer_size;
+    size_t result = iconv(icd, &src_ptr, &in_size, &dst_ptr, &out_size);
+    if (result == (size_t)-1) {
+      int e = errno;
+
+      Debugger::ReportError(
+          llvm::formatv(
+             "TargetCharsetReader: Attempted iconv of {0} host-bytes, failed with error: {1}({2}): in_size={3} out_size={4}",
+             inp.length(), e, llvm::sys::StrError(e).c_str(), in_size, out_size).str());
+
+      return false;
+    }
+
+    size_t out_len = buffer_size - out_size;
+    if (out_len) {
+      dst.append(&buffer[0], out_len);
+      Converted |= true;
     }
     if (Converted) {
       inp.erase();
@@ -621,20 +631,28 @@ public:
     if (!IsValid())
       return false;
 #if defined(USE_BUILTIN_ICONV)
+    size_t buffer_size = length;
     size_t in_size = length;
     char *src_ptr = inp;
     std::vector<char> buffer(buffer_size);
-    while (in_size) {
-      char *dst_ptr = &buffer[0];
-      size_t out_size = buffer_size;
-      size_t result = iconv(icd, &src_ptr, &in_size, &dst_ptr, &out_size);
-      if (result == (size_t)-1)
-        return false;
-      size_t out_len = buffer_size - out_size;
-      if (out_len) {
-        memcpy(inp, &buffer[0], out_len);
-        return true;
-      }
+
+    char *dst_ptr = &buffer[0];
+    size_t out_size = buffer_size;
+    size_t result = iconv(icd, &src_ptr, &in_size, &dst_ptr, &out_size);
+    if (result == (size_t)-1) {
+      int e = errno;
+
+      Debugger::ReportError(
+          llvm::formatv(
+             "TargetCharsetReader: Attempted iconv of {0} host-bytes, failed with error: {1}({2}): in_size={3} out_size={4}",
+             length, e, llvm::sys::StrError(e).c_str(), in_size, out_size).str());
+
+      return false;
+    }
+    size_t out_len = buffer_size - out_size;
+    if (out_len) {
+      memcpy(inp, &buffer[0], out_len);
+      return true;
     }
 #endif
     return false;
@@ -654,7 +672,6 @@ private:
   TargetCharsetReader(const TargetCharsetReader &) = delete;
   const TargetCharsetReader &operator=(const TargetCharsetReader &) = delete;
 
-  static const size_t buffer_size = 1024;
   std::string fromcode;
 #if defined(USE_BUILTIN_ICONV)
   iconv_t icd;
