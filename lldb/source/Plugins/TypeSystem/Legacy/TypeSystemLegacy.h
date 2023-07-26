@@ -576,8 +576,16 @@ public:
     icd = (iconv_t)-1;
     if (target_sp) {
       fromcode.assign(target_sp->GetTargetCharset().str());
-      icd = encode ? iconv_open(fromcode.c_str(), "")
-                   : iconv_open("//TRANSLIT //IGNORE", fromcode.c_str());
+      const char * to{};
+      const char * from{};
+      if ( encode ) {
+        to = fromcode.c_str();
+        from = "";
+      } else {
+        to = "//TRANSLIT //IGNORE";
+        from = fromcode.c_str();
+      }
+      icd = iconv_open(to, from);
     }
 #endif
   }
@@ -594,28 +602,45 @@ public:
 
     bool Converted = false;
 #if defined(USE_BUILTIN_ICONV)
-    size_t buffer_size = inp.length();
     size_t in_size = inp.length();
+    size_t buffer_size = in_size*2;
     char *src_ptr = const_cast<char *>(inp.c_str());
     std::vector<char> buffer(buffer_size);
     std::string dst;
 
     char *dst_ptr = &buffer[0];
     size_t out_size = buffer_size;
-    size_t result = iconv(icd, &src_ptr, &in_size, &dst_ptr, &out_size);
-    if (result == (size_t)-1) {
+
+#if 0
+    // First reset to initial state
+    size_t iresult = iconv(icd, NULL, NULL, NULL, NULL);
+    if (iresult == (size_t)-1) {
       int e = errno;
 
       Debugger::ReportError(
           llvm::formatv(
-             "TargetCharsetReader: Attempted iconv of {0} host-bytes, failed with error: {1}({2}): in_size={3} out_size={4}",
-             inp.length(), e, llvm::sys::StrError(e).c_str(), in_size, out_size).str());
+             "TargetCharsetReader: Failed to reset iconv state.  error: {0}({1})\n",
+             e, llvm::sys::StrError(e).c_str()).str());
 
       return false;
     }
+#endif
 
-    size_t out_len = buffer_size - out_size;
-    if (out_len) {
+    size_t result = iconv(icd, &src_ptr, &in_size, &dst_ptr, &out_size);
+    if (result == (size_t)-1) {
+      int e = errno;
+      Debugger::ReportError(
+          llvm::formatv(
+             "TargetCharsetReader: Attempted iconv of {0} host-bytes, failed with error: {1}({2}): in_size={3} out_size={4}",
+             inp.length(), e, llvm::sys::StrError(e).c_str(), in_size, out_size).str());
+      return false;
+    }
+
+    ssize_t out_len = buffer_size - out_size;
+    if (out_len > 0) {
+      if (out_len > inp.length()) {
+         out_len = inp.length();
+      }
       dst.append(&buffer[0], out_len);
       Converted |= true;
     }
@@ -631,26 +656,41 @@ public:
     if (!IsValid())
       return false;
 #if defined(USE_BUILTIN_ICONV)
-    size_t buffer_size = length;
     size_t in_size = length;
+    size_t buffer_size = in_size*2;
     char *src_ptr = inp;
     std::vector<char> buffer(buffer_size);
 
     char *dst_ptr = &buffer[0];
     size_t out_size = buffer_size;
+
+#if 0
+    // First reset to initial state
+    size_t iresult = iconv(icd, NULL, NULL, NULL, NULL);
+    if (iresult == (size_t)-1) {
+      int e = errno;
+      Debugger::ReportError(
+          llvm::formatv(
+             "TargetCharsetReader: Failed to reset iconv state.  error: {0}({1})\n",
+             e, llvm::sys::StrError(e).c_str()).str());
+      return false;
+    }
+#endif
+
     size_t result = iconv(icd, &src_ptr, &in_size, &dst_ptr, &out_size);
     if (result == (size_t)-1) {
       int e = errno;
-
       Debugger::ReportError(
           llvm::formatv(
              "TargetCharsetReader: Attempted iconv of {0} host-bytes, failed with error: {1}({2}): in_size={3} out_size={4}",
              length, e, llvm::sys::StrError(e).c_str(), in_size, out_size).str());
-
       return false;
     }
-    size_t out_len = buffer_size - out_size;
-    if (out_len) {
+    ssize_t out_len = buffer_size - out_size;
+    if (out_len > 0) {
+      if (out_len > length) {
+         out_len = length;
+      }
       memcpy(inp, &buffer[0], out_len);
       return true;
     }
