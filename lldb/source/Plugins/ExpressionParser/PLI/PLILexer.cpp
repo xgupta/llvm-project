@@ -44,6 +44,8 @@ const PLILexer::Token &PLILexer::Lex() {
   if (newline) {
     switch (lastTok) {
     default:
+      m_start++;
+      start++;
       break;
     case TOK_IDENTIFIER:
     case LIT_FLOAT:
