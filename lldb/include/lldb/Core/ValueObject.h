@@ -662,6 +662,11 @@ public:
   CreateValueObjectFromData(llvm::StringRef name, const DataExtractor &data,
                             const ExecutionContext &exe_ctx, CompilerType type);
 
+  static lldb::ValueObjectSP
+  CreateValueObjectFromCString(const char *value_str,
+                               const ExecutionContext &exe_ctx,
+                               CompilerType comp_type, Status &error);
+
   lldb::ValueObjectSP Persist();
 
   /// Returns true if this is a char* or a char[] if it is a char* and
