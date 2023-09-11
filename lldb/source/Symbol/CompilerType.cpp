@@ -827,6 +827,16 @@ lldb::Encoding CompilerType::GetEncoding(uint64_t &count) const {
   return lldb::eEncodingInvalid;
 }
 
+bool CompilerType::EncodeDataToType(ExecutionContext &exe_ctx,
+                                    opaque_compiler_type_t src_type,
+                                    const DataExtractor &src_data,
+                                    DataExtractor &dest_data) {
+  if (!IsValid())
+    return false;
+  return m_type_system->EncodeDataToType(exe_ctx, src_type, src_data,
+                                         m_type /*dest_type*/, dest_data);
+}
+
 lldb::Format CompilerType::GetFormat() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())

@@ -743,6 +743,10 @@ public:
   static lldb::ValueObjectSP CreateValueObjectFromNullptr(lldb::TargetSP target,
                                                           CompilerType type,
                                                           llvm::StringRef name);
+  static lldb::ValueObjectSP
+  CreateValueObjectFromCString(const char *value_str,
+                               const ExecutionContext &exe_ctx,
+                               CompilerType comp_type, Status &error);
 
   lldb::ValueObjectSP Persist();
 
