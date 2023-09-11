@@ -744,6 +744,11 @@ public:
                                                           CompilerType type,
                                                           llvm::StringRef name);
 
+  static lldb::ValueObjectSP
+  CreateValueObjectFromCString(const char *value_str,
+                               const ExecutionContext &exe_ctx,
+                               CompilerType comp_type, Status &error);
+
   lldb::ValueObjectSP Persist();
 
   /// Returns true if this is a char* or a char[] if it is a char* and

@@ -1647,6 +1647,75 @@ addr_t ValueObject::GetPointerValue(AddressType *address_type) {
 
   return address;
 }
+#include <regex>
+
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromCString(
+    const char *value_str, const ExecutionContext &exe_ctx,
+    CompilerType comp_type, Status &error) {
+  std::string str(value_str);
+  llvm::StringRef value_string(str);
+  size_t data_length = 0;
+  int64_t iValue;
+  double dValue;
+  bool isArray = false;
+  size_t array_length = 0;
+  const void *data_ptr = nullptr;
+  BasicType base_type;
+  // Regular expressions for integer, string, and float
+  std::regex intRegex(
+      "[-+]?\\d+"); // Matches integers with optional negative sign
+  std::regex floatRegex(
+      "[-+]?\\d*\\.?\\d+([eE][-+]?\\d+)?"); // Matches floating-point numbers,
+                                            // including scientific notation
+                                            // with optional sign
+
+  if (std::regex_match(str, intRegex)) {
+    if (value_string.front() == '+')
+      value_string = value_string.drop_front(1);
+    if (value_string.getAsInteger(0, iValue)) {
+      error.SetErrorStringWithFormat("integer conversion error %s",
+                                     value_string.str().c_str());
+      return nullptr;
+    }
+    data_length = sizeof(iValue);
+    data_ptr = &iValue;
+    base_type = eBasicTypeInt;
+  } else if (std::regex_match(str, floatRegex)) {
+    if (value_string.getAsDouble(dValue)) {
+      error.SetErrorStringWithFormat("double conversion error %s",
+                                     value_string.str().c_str());
+      return nullptr;
+    }
+    data_length = sizeof(dValue);
+    data_ptr = &dValue;
+    base_type = eBasicTypeDouble;
+  } else {
+    isArray = true;
+    data_ptr = value_string.data();
+    array_length = value_string.size();
+    data_length = array_length;
+    base_type = eBasicTypeChar;
+  }
+
+  auto type = comp_type.GetBasicTypeFromAST(base_type);
+  TargetSP target = exe_ctx.GetTargetSP();
+  if (!target)
+    return nullptr;
+
+  ByteOrder byte_order = endian::InlHostByteOrder();
+  uint8_t addr_size = target->GetArchitecture().GetAddressByteSize();
+
+  DataBufferSP buffer(new DataBufferHeap(data_length, 0));
+  DataEncoder enc(buffer->GetBytes(), data_length, byte_order, addr_size);
+  enc.PutData(0, data_ptr, data_length);
+  DataExtractor data(enc.GetDataBuffer(), byte_order, addr_size);
+
+  if (isArray) {
+    type = type.GetArrayType(array_length);
+  }
+  return ValueObject::CreateValueObjectFromData(llvm::StringRef(), data,
+                                                exe_ctx, type);
+}
 
 bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   error.Clear();
@@ -1659,10 +1728,31 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
 
   uint64_t count = 0;
   const Encoding encoding = GetCompilerType().GetEncoding(count);
-
   const size_t byte_size = GetByteSize().value_or(0);
 
   Value::ValueType value_type = m_value.GetValueType();
+
+  ExecutionContext exe_ctx(GetExecutionContextRef());
+  TargetSP target = exe_ctx.GetTargetSP();
+  if (!target)
+    return false;
+
+  const uint8_t addr_size = target->GetArchitecture().GetAddressByteSize();
+  auto comp_type = GetCompilerType();
+  auto rhsVal =
+      CreateValueObjectFromCString(value_str, exe_ctx, comp_type, error);
+  DataExtractor data0;
+  rhsVal->GetData(data0, error);
+  DataBufferSP buffer_dest(new DataBufferHeap(byte_size, 0));
+  DataExtractor dest_data(buffer_dest, ByteOrder::eByteOrderInvalid, addr_size);
+  const auto src_type = rhsVal->GetCompilerType().GetOpaqueQualType();
+
+  bool encodedata_to_type =
+      GetCompilerType().EncodeDataToType(exe_ctx, src_type, data0, dest_data);
+  if (encodedata_to_type) {
+    SetData(dest_data, error);
+    return true;
+  }
 
   if (value_type == Value::ValueType::Scalar) {
     // If the value is already a scalar, then let the scalar change itself:

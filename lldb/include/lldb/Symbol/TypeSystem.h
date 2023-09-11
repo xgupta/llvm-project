@@ -316,8 +316,13 @@ public:
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) = 0;
 
-  virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
-                                     uint64_t &count) = 0;
+  virtual bool EncodeDataToType(
+      ExecutionContext &exe_scope, lldb::opaque_compiler_type_t src_type,
+      const DataExtractor &src_data, lldb::opaque_compiler_type_t dest_type,
+      DataExtractor &dest_data,
+      const lldb::LanguageType lang = lldb::eLanguageTypeUnknown) {
+    return false;
+  }
 
   virtual lldb::Format GetFormat(lldb::opaque_compiler_type_t type) = 0;
 

@@ -411,6 +411,10 @@ public:
 
   lldb::Encoding GetEncoding(uint64_t &count) const;
 
+  bool EncodeDataToType(ExecutionContext &exe_scope,
+                        lldb::opaque_compiler_type_t src_type,
+                        const DataExtractor &src_data,
+                        DataExtractor &dest_data);
   lldb::Format GetFormat() const;
 
   std::optional<size_t> GetTypeBitAlign(ExecutionContextScope *exe_scope) const;
