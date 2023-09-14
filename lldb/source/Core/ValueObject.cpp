@@ -1691,6 +1691,13 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromCString(
     data_ptr = &dValue;
     base_type = eBasicTypeDouble;
   } else {
+    if (value_string.front() != '"' || value_string.back() != '"') {
+      error.SetErrorStringWithFormat("string %s must be enclosed in quotes",
+                                    value_string.str().c_str());
+      return nullptr;
+    }
+    value_string = value_string.drop_front();
+    value_string = value_string.drop_back();
     isArray = true;
     data_ptr = value_string.data();
     array_length = value_string.size();
@@ -1742,6 +1749,9 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   auto comp_type = GetCompilerType();
   auto rhsVal =
       CreateValueObjectFromCString(value_str, exe_ctx, comp_type, error);
+  if (error.Fail()) {
+    return false;
+  }
   DataExtractor data0;
   rhsVal->GetData(data0, error);
   DataBufferSP buffer_dest(new DataBufferHeap(byte_size, 0));
