@@ -78,6 +78,11 @@ CobolLanguage::GetHardcodedSummaries() {
   return g_formatters;
 }
 
+bool CobolLanguage::DemangledNameContainsPath(llvm::StringRef path,
+                                              ConstString demangled) const {
+  return demangled.GetStringRef().contains_insensitive(path);
+}
+
 HardcodedFormatters::HardcodedSyntheticFinder
 CobolLanguage::GetHardcodedSynthetics() {
   static HardcodedFormatters::HardcodedSyntheticFinder g_formatters;

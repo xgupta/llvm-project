@@ -80,6 +80,11 @@ PLILanguage::GetHardcodedSummaries() {
   return g_formatters;
 }
 
+bool PLILanguage::DemangledNameContainsPath(llvm::StringRef path,
+                                            ConstString demangled) const {
+  return demangled.GetStringRef().contains_insensitive(path);
+}
+
 HardcodedFormatters::HardcodedSyntheticFinder
 PLILanguage::GetHardcodedSynthetics() {
   static HardcodedFormatters::HardcodedSyntheticFinder g_formatters;
