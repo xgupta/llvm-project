@@ -30,7 +30,8 @@ public:
   }
 
   HardcodedFormatters::HardcodedSummaryFinder GetHardcodedSummaries() override;
-
+  bool DemangledNameContainsPath(llvm::StringRef path,
+                                 ConstString demangled) const override;
   HardcodedFormatters::HardcodedSyntheticFinder
   GetHardcodedSynthetics() override;
 
