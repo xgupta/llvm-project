@@ -476,7 +476,8 @@ public:
   lldb::ValueObjectSP
   GetValueObjectForFrameAggregateVariable(ConstString name,
                                           lldb::ValueObjectSP &valobj_sp,
-                                          lldb::DynamicValueType use_dynamic);
+                                          lldb::DynamicValueType use_dynamic,
+                                          bool look_in_array = false);
 
   /// Create a ValueObject for a given Variable in this StackFrame.
   ///

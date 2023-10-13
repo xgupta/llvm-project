@@ -1274,14 +1274,16 @@ bool StackFrame::HasDebugInformation() {
 }
 
 ValueObjectSP StackFrame::GetValueObjectForFrameAggregateVariable(
-    ConstString name, ValueObjectSP &valobj_sp, DynamicValueType use_dynamic) {
+    ConstString name, ValueObjectSP &valobj_sp, DynamicValueType use_dynamic, bool look_in_array) {
 
   if (!valobj_sp)
     return valobj_sp;
 
   bool is_complete;
-  if (valobj_sp->GetCompilerType().IsArrayType(nullptr, nullptr, &is_complete))
-    return nullptr;
+  if (valobj_sp->GetCompilerType().IsArrayType(nullptr, nullptr, &is_complete)) {
+    if (!look_in_array || !valobj_sp->GetCompilerType().IsAggregateType())
+      return nullptr;
+  }
 
   ValueObjectSP result = valobj_sp->GetChildMemberWithName(name, true);
   if (result)
@@ -1296,7 +1298,7 @@ ValueObjectSP StackFrame::GetValueObjectForFrameAggregateVariable(
     if (!child_type.IsAggregateType())
       continue;
 
-    result = GetValueObjectForFrameAggregateVariable(name, child, use_dynamic);
+    result = GetValueObjectForFrameAggregateVariable(name, child, use_dynamic, look_in_array);
     if (result)
       break;
   }
