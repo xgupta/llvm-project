@@ -81,6 +81,10 @@ private:
   lldb::DynamicValueType m_use_dynamic;
   CobolParser m_parser;
   std::vector<std::unique_ptr<CobolASTStmt>> m_statements;
+  lldb::ValueObjectSP 
+  FindFieldInStructArray(const lldb_private::CobolASTRefModifierExpr *expr);
+  lldb::ValueObjectSP
+  GetElementAtIndex(lldb::ValueObjectSP var, const lldb_private::CobolASTRefModifierExpr *expr);
 };
 
 class CobolUserExpression : public UserExpression {
