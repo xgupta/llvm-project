@@ -30,6 +30,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/LLDBLog.h"
 
+#include "llvm/Support/Casting.h"
+
 using namespace lldb_private;
 using namespace lldb;
 
@@ -405,14 +407,10 @@ CobolInterpreter::VisitSelectorExpr(const CobolASTSelectorExpr *expr) {
   return nullptr;
 }
 
+// Gets an element from array where `var` is shared pointer to array type
+// Index is extracted from `expr`
 ValueObjectSP
-CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
-  ValueObjectSP var = EvaluateExpr(expr->GetExpr());
-  if (!var) {
-    m_error.SetErrorString("variable not found.");
-    return nullptr;
-  }
-
+CobolInterpreter::GetElementAtIndex(lldb::ValueObjectSP var, const lldb_private::CobolASTRefModifierExpr *expr) {
   CompilerType elem_type;
   uint64_t max_elem;
   bool is_incomplete;
@@ -499,6 +497,65 @@ CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
   }
   return ValueObject::CreateValueObjectFromData(llvm::StringRef(), result_data,
                                                 m_exe_ctx, result_type);
+}
+
+ValueObjectSP
+CobolInterpreter::FindFieldInStructArray(const CobolASTRefModifierExpr *expr) {
+  const CobolASTIdent* ident = llvm::cast<const CobolASTIdent>(expr->GetExpr());
+  ValueObjectSP result;
+
+  llvm::StringRef var_name = ident->GetName().m_text;
+
+  VariableListSP var_list_sp(m_frame->GetInScopeVariableList(true));
+  VariableList *var_list = var_list_sp.get();
+
+  if (var_list) {
+    for (size_t i = 0; i < var_list->GetSize(); i++) {
+      VariableSP variable_sp = var_list->GetVariableAtIndex(i);
+      if (!variable_sp)
+        continue;
+
+      Type *var_type = variable_sp->GetType();
+      if (!var_type)
+        continue;
+
+      ValueObjectSP valobj_sp =
+          m_frame->GetValueObjectForFrameVariable(variable_sp, m_use_dynamic);
+      if (!valobj_sp)
+        return valobj_sp;
+
+      valobj_sp = m_frame->GetValueObjectForFrameAggregateVariable(
+          ConstString(var_name), valobj_sp, m_use_dynamic, true);
+      if (valobj_sp) {
+        result = valobj_sp->GetParent()->GetParent()->GetSP();
+        break;
+      }
+    }
+  }
+
+  if (!result) {
+    m_error.SetErrorStringWithFormat("Unknown variable %s",
+                                     var_name.str().c_str());
+    return result;
+  }
+
+  result = GetElementAtIndex(result, expr);
+  if (!result)
+    return result;
+
+  result = result->GetChildMemberWithName(ConstString(var_name), true);
+  return result;
+}
+
+ValueObjectSP
+CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
+  ValueObjectSP var = EvaluateExpr(expr->GetExpr());
+  if (!var) {
+    m_error.Clear();
+    return FindFieldInStructArray(expr);
+  }
+
+  return GetElementAtIndex(var, expr);
 }
 
 ValueObjectSP
