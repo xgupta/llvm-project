@@ -408,29 +408,14 @@ CobolInterpreter::VisitSelectorExpr(const CobolASTSelectorExpr *expr) {
 }
 
 // Gets an element from array where `var` is shared pointer to array type
-// Index is extracted from `expr`
 ValueObjectSP
-CobolInterpreter::GetElementAtIndex(lldb::ValueObjectSP var, const lldb_private::CobolASTRefModifierExpr *expr) {
+CobolInterpreter::GetElementAtIndex(lldb::ValueObjectSP var, uint32_t start, uint32_t len) {
   CompilerType elem_type;
   uint64_t max_elem;
   bool is_incomplete;
   bool substring_select = !var->GetCompilerType().IsArrayType(
       &elem_type, &max_elem, &is_incomplete);
   DataExtractor var_data;
-  ValueObjectSP start_var = EvaluateExpr(expr->GetStartExpr());
-  if (!start_var) {
-    m_error.SetErrorString("ref modifier invalid indexes.");
-    return nullptr;
-  }
-
-  uint32_t start = 0;
-  uint32_t len = 1;
-  llvm::StringRef index_string(start_var->GetValueAsCString());
-  if (index_string.getAsInteger(10, start)) {
-    m_error.SetErrorStringWithFormat("ref modifier invalid index %s.",
-                                     index_string.str().c_str());
-    return nullptr;
-  }
 
   if (substring_select) {
     Status err;
@@ -442,16 +427,6 @@ CobolInterpreter::GetElementAtIndex(lldb::ValueObjectSP var, const lldb_private:
     return nullptr;
   }
   start -= 1; // convert 1-based indexing to 0-based.
-
-  ValueObjectSP len_var = EvaluateExpr(expr->GetLenExpr());
-  if (len_var) {
-    llvm::StringRef len_string(len_var->GetValueAsCString());
-    if (len_string.getAsInteger(10, len)) {
-      m_error.SetErrorStringWithFormat("ref modifier invalid index %s.",
-                                       len_string.str().c_str());
-      return nullptr;
-    }
-  }
 
   if ((start + len) > max_elem)
     len = max_elem - start;
@@ -499,12 +474,8 @@ CobolInterpreter::GetElementAtIndex(lldb::ValueObjectSP var, const lldb_private:
                                                 m_exe_ctx, result_type);
 }
 
-ValueObjectSP
-CobolInterpreter::FindFieldInStructArray(const CobolASTRefModifierExpr *expr) {
-  const CobolASTIdent* ident = llvm::cast<const CobolASTIdent>(expr->GetExpr());
-  ValueObjectSP result;
-
-  llvm::StringRef var_name = ident->GetName().m_text;
+ValueObjectListSP CobolInterpreter::FindAllCandidates(ConstString var_name) {
+  ValueObjectListSP candidates(new ValueObjectList);
 
   VariableListSP var_list_sp(m_frame->GetInScopeVariableList(true));
   VariableList *var_list = var_list_sp.get();
@@ -522,40 +493,100 @@ CobolInterpreter::FindFieldInStructArray(const CobolASTRefModifierExpr *expr) {
       ValueObjectSP valobj_sp =
           m_frame->GetValueObjectForFrameVariable(variable_sp, m_use_dynamic);
       if (!valobj_sp)
-        return valobj_sp;
+        continue;
 
       valobj_sp = m_frame->GetValueObjectForFrameAggregateVariable(
-          ConstString(var_name), valobj_sp, m_use_dynamic, true);
+          var_name, valobj_sp, m_use_dynamic, true);
       if (valobj_sp) {
-        result = valobj_sp->GetParent()->GetParent()->GetSP();
-        break;
+        candidates->Append(valobj_sp);
       }
     }
   }
 
-  if (!result) {
+  return candidates;
+}
+
+ValueObjectSP
+CobolInterpreter::FindFieldInStructArray(const CobolASTRefModifierExpr *expr) {
+  auto ident = llvm::cast<const CobolASTIdent>(expr->GetExpr());
+  auto indices = llvm::cast<const CobolASTIndexExpr>(expr->GetStartExpr());
+
+  llvm::StringRef var_name = ident->GetName().m_text;
+
+  auto candidates_sp = FindAllCandidates(ConstString(var_name));
+
+  if (candidates_sp->GetSize() == 0) {
     m_error.SetErrorStringWithFormat("Unknown variable %s",
                                      var_name.str().c_str());
-    return result;
+    return nullptr;
   }
 
-  result = GetElementAtIndex(result, expr);
-  if (!result)
-    return result;
+  for (auto result : candidates_sp->GetObjects()) {
+    m_error.Clear();
+    for (size_t i = 0; i < indices->GetNumberOfIndices(); ++i) {
+      auto index = GetUIntFromValueObjectSP(EvaluateExpr(indices->GetIndices()[i].get()));
+      if (m_error.Fail()) {
+        result = nullptr;
+        break;
+      }
+      
+      auto level = indices->GetNumberOfIndices() - i;
+      auto top_level_parent = result->GetParent()->FollowParentChain([&level](ValueObject* par) {
+        if (par->GetCompilerType().IsArrayType())
+          level--;
+        return (level != 0);
+      });
+      
+      if (!top_level_parent) {
+        result = nullptr;
+        break;
+      }
+      
+      result = GetElementAtIndex(top_level_parent->GetSP(), index);
+      if (!result)
+        break;
+      
+      result = m_frame->GetValueObjectForFrameAggregateVariable(
+          ConstString(var_name), result, m_use_dynamic, true);
+    }
+    if (result)
+        return result;
+  }
+  
+  return nullptr;
+}
 
-  result = result->GetChildMemberWithName(ConstString(var_name), true);
-  return result;
+uint32_t CobolInterpreter::GetUIntFromValueObjectSP(ValueObjectSP var) {
+  uint32_t index;
+  llvm::StringRef index_string(var->GetValueAsCString());
+  if (index_string.getAsInteger(10, index)) {
+    m_error.SetErrorStringWithFormat("ref modifier invalid index %s.",
+                                     index_string.str().c_str());
+    return 0;
+  }
+  return index;
 }
 
 ValueObjectSP
 CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
+  auto index_expr = llvm::cast<CobolASTIndexExpr>(expr->GetStartExpr());
   ValueObjectSP var = EvaluateExpr(expr->GetExpr());
-  if (!var) {
+  if (!var || index_expr->GetNumberOfIndices() != 1) {
     m_error.Clear();
     return FindFieldInStructArray(expr);
   }
 
-  return GetElementAtIndex(var, expr);
+  auto start_var = EvaluateExpr(index_expr->GetIndices()[0].get());
+  auto start = GetUIntFromValueObjectSP(start_var);
+  if (m_error.Fail()) return nullptr;
+  auto len_var = EvaluateExpr(expr->GetLenExpr());
+  uint32_t len;
+  if (len_var) {
+    len = GetUIntFromValueObjectSP(len_var);
+    if (m_error.Fail()) return nullptr;
+    return GetElementAtIndex(var, start, len);
+  }
+  return GetElementAtIndex(var, start);
 }
 
 ValueObjectSP
