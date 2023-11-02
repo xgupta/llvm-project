@@ -149,12 +149,27 @@ CobolASTExpr *CobolParser::Selector(CobolASTExpr *expr) {
   return nullptr;
 }
 
+CobolASTExpr *CobolParser::Indices() {
+  Rule r("Indices", this);
+  std::vector<std::unique_ptr<CobolASTExpr>> indices_vec;
+
+  while (true) {
+    indices_vec.push_back(std::move(std::unique_ptr<CobolASTExpr>(PrimaryExpr())));
+    auto next_type = peek();
+    if (next_type != CobolLexer::OP_COMMA)
+      break;
+    next();
+  }
+  
+  return new CobolASTIndexExpr(std::move(indices_vec));
+}
+
 CobolASTExpr *CobolParser::RefModifier(CobolASTExpr *expr) {
   Rule r("MoveRef", this);
   CobolASTExpr *start = nullptr;
   CobolASTExpr *len = nullptr;
   if (match(CobolLexer::OP_LPAREN)) {
-    start = PrimaryExpr();
+    start = Indices();
     CobolLexer::Token t = next();
     if (t.m_type == CobolLexer::OP_COLON) {
       len = PrimaryExpr();

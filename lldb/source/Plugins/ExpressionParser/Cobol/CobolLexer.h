@@ -33,6 +33,7 @@ public:
     LIT_STRING,
     OP_AMP,
     OP_COLON,
+    OP_COMMA,
     OP_DOT,
     OP_LPAREN,
     OP_LBRACK,
@@ -98,6 +99,7 @@ private:
     case '=':
     case '>':
     case '<':
+    case ',':
       break;
     }
     return true;
