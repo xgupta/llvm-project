@@ -30,6 +30,7 @@ public:
     eFuncCallExpr,
     eAssignmentExpr,
     eCompareExpr,
+    eIndexExpr,
   };
 
   virtual ~CobolASTNode() = default;
@@ -208,6 +209,35 @@ private:
 
   CobolASTSelectorExpr(const CobolASTSelectorExpr &) = delete;
   const CobolASTSelectorExpr &operator=(const CobolASTSelectorExpr &) = delete;
+};
+
+class CobolASTIndexExpr : public CobolASTExpr {
+public:
+  CobolASTIndexExpr(std::vector<std::unique_ptr<CobolASTExpr>> indices) 
+  : CobolASTExpr(eIndexExpr), m_indices(std::move(indices)) {}
+  ~CobolASTIndexExpr() override = default;
+
+  static bool classof(const CobolASTNode *n) {
+    return n->GetKind() == eIndexExpr;
+  }
+
+  const char *GetKindName() const override {
+    return "Index Expression";
+  }
+
+  size_t GetNumberOfIndices() const {
+    return m_indices.size();
+  }
+
+  const std::vector<std::unique_ptr<CobolASTExpr>>& GetIndices() const {
+    return m_indices;
+  }
+private:
+  std::vector<std::unique_ptr<CobolASTExpr>> m_indices;
+
+  CobolASTIndexExpr(const CobolASTIndexExpr &) = delete;
+  const CobolASTIndexExpr &
+  operator=(const CobolASTIndexExpr &) = delete;
 };
 
 class CobolASTRefModifierExpr : public CobolASTExpr {

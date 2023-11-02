@@ -95,6 +95,7 @@ private:
   CobolASTExpr *FuncCall(CobolASTExpr *expr);
   CobolASTExpr *Assignment(CobolASTExpr *expr);
   CobolASTExpr *Compare(CobolASTExpr *expr);
+  CobolASTExpr *Indices();
 
   CobolLexer m_lexer;
   std::vector<CobolLexer::Token> m_tokens;

@@ -23,7 +23,7 @@ const CobolLexer::KeywordMap CobolLexer::m_keywords = {
     {"MOVE", KW_MV},    {"SET", KW_SET},       {"TO", KW_TO},
     {"IF", KW_IF},      {"EQUALS", KW_EQUALS}, {"IS", KW_IS},
     {"NOT", KW_NOT},    {">", OP_COMP_GT},     {"<", OP_COMP_LT},
-    {">=", OP_COMP_GE}, {"<=", OP_COMP_LE},
+    {">=", OP_COMP_GE}, {"<=", OP_COMP_LE},    {",", OP_COMMA},
 };
 
 CobolLexer::CobolLexer(const char *expr)

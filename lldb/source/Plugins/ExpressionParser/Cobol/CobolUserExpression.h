@@ -84,7 +84,10 @@ private:
   lldb::ValueObjectSP 
   FindFieldInStructArray(const lldb_private::CobolASTRefModifierExpr *expr);
   lldb::ValueObjectSP
-  GetElementAtIndex(lldb::ValueObjectSP var, const lldb_private::CobolASTRefModifierExpr *expr);
+  GetElementAtIndex(lldb::ValueObjectSP var, uint32_t start, uint32_t len = 1);
+  uint32_t 
+  GetUIntFromValueObjectSP(lldb::ValueObjectSP var);
+  lldb::ValueObjectListSP FindAllCandidates(ConstString var_name);
 };
 
 class CobolUserExpression : public UserExpression {
