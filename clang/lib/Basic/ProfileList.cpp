@@ -139,21 +139,20 @@ std::optional<ProfileList::ExclusionType>
 ProfileList::isFileExcluded(StringRef FileName,
                             CodeGenOptions::ProfileInstrKind Kind) const {
   StringRef Section = getSectionName(Kind);
-  // Convert the input file path to its canonical (absolute) form
-  llvm::SmallString<128> CanonicalFileName(FileName);
-  llvm::sys::fs::make_absolute(CanonicalFileName);
-
   // Check for "source:<regex>=<case>"
   if (auto V = inSection(Section, "source", FileName))
     return V;
-  if (auto V = inSection(Section, "source", CanonicalFileName))
-    return V;
   if (SCL->inSection(Section, "!src", FileName))
-    return Forbid;
-  if (SCL->inSection(Section, "!src", CanonicalFileName))
     return Forbid;
   if (SCL->inSection(Section, "src", FileName))
     return Allow;
+  // Convert the input file path to its canonical (absolute) form
+  llvm::SmallString<128> CanonicalFileName(FileName);
+  llvm::sys::fs::make_absolute(CanonicalFileName);
+  if (auto V = inSection(Section, "source", CanonicalFileName))
+    return V;
+  if (SCL->inSection(Section, "!src", CanonicalFileName))
+    return Forbid;
   if (SCL->inSection(Section, "src", CanonicalFileName))
     return Allow;
   return std::nullopt;
