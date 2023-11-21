@@ -36,3 +36,9 @@ jobs:
         run: |
           cp llvm/utils/git-check-coverage.py .
           python3 git-check-coverage.py -b build -c c160c3c65107d5b1b2993972bce903304d4860e6 bin/opt llvm/test
+
+      - name: Archive code coverage artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: code-coverage-results
+          path: build/patch_coverage.log 
