@@ -18,11 +18,11 @@ jobs:
 
       - name: Install LLVM project build dependency
         run: |
-          apt-get install llvm
-          apt-get install clang
-          apt-get install lld
-          apt-get install cmake
-          apt-get install ninja-build
+          sudo apt-get install llvm
+          sudo apt-get install clang
+          sudo apt-get install lld
+          sudo apt-get install cmake
+          sudo apt-get install ninja-build
                   
       - name: Build LLVM project
         run: |
