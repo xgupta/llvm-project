@@ -30,6 +30,7 @@ jobs:
         run: |
           git branch -a
           git show 
+          git show c160c3c65107d5b1b2993972bce903304d4860e6 
           git checkout aarch64_idiom
           mkdir build
           cd build
