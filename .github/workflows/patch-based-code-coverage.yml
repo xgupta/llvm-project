@@ -32,4 +32,4 @@ jobs:
       - name: Run the patch-based code coverage tool
         run: |
           cp llvm/utils/git-check-coverage.py .
-          python3 llvm/utils/git-check-coverage.py -b build -c c160c3c65107d5b1b2993972bce903304d4860e6 bin/opt llvm/test
+          python3 git-check-coverage.py -b build -c c160c3c65107d5b1b2993972bce903304d4860e6 bin/opt llvm/test
