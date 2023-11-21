@@ -303,7 +303,7 @@ def process_coverage_data(cpp_files, build_dir, binary):
 
                     # Construct the llvm-profdata command
                     llvm_profdata_cmd = [
-                        "/usr/local/bin/llvm-profdata",
+                        "/usr/bin/llvm-profdata",
                         "merge",
                         "-o",
                         profdata_output,
@@ -330,7 +330,7 @@ def process_coverage_data(cpp_files, build_dir, binary):
                         cpp_file = os.path.join(parent_directory, cpp_file)
                         # Construct the llvm-cov show command to extract coverage data for the specific C++ file
                         llvm_cov_cmd = [
-                            "/usr/local/bin/llvm-cov",
+                            "/usr/bin/llvm-cov",
                             "show",
                             "-instr-profile",
                             profdata_output,
