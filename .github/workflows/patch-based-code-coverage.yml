@@ -31,6 +31,7 @@ jobs:
             
       - name: Run the patch-based code coverage tool
         run: |
+          git checkout aarch64_idiom
           pwd
           ls llvm
           ls llvm/utils/
