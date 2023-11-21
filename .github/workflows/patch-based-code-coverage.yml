@@ -1,0 +1,38 @@
+name: LLVM Code Coverage
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  code-coverage:
+    name: Generate Code Coverage Report
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout LLVM Repository
+        uses: actions/checkout@v2
+        with:
+          ref: main
+
+      - name: Install LLVM project build dependency
+        run: |
+          apt-get install llvm
+          apt-get install clang
+          apt-get install lld
+          apt-get install cmake
+          apt-get install ninja-build
+                  
+      - name: Build LLVM project
+        run: |
+          mkdir build
+          cd build
+          cmake -G Ninja ../llvm -DCMAKE_BUILD_TYPE=Release -DLLVM_USE_LINKER=lld -DCMAKE_C_COMPILER=/usr/local/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/bin/clang++ -DLLVM_TARGETS_TO_BUILD="X86;AArch64;RISCV"  -DLLVM_ENABLE_ASSERTIONS=ON
+          ninja
+          cd ..
+      
+      - name: Run the patch-based code coverage tool
+        run: |
+          cp llvm/utils/git-check-coverage .
+          python3 git-check-coverage -b build -c c160c3c65107d5b1b2993972bce903304d4860e6 bin/opt llvm/test
