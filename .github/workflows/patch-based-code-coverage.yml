@@ -3,7 +3,7 @@ name: LLVM Code Coverage
 on:
   push:
     branches:
-      - main
+      - aarch64_idiom
 
 jobs:
   code-coverage:
