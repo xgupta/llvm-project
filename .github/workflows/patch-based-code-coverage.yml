@@ -14,7 +14,7 @@ jobs:
       - name: Checkout LLVM Repository
         uses: actions/checkout@v2
         with:
-          ref: main
+          ref: aarch64_idiom
 
       - name: Install LLVM project build dependency
         run: |
@@ -28,12 +28,8 @@ jobs:
         run: |
           mkdir build
           cd build
-            
+      
       - name: Run the patch-based code coverage tool
         run: |
-          git checkout aarch64_idiom
-          pwd
-          ls llvm
-          ls llvm/utils/
           cp llvm/utils/git-check-coverage.py .
           python3 git-check-coverage -b build -c c160c3c65107d5b1b2993972bce903304d4860e6 bin/opt llvm/test
