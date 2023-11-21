@@ -23,7 +23,7 @@ jobs:
           sudo apt-get install lld
           sudo apt-get install cmake
           sudo apt-get install ninja-build
-          pip install argparse logging unidiff
+          pip install argparse  unidiff
 
                   
       - name: Build LLVM project
