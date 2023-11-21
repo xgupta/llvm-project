@@ -28,6 +28,8 @@ jobs:
                   
       - name: Build LLVM project
         run: |
+          git branch -a
+          git show 
           git checkout aarch64_idiom
           mkdir build
           cd build
