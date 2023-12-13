@@ -270,7 +270,7 @@ public:
       ExecutionContext &exe_scope, lldb::opaque_compiler_type_t src_type,
       const DataExtractor &src_data, lldb::opaque_compiler_type_t dest_type,
       DataExtractor &dest_data,
-      const lldb::LanguageType lang = lldb::eLanguageTypeUnknown);
+      const lldb::LanguageType lang = lldb::eLanguageTypeUnknown) override;
   /*
     CompilerType AddConstModifier(lldb::opaque_compiler_type_t type) override;
 
@@ -638,7 +638,7 @@ public:
 
     ssize_t out_len = buffer_size - out_size;
     if (out_len > 0) {
-      if (out_len > inp.length()) {
+      if ((size_t)out_len > inp.length()) {
          out_len = inp.length();
       }
       dst.append(&buffer[0], out_len);
@@ -688,7 +688,7 @@ public:
     }
     ssize_t out_len = buffer_size - out_size;
     if (out_len > 0) {
-      if (out_len > length) {
+      if ((size_t)out_len > length) {
          out_len = length;
       }
       memcpy(inp, &buffer[0], out_len);
