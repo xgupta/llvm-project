@@ -485,6 +485,8 @@ bool TypeSystemLegacy::IsIntegerType(opaque_compiler_type_t type,
     int kind = static_cast<LegacyType *>(type)->GetLegacyKind();
     switch (kind) {
     case LegacyType::KIND_INT:
+      is_signed = true;
+      return true;
     case LegacyType::KIND_UINT:
     case LegacyType::KIND_DECIMAL:
       return true;
