@@ -418,7 +418,6 @@ CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
   bool is_incomplete;
   bool substring_select = !var->GetCompilerType().IsArrayType(
       &elem_type, &max_elem, &is_incomplete);
-  llvm::StringRef var_str;
   DataExtractor var_data;
   ValueObjectSP start_var = EvaluateExpr(expr->GetStartExpr());
   if (!start_var) {

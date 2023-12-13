@@ -2954,11 +2954,12 @@ class DIExpression : public MDNode {
   friend class MDNode;
 
   std::vector<uint64_t> Elements;
+  std::vector<Metadata*> Refs;
 
   DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements,
                ArrayRef<Metadata *> Refs)
       : MDNode(C, DIExpressionKind, Storage, Refs),
-        Elements(Elements.begin(), Elements.end()) {}
+        Elements(Elements.begin(), Elements.end()), Refs(Refs.begin(), Refs.end()) {}
   ~DIExpression() = default;
 
   static DIExpression *getImpl(LLVMContext &Context,
@@ -2986,7 +2987,7 @@ public:
 
   ArrayRef<uint64_t> getElements() const { return Elements; }
   ArrayRef<Metadata *> getRefs() const {
-    return SmallVector<Metadata *, 4>(op_begin(), op_end());
+    return Refs;
   }
 
   unsigned getNumElements() const { return Elements.size(); }
