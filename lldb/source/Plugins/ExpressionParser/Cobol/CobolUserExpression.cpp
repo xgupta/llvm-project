@@ -361,7 +361,7 @@ ValueObjectSP CobolInterpreter::VisitBasicLit(const CobolASTBasicLit *expr) {
   DataBufferSP buffer(new DataBufferHeap(data_length, 0));
   DataEncoder enc(buffer->GetBytes(), data_length, byte_order, addr_size);
   enc.PutData(0, data_ptr, data_length);
-  DataExtractor data(buffer, byte_order, addr_size);
+  DataExtractor data(enc.GetDataBuffer(), byte_order, addr_size);
 
   CompilerType comp_type = legacy_type_system->GetBasicTypeFromAST(base_type);
   if (isArray) {
