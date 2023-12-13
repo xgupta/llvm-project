@@ -833,7 +833,7 @@ bool CompilerType::EncodeDataToType(ExecutionContext &exe_ctx,
                                     DataExtractor &dest_data) {
   if (!IsValid())
     return false;
-  return m_type_system->EncodeDataToType(exe_ctx, src_type, src_data,
+  return GetTypeSystem()->EncodeDataToType(exe_ctx, src_type, src_data,
                                          m_type /*dest_type*/, dest_data);
 }
 

@@ -48,6 +48,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/DataEncoder.h"
 #include "lldb/lldb-private-types.h"
 
 #include "llvm/Support/Compiler.h"
