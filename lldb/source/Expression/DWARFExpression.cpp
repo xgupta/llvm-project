@@ -2400,13 +2400,6 @@ bool DWARFExpression::EvaluateCall(ExecutionContext *exe_ctx,
       dwarf_cu, reg_kind, initial_value_ptr, object_address_ptr, stack, result, error_ptr, true);
 }
 
-static DataExtractor ToDataExtractor(const llvm::DWARFLocationExpression &loc,
-                                     ByteOrder byte_order, uint32_t addr_size) {
-  auto buffer_sp =
-      std::make_shared<DataBufferHeap>(loc.Expr.data(), loc.Expr.size());
-  return DataExtractor(buffer_sp, byte_order, addr_size);
-}
-
 bool DWARFExpression::ParseDWARFLocationList(
     const DWARFUnit *dwarf_cu, const DataExtractor &data,
     DWARFExpressionList *location_list) {
