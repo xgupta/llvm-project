@@ -154,7 +154,7 @@ CobolASTExpr *CobolParser::Indices() {
   std::vector<std::unique_ptr<CobolASTExpr>> indices_vec;
 
   while (true) {
-    indices_vec.push_back(std::move(std::unique_ptr<CobolASTExpr>(PrimaryExpr())));
+    indices_vec.push_back(std::unique_ptr<CobolASTExpr>(PrimaryExpr()));
     auto next_type = peek();
     if (next_type != CobolLexer::OP_COMMA)
       break;
