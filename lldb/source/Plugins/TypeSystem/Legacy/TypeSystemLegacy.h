@@ -101,10 +101,7 @@ public:
   }
 
   bool
-  DeclContextIsClassMethod(void *opaque_decl_ctx,
-                           lldb::LanguageType *language_ptr,
-                           bool *is_instance_method_ptr,
-                           ConstString *language_object_name_ptr) override {
+  DeclContextIsClassMethod(void *opaque_decl_ctx) override {
     return false;
   }
 
@@ -112,6 +109,14 @@ public:
                                       void *other_opaque_decl_ctx) override {
     return false;
   }
+
+  lldb::LanguageType DeclContextGetLanguage(void *opaque_decl_ctx) override {
+
+  }
+
+  bool IsMemberFunctionPointerType(lldb::opaque_compiler_type_t type)  override {
+  }
+
 
   //----------------------------------------------------------------------
   // Tests
@@ -385,7 +390,7 @@ public:
   // Lookup a child given a name. This function will match base class names and
   // member member names in "clang_type" only, not descendants.
   uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                   const char *name,
+                                   llvm::StringRef name,
                                    bool omit_empty_base_classes) override;
 
   // Lookup a child member given a name. This function will match member names
@@ -396,7 +401,7 @@ public:
   // so we catch all names that match a given child name, not just the first.
   size_t
   GetIndexOfChildMemberWithName(lldb::opaque_compiler_type_t type,
-                                const char *name, bool omit_empty_base_classes,
+                                llvm::StringRef name, bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) override;
 
   //----------------------------------------------------------------------
@@ -448,13 +453,13 @@ public:
 #endif
 
   void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                 Stream *s, lldb::Format format, const DataExtractor &data,
+                 Stream &s, lldb::Format format, const DataExtractor &data,
                  lldb::offset_t data_offset, size_t data_byte_size,
                  uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
                  bool show_types, bool show_summary, bool verbose,
                  uint32_t depth) override;
 
-  bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s,
+  bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream &s,
                      lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
@@ -466,7 +471,7 @@ public:
           lldb::eDescriptionLevelFull) override; // Dump to stdout
 
   void DumpTypeDescription(
-      lldb::opaque_compiler_type_t type, Stream *s,
+      lldb::opaque_compiler_type_t type, Stream &s,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
   //----------------------------------------------------------------------
@@ -478,7 +483,7 @@ public:
   }
 
   void DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                   Stream *s, const DataExtractor &data,
+                   Stream &s, const DataExtractor &data,
                    lldb::offset_t data_offset, size_t data_byte_size) override;
 
   //----------------------------------------------------------------------

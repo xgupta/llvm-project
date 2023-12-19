@@ -137,8 +137,8 @@ static VariableSP FindGlobalVariable(TargetSP target, llvm::Twine name,
   return SearchMemberByName(target, name);
 }
 
-CobolPersistentExpressionState::CobolPersistentExpressionState()
-    : PersistentExpressionState(eKindCobol) {}
+char CobolPersistentExpressionState::ID = 0;
+CobolPersistentExpressionState::CobolPersistentExpressionState() {}
 
 void CobolPersistentExpressionState::RemovePersistentVariable(
     lldb::ExpressionVariableSP var) {
@@ -783,7 +783,7 @@ CobolUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   }
 
   result_val_sp->UpdateValueIfNeeded();
-  result.reset(new ExpressionVariable(ExpressionVariable::eKindCobol));
+  result.reset(new ExpressionVariable());
   result->m_live_sp = result->m_frozen_sp = result_val_sp;
   result->m_flags |= ExpressionVariable::EVIsProgramReference;
   PersistentExpressionState *pv =

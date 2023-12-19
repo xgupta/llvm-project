@@ -23,17 +23,16 @@
 
 namespace lldb_private {
 /// TODO - not used yet.
-class CobolPersistentExpressionState : public PersistentExpressionState {
+class CobolPersistentExpressionState : public llvm::RTTIExtends<CobolPersistentExpressionState,
+                               PersistentExpressionState> {
 public:
+  // LLVM RTTI support
+  static char ID;
   CobolPersistentExpressionState();
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 
   ConstString GetNextPersistentVariableName(bool is_error = false) override;
-
-  static bool classof(const PersistentExpressionState *pv) {
-    return pv->getKind() == PersistentExpressionState::eKindCobol;
-  }
 
 protected:
   llvm::StringRef
