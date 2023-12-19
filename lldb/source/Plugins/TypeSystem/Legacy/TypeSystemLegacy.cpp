@@ -1538,7 +1538,7 @@ CompilerType TypeSystemLegacy::GetChildCompilerTypeAtIndex(
 
 uint32_t
 TypeSystemLegacy::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                          const char *name,
+                                          llvm::StringRef name,
                                           bool omit_empty_base_classes) {
   if (!type)
     return UINT32_MAX;
@@ -1567,7 +1567,7 @@ TypeSystemLegacy::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
 }
 
 size_t TypeSystemLegacy::GetIndexOfChildMemberWithName(
-    lldb::opaque_compiler_type_t type, const char *name,
+    lldb::opaque_compiler_type_t type, llvm::StringRef name,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
   uint32_t index = GetIndexOfChildWithName(type, name, omit_empty_base_classes);
   if (index == UINT32_MAX)
@@ -1934,7 +1934,7 @@ TypeSystemLegacy::dump(lldb::opaque_compiler_type_t type) const {
 #endif
 
 void TypeSystemLegacy::DumpValue(
-    opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s,
+    opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream &s,
     Format format, const DataExtractor &data, offset_t data_byte_offset,
     size_t data_byte_size, uint32_t bitfield_bit_size,
     uint32_t bitfield_bit_offset, bool show_types, bool show_summary,
@@ -1955,36 +1955,36 @@ void TypeSystemLegacy::DumpValue(
     uint64_t elem_idx = 0;
     for (; elem_idx < length; ++elem_idx) {
       if (elem_idx)
-        s->PutChar(',');
+        s.PutChar(',');
       else
-        s->PutChar('{');
+        s.PutChar('{');
 
       // Indent and print the index
-      s->Printf("\n%*s[%" PRIu64 "] ", depth + DEPTH_INCREMENT, "", elem_idx);
+      s.Printf("\n%*s[%" PRIu64 "] ", depth + DEPTH_INCREMENT, "", elem_idx);
 
       // Figure out the field offset within the current struct/union/class type
       uint64_t element_offset = elem_idx * (*element_byte_size);
 
-      elem_type.DumpValue(exe_ctx, s, format, data,
+      elem_type.DumpValue(exe_ctx, &s, format, data,
                           data_byte_offset + element_offset, *element_byte_size,
                           0, 0, show_types, show_summary, verbose,
                           depth + DEPTH_INCREMENT);
     }
 
     if (elem_idx > 0)
-      s->Printf("\n%*s}", depth, "");
+      s.Printf("\n%*s}", depth, "");
 
   } break;
   case LegacyType::KIND_STRUCT:
   default:
     // We are down to a scalar type that we just need to display.
-    DumpDataExtractor(data, s, data_byte_offset, format, data_byte_size, 1,
+    DumpDataExtractor(data, &s, data_byte_offset, format, data_byte_size, 1,
                       UINT32_MAX, LLDB_INVALID_ADDRESS, bitfield_bit_size,
                       bitfield_bit_offset);
   }
 }
 
-bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream *s,
+bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream &s,
                                      Format format, const DataExtractor &data,
                                      offset_t byte_offset, size_t byte_size,
                                      uint32_t bitfield_bit_size,
@@ -2031,12 +2031,12 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream *s,
       }
       format_data.SetData((void *)&data, sizeof(data),
                           endian::InlHostByteOrder());
-      return DumpDataExtractor(format_data, s, byte_offset, eFormatFloat,
+      return DumpDataExtractor(format_data, &s, byte_offset, eFormatFloat,
                                sizeof(data), 1 /*item_count*/, UINT32_MAX,
                                LLDB_INVALID_ADDRESS, bitfield_bit_size,
                                bitfield_bit_offset, exe_scope);
     }
-    return DumpDataExtractor(format_data, s, byte_offset, format, byte_size,
+    return DumpDataExtractor(format_data, &s, byte_offset, format, byte_size,
                              1 /*item_count*/, UINT32_MAX, LLDB_INVALID_ADDRESS,
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
   } break;
@@ -2046,7 +2046,7 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream *s,
 
     switch (format) {
     default:
-      return DumpDataExtractor(data, s, byte_offset, format, 1, byte_size,
+      return DumpDataExtractor(data, &s, byte_offset, format, 1, byte_size,
                                UINT32_MAX, LLDB_INVALID_ADDRESS,
                                bitfield_bit_size, bitfield_bit_offset,
                                exe_scope);
@@ -2139,7 +2139,7 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream *s,
                           format_string.length(), endian::InlHostByteOrder());
       format_data.SetAddressByteSize(data.GetAddressByteSize());
 
-      return DumpDataExtractor(format_data, s, byte_offset, format, 1,
+      return DumpDataExtractor(format_data, &s, byte_offset, format, 1,
                                format_string.length(), UINT32_MAX,
                                LLDB_INVALID_ADDRESS, bitfield_bit_size,
                                bitfield_bit_offset, exe_scope);
@@ -2147,12 +2147,12 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream *s,
     }
   }
   case LegacyType::KIND_PTR:
-    return DumpDataExtractor(data, s, byte_offset, format, byte_size, 1,
+    return DumpDataExtractor(data, &s, byte_offset, format, byte_size, 1,
                              UINT32_MAX, LLDB_INVALID_ADDRESS,
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
   case LegacyType::KIND_DYNAMIC: {
     auto dyn_base_ty = static_cast<LegacyDynamic *>(type)->GetBaseType();
-    return dyn_base_ty.DumpTypeValue(s, format, data, byte_offset, byte_size,
+    return dyn_base_ty.DumpTypeValue(&s, format, data, byte_offset, byte_size,
                                      bitfield_bit_size, bitfield_bit_offset,
                                      exe_scope);
   }
@@ -2165,20 +2165,20 @@ void TypeSystemLegacy::DumpTypeDescription(opaque_compiler_type_t type,
                                            DescriptionLevel level) {
   // Dump to stdout
   StreamFile s(stdout, false);
-  DumpTypeDescription(type, &s, level);
+  DumpTypeDescription(type, s, level);
 }
 
 void TypeSystemLegacy::DumpTypeDescription(opaque_compiler_type_t type,
-                                           Stream *s, DescriptionLevel level) {
+                                           Stream &s, DescriptionLevel level) {
   if (!type)
     return;
 
   ConstString name = GetTypeName(type, true);
-  s->PutCString(name.AsCString());
+  s.PutCString(name.AsCString());
 }
 
 void TypeSystemLegacy::DumpSummary(opaque_compiler_type_t type,
-                                   ExecutionContext *exe_ctx, Stream *s,
+                                   ExecutionContext *exe_ctx, Stream &s,
                                    const DataExtractor &data,
                                    offset_t data_offset,
                                    size_t data_byte_size) {

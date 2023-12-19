@@ -4817,14 +4817,14 @@ bool TargetProperties::GetAutoInstallMainExecutable() const {
 
 llvm::StringRef TargetProperties::GetTargetCharset() const {
   const uint32_t idx = ePropertyCharacterSet;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx,
-                                                     llvm::StringRef());
+  return GetPropertyAtIndexAs<llvm::StringRef>(idx,
+          g_target_properties[idx].default_cstr_value);
 }
 
 bool TargetProperties::GetHideInvalidLegacyFrames() const {
   const uint32_t idx = ePropertyHideInvalidLegacyFrames;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::Arg0ValueChangedCallback() {

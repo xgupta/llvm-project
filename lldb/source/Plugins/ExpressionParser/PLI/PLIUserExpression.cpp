@@ -135,8 +135,8 @@ static VariableSP FindGlobalVariable(TargetSP target, llvm::Twine name,
   return SearchMemberByName(target, name);
 }
 
-PLIPersistentExpressionState::PLIPersistentExpressionState()
-    : PersistentExpressionState(eKindPLI) {}
+char PLIPersistentExpressionState::ID = 0;
+PLIPersistentExpressionState::PLIPersistentExpressionState() {}
 
 void PLIPersistentExpressionState::RemovePersistentVariable(
     lldb::ExpressionVariableSP var) {
@@ -647,7 +647,7 @@ PLIUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   }
 
   result_val_sp->UpdateValueIfNeeded();
-  result.reset(new ExpressionVariable(ExpressionVariable::eKindPLI));
+  result.reset(new ExpressionVariable());
   result->m_live_sp = result->m_frozen_sp = result_val_sp;
   result->m_flags |= ExpressionVariable::EVIsProgramReference;
   PersistentExpressionState *pv =

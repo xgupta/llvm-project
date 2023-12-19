@@ -853,7 +853,7 @@ DILocalVariable *DIBuilder::createAutoVariable2(DIScope *Scope, StringRef Name,
                                                DINode::DIFlags Flags,
 					       DILocalVariable::DIVarFlags VarFlags,
                                                uint32_t AlignInBits) {
-  return createLocalVariable(VMContext, PreservedVariables, Scope, Name,
+  return createLocalVariable(VMContext, getSubprogramNodesTrackingVector(Scope), Scope, Name,
                              /* ArgNo */ 0, File, LineNo, Ty, AlwaysPreserve,
                              Flags, VarFlags, LexicalScope, AlignInBits);
 }
@@ -928,7 +928,7 @@ DISubprogram *DIBuilder::createFunction(
       /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
       Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
       SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl,
-      MDTuple::getTemporary(VMContext, std::nullopt).release(), ThrownTypes,
+      nullptr, ThrownTypes,
       Annotations, TargetFuncName, StaticLink, RcFrameBase);
 
   if (IsDefinition)

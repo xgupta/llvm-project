@@ -811,7 +811,7 @@ LanguageType DWARFUnit::LanguageTypeFromDWARF(uint64_t val) {
   case DW_LANG_Mips_Assembler:
     return eLanguageTypeMipsAssembler;
   case DW_LANG_GOOGLE_RenderScript:
-    return eLanguageTypeExtRenderScript;
+    return eLanguageTypeRenderScript;
   default:
     return static_cast<LanguageType>(val);
   }
