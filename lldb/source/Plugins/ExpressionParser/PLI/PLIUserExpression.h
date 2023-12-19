@@ -28,17 +28,16 @@
 
 namespace lldb_private {
 /// TODO - not used yet.
-class PLIPersistentExpressionState : public PersistentExpressionState {
+class PLIPersistentExpressionState : public llvm::RTTIExtends<PLIPersistentExpressionState,
+                               PersistentExpressionState> {
 public:
+  // LLVM RTTI support
+  static char ID;
   PLIPersistentExpressionState();
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 
   ConstString GetNextPersistentVariableName(bool is_error = false) override;
-
-  static bool classof(const PersistentExpressionState *pv) {
-    return pv->getKind() == PersistentExpressionState::eKindPLI;
-  }
 
 protected:
   llvm::StringRef

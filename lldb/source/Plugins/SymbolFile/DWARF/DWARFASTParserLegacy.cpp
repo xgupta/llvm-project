@@ -99,7 +99,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
         int32_t scale = 0;
         bool bin_scale = false;
 
-        const size_t num_attributes = die.GetAttributes(attributes);
+        attributes =  die.GetAttributes();
+        const size_t num_attributes = attributes.Size();
         for (size_t i = 0; i < num_attributes; ++i) {
           attr = attributes.AttributeAtIndex(i);
           if (attributes.ExtractFormValueAtIndex(i, form_value)) {
@@ -187,7 +188,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
 
         type_sp = dwarf->MakeType(
             die.GetID(), type_name_const_str, (bit_size + 7) / 8,
-            nullptr, dwarf->GetUID(encoding_uid.Reference()),
+            nullptr, LLDB_INVALID_UID,
             encoding_data_type, &decl, compiler_type, resolve_state);
 
         assert(type_sp.get());
@@ -201,7 +202,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
         uint32_t bit_stride = 0;
         bool isVarString = false;
 
-        const size_t num_attributes = die.GetAttributes(attributes);
+        attributes = die.GetAttributes();
+        const size_t num_attributes = attributes.Size();
         for (size_t i = 0; i < num_attributes; ++i) {
           attr = attributes.AttributeAtIndex(i);
           if (attributes.ExtractFormValueAtIndex(i, form_value)) {
@@ -292,7 +294,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
 
             type_sp = dwarf->MakeType(
                 die.GetID(), empty_name, array_element_bit_stride / 8,
-                nullptr, dwarf->GetUID(type_die_form.Reference()),
+                nullptr, LLDB_INVALID_UID,
                 Type::eEncodingIsUID, &decl, compiler_type,
                 Type::ResolveState::Full);
 
@@ -313,7 +315,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
         bool byte_size_valid = false;
         unsigned byte_size = 0;
 
-        const size_t num_attributes = die.GetAttributes(attributes);
+        attributes = die.GetAttributes();
+        const size_t num_attributes = attributes.Size();
         for (size_t i = 0; i < num_attributes; ++i) {
           attr = attributes.AttributeAtIndex(i);
           if (attributes.ExtractFormValueAtIndex(i, form_value)) {
@@ -382,7 +385,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
       } break;
       case DW_TAG_dynamic_type: {
         dwarf->m_die_to_type[die.GetDIE()] = DIE_IS_BEING_PARSED;
-        const size_t num_attributes = die.GetAttributes(attributes);
+        attributes = die.GetAttributes();
+        const size_t num_attributes = attributes.Size();
         DWARFFormValue type_die_form;
         DWARFExpressionList dw_location, dw_allocated;
         ModuleSP module(die.GetModule());
@@ -439,7 +443,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
             base_type->GetForwardCompilerType(), dw_location, dw_allocated);
         type_sp = dwarf->MakeType(
             die.GetID(), empty_name, 0, nullptr,
-            dwarf->GetUID(type_die_form.Reference()), Type::eEncodingIsUID,
+            LLDB_INVALID_UID, Type::eEncodingIsUID,
             &decl, compiler_type, Type::ResolveState::Full);
         type_sp->SetEncodingType(base_type);
       } break;
@@ -457,7 +461,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
 
         bool is_variadic = false;
 
-        const size_t num_attr = die.GetAttributes(attributes);
+        attributes = die.GetAttributes();
+        const size_t num_attr = attributes.Size();
         for (size_t i = 0; i < num_attr; ++i) {
           if (attributes.ExtractFormValueAtIndex(i, form_value)) {
             switch (attributes.AttributeAtIndex(i)) {
@@ -535,12 +540,12 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(lldb_privat
   DWARFRangeList func_ranges;
   const char *name = nullptr;
   const char *mangled = nullptr;
-  int decl_file = 0;
-  int decl_line = 0;
-  int decl_column = 0;
-  int call_file = 0;
-  int call_line = 0;
-  int call_column = 0;
+  std::optional<int> decl_file = 0;
+  std::optional<int>  decl_line = 0;
+  std::optional<int>  decl_column = 0;
+  std::optional<int>  call_file = 0;
+  std::optional<int>  call_line = 0;
+  std::optional<int>  call_column = 0;
   DWARFExpressionList frame_base;
   DWARFExpressionList rc_frame_base;
   DWARFExpressionList static_link;
@@ -564,14 +569,14 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(lldb_privat
 
     if (func_range.GetBaseAddress().IsValid()) {
       Mangled func_name;
-      func_name.SetValue(ConstString(name), false);
+      func_name.SetValue(ConstString(name));
 
       FunctionSP func_sp;
       std::unique_ptr<Declaration> decl_ap;
       if (decl_file != 0 || decl_line != 0 || decl_column != 0)
         decl_ap.reset(new Declaration(
-            comp_unit.GetSupportFiles().GetFileSpecAtIndex(decl_file),
-            decl_line, decl_column));
+            comp_unit.GetSupportFiles().GetFileSpecAtIndex(decl_file.value()),
+            decl_line.value(), decl_column.value()));
 
       SymbolFileDWARF *dwarf = die.GetDWARF();
       // Supply the type _only_ if it has already been parsed
@@ -657,7 +662,8 @@ DWARFASTParserLegacy::ParseChildMembers(const DWARFDIE &parent_die,
       DWARFAttributes attributes;
       const char *name = NULL;
       DWARFFormValue encoding_uid;
-      const size_t num_attributes = die.GetAttributes(attributes);
+      attributes = die.GetAttributes();
+      const size_t num_attributes = attributes.Size();
       uint32_t member_offset_in_bits = UINT32_MAX;
       for (size_t i = 0; i < num_attributes; ++i) {
         const dw_attr_t attr = attributes.AttributeAtIndex(i);
