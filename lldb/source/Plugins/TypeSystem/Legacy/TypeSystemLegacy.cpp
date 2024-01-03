@@ -121,7 +121,7 @@ class LegacyElem : public LegacyType {
 public:
   LegacyElem(int kind, const ConstString &name, const CompilerType &elem)
       : LegacyType(kind, name), m_elem(elem) {}
-  virtual CompilerType GetElementType() const { return m_elem; }
+  virtual CompilerType GetElementType() const override { return m_elem; }
 
 private:
   CompilerType m_elem;
@@ -180,7 +180,7 @@ public:
     SetLength(length);
   }
 
-  bool isDynamic() const { return true; }
+  bool isDynamic() const override { return true; }
 
 private:
   const DWARFExpressionList m_count_exp;
@@ -1633,7 +1633,7 @@ CompilerType TypeSystemLegacy::CreateArrayType(
     return CompilerType();
 
   if (element_count == 0) {
-    char buffer[64];
+    char buffer[128];
     sprintf(buffer, "Warning: need to add support for "
 		    "DW_TAG_array_type '%s' with dynamic size",
 		    name.GetCString());
@@ -1791,7 +1791,7 @@ CompilerType TypeSystemLegacy::CreateBaseType(
   }
 
   if (kind == LegacyType::KIND_INVALID) {
-    char buffer[128];
+    char buffer[256];
     sprintf(buffer, "Warning: need to add support for "
                     "DW_TAG_base_type '%s' encoded with "
                     "DW_ATE = 0x%x, bit_size = %u\n, "
