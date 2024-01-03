@@ -111,10 +111,11 @@ public:
   }
 
   lldb::LanguageType DeclContextGetLanguage(void *opaque_decl_ctx) override {
-
+    return lldb::eLanguageTypeUnknown;
   }
 
   bool IsMemberFunctionPointerType(lldb::opaque_compiler_type_t type)  override {
+    return false;
   }
 
 
