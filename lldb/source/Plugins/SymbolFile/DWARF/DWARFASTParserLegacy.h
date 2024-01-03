@@ -69,9 +69,9 @@ public:
       lldb_private::CompilerDeclContext decl_context) override {}
 
   lldb_private::ConstString
-  GetDIEClassTemplateParams(const DWARFDIE &die) override {}
+  GetDIEClassTemplateParams(const DWARFDIE &die) override { return lldb_private::ConstString(); }
   lldb_private::ConstString
-  ConstructDemangledNameFromDWARF(const DWARFDIE &die) override {}
+  ConstructDemangledNameFromDWARF(const DWARFDIE &die) override { return lldb_private::ConstString(); }
 private:
   std::weak_ptr<lldb_private::TypeSystemLegacy> m_ast;
 

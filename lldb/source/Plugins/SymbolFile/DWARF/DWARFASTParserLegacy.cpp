@@ -396,6 +396,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
           attr = attributes.AttributeAtIndex(i);
           if (attributes.ExtractFormValueAtIndex(i, form_value)) {
             switch (attr) {
+            default:
+              break;
             case DW_AT_type:
               type_die_form = form_value;
               break;
@@ -466,6 +468,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
         for (size_t i = 0; i < num_attr; ++i) {
           if (attributes.ExtractFormValueAtIndex(i, form_value)) {
             switch (attributes.AttributeAtIndex(i)) {
+            default:
+              break;
             case DW_AT_name:
               type_name_cstr = form_value.AsCString();
               type_name_const_str.SetCString(type_name_cstr);
