@@ -85,6 +85,7 @@ enum LLVMConstants : uint32_t {
   DWARF_VENDOR_SUN,
   DWARF_VENDOR_UPC,
   ///\}
+  DWARF_VENDOR_RAINCODE
 };
 
 /// Constants that define the DWARF format as 32 or 64 bit.
@@ -163,11 +164,9 @@ enum TypeKind : uint8_t {
 
 enum DecimalSignEncoding {
   // Decimal sign attribute values
-  DW_DS_unsigned = 0x01,
-  DW_DS_leading_overpunch = 0x02,
-  DW_DS_trailing_overpunch = 0x03,
-  DW_DS_leading_separate = 0x04,
-  DW_DS_trailing_separate = 0x05
+  DW_DS_Invalid = 0,
+#define HANDLE_DW_DS(ID, NAME) DW_DS_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
 };
 
 enum EndianityEncoding {
@@ -864,6 +863,13 @@ enum ApplePropertyAttributes {
 #include "llvm/BinaryFormat/Dwarf.def"
 };
 
+/// Constants for the DW_RAINCODE_DESC_TYPE attributes.
+enum RaincodeDescTypeAttributes {
+#define HANDLE_DW_RAINCODE_DESC_TYPE(ID, NAME)                                 \
+  DW_RAINCODE_DESC_TYPE_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+};
+
 /// Constants for unit types in DWARF v5.
 enum UnitType : unsigned char {
 #define HANDLE_DW_UT(ID, NAME) DW_UT_##NAME = ID,
@@ -1009,6 +1015,7 @@ StringRef RLEString(unsigned RLE);
 ///
 /// @{
 unsigned getTag(StringRef TagString);
+unsigned getDecimalSign(StringRef DSString);
 unsigned getOperationEncoding(StringRef OperationEncodingString);
 unsigned getSubOperationEncoding(unsigned OpEncoding,
                                  StringRef SubOperationEncodingString);

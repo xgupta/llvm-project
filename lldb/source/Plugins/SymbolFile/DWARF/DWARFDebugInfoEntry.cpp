@@ -121,11 +121,14 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
     DWARFRangeList &ranges, std::optional<int> &decl_file,
     std::optional<int> &decl_line, std::optional<int> &decl_column,
     std::optional<int> &call_file, std::optional<int> &call_line,
-    std::optional<int> &call_column, DWARFExpressionList *frame_base) const {
+    std::optional<int> &call_column, DWARFExpressionList *frame_base,
+    DWARFExpressionList *static_link,
+    DWARFExpressionList *rc_frame_base) const {
   dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
   dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
   std::vector<DWARFDIE> dies;
   bool set_frame_base_loclist_addr = false;
+  bool set_static_link_loclist_addr = false;
 
   SymbolFileDWARF &dwarf = cu->GetSymbolFileDWARF();
   lldb::ModuleSP module = dwarf.GetObjectFile()->GetModule();
@@ -226,6 +229,31 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
             call_column = form_value.Unsigned();
           break;
 
+        case DW_AT_static_link:
+          if (static_link) {
+            if (form_value.BlockData()) {
+              uint32_t block_offset =
+                  form_value.BlockData() - data.GetDataStart();
+              uint32_t block_length = form_value.Unsigned();
+              *static_link = DWARFExpressionList(
+                  module, DataExtractor(data, block_offset, block_length), cu);
+            } else {
+              DataExtractor data = cu->GetLocationData();
+              const dw_offset_t offset = form_value.Unsigned();
+              if (data.ValidOffset(offset)) {
+                data = DataExtractor(data, offset, data.GetByteSize() - offset);
+                *static_link = DWARFExpressionList(module, data, cu);
+                if (lo_pc != LLDB_INVALID_ADDRESS) {
+                  assert(lo_pc >= cu->GetBaseAddress());
+                  // static_link->SetLocationListAddresses(cu->GetBaseAddress(),
+                  //                                      lo_pc);
+                } else {
+                  set_static_link_loclist_addr = true;
+                }
+              }
+            }
+          }
+          break;
         case DW_AT_frame_base:
           if (frame_base) {
             if (form_value.BlockData()) {
@@ -253,6 +281,18 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
           }
           break;
 
+        case DW_AT_RAINCODE_frame_base:
+          if (rc_frame_base) {
+            if (form_value.BlockData()) {
+              uint32_t block_offset =
+                  form_value.BlockData() - data.GetDataStart();
+              uint32_t block_length = form_value.Unsigned();
+              *rc_frame_base = DWARFExpressionList(
+                  module, DataExtractor(data, block_offset, block_length), cu);
+            }
+          }
+          break;
+
         default:
           break;
         }
@@ -267,6 +307,11 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
       else
         ranges.Append(DWARFRangeList::Entry(lo_pc, 0));
     }
+  }
+
+  if (set_static_link_loclist_addr) {
+    dw_addr_t lowest_range_pc = ranges.GetMinRangeBase(0);
+    assert(lowest_range_pc >= cu->GetBaseAddress());
   }
 
   if (set_frame_base_loclist_addr) {

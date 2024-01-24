@@ -1525,19 +1525,38 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 7)
-      return error("Invalid record");
 
+    if (Record.size() < 6 || Record.size() > 12)
+      return error("Invalid record");
     IsDistinct = Record[0];
+
     DINode::DIFlags Flags = (Record.size() > 6)
                                 ? static_cast<DINode::DIFlags>(Record[6])
                                 : DINode::FlagZero;
 
-    MetadataList.assignValue(
-        GET_OR_DISTINCT(DIBasicType,
-                        (Context, Record[1], getMDString(Record[2]), Record[3],
-                         Record[4], Record[5], Flags)),
-        NextMetadataNo);
+    if (Record.size() > 7) {
+      DIBasicType::DecimalInfo DAInfo;
+      if (Record[8])
+        DAInfo.DigitCount = Record[8];
+      if (Record[9])
+        DAInfo.DecimalSign = Record[9];
+      if (Record[10])
+        DAInfo.Scale = Record[11];
+
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(DIBasicType,
+                          (Context, Record[1], getMDString(Record[2]),
+                           Record[7] ? getMDString(Record[7]) : nullptr,
+                           Record[3], Record[4], Record[5], Flags, DAInfo)),
+          NextMetadataNo);
+    } else {
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(DIBasicType,
+                          (Context, Record[1], getMDString(Record[2]),
+                           Record[3], Record[4], Record[5], Flags)),
+          NextMetadataNo);
+    }
+
     NextMetadataNo++;
     break;
   }
@@ -1562,7 +1581,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_DERIVED_TYPE: {
-    if (Record.size() < 12 || Record.size() > 15)
+    if (Record.size() < 12 || Record.size() > 17)
       return error("Invalid record");
 
     // DWARF address space is encoded as N->getDWARFAddressSpace() + 1. 0 means
@@ -1577,23 +1596,28 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // Only look for annotations/ptrauth if both are allocated.
     // If not, we can't tell which was intended to be embedded, as both ptrauth
     // and annotations have been expected at Record[13] at various times.
-    if (Record.size() > 14) {
-      if (Record[13])
-        Annotations = getMDOrNull(Record[13]);
-      if (Record[14])
-        PtrAuthData.emplace(Record[14]);
+    if (Record.size() > 16) {
+      if (Record[15])
+        Annotations = getMDOrNull(Record[15]);
+      if (Record[16])
+        PtrAuthData.emplace(Record[16]);
     }
 
-    IsDistinct = Record[0];
+    IsDistinct = Record[0] & 0x1;
+    const unsigned Version = Record[0] & ~(0x1);
+    Metadata *Location =
+        Version == (2 << 1) ? getMDOrNull(Record[13]) : nullptr;
+    Metadata *Allocated =
+        Version == (2 << 1) ? getMDOrNull(Record[14]) : nullptr;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DIDerivedType,
-                        (Context, Record[1], getMDString(Record[2]),
-                         getMDOrNull(Record[3]), Record[4],
-                         getDITypeRefOrNull(Record[5]),
-                         getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-                         Record[9], DWARFAddressSpace, PtrAuthData, Flags,
-                         getDITypeRefOrNull(Record[11]), Annotations)),
+        GET_OR_DISTINCT(
+            DIDerivedType,
+            (Context, Record[1], getMDString(Record[2]), getMDOrNull(Record[3]),
+             Record[4], getDITypeRefOrNull(Record[5]),
+             getDITypeRefOrNull(Record[6]), Record[7], Record[8], Record[9],
+             DWARFAddressSpace, PtrAuthData, Flags,
+             getDITypeRefOrNull(Record[11]), Annotations, Location, Allocated)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1792,7 +1816,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_SUBPROGRAM: {
-    if (Record.size() < 18 || Record.size() > 21)
+    if (Record.size() < 18 || Record.size() > 22)
       return error("Invalid record");
 
     bool HasSPFlags = Record[0] & 4;
@@ -1842,6 +1866,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     bool HasThrownTypes = true;
     bool HasAnnotations = false;
     bool HasTargetFuncName = false;
+    const bool HasStaticLink = Record.size() >= 22;
+    // const bool HasStaticLinkRecv = Record.size() >= 23;
+    const bool HasRcFrameBase = Record.size() >= 24;
     unsigned OffsetA = 0;
     unsigned OffsetB = 0;
     if (!HasSPFlags) {
@@ -1882,7 +1909,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
                         : nullptr, // annotations
          HasTargetFuncName ? getMDString(Record[19 + OffsetB])
-                           : nullptr // targetFuncName
+                           : nullptr, // targetFuncName
+         HasStaticLink ? getMDOrNull(Record[20 + OffsetB])
+                       : nullptr, // StaticLinkExpr
+         HasRcFrameBase ? getMDOrNull(Record[21 + OffsetB])
+                        : nullptr // RcFrameBaseExpr
          ));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;
@@ -2161,15 +2192,26 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
-    uint64_t Version = Record[0] >> 1;
-    auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
+    uint64_t Version = (Record[0] >> 1) & (0xF);
+    uint64_t Ops = (Record[0] >> 6);
+    auto Elts = Ops ? MutableArrayRef<uint64_t>(Record).slice(1, Ops)
+                    : MutableArrayRef<uint64_t>(Record).slice(1);
 
     SmallVector<uint64_t, 6> Buffer;
     if (Error Err = upgradeDIExpression(Version, Elts, Buffer))
       return Err;
 
-    MetadataList.assignValue(GET_OR_DISTINCT(DIExpression, (Context, Elts)),
-                             NextMetadataNo);
+    SmallVector<Metadata *, 4> Refs;
+    /// on old bitcode we will get zero Ops.
+    if (Ops) {
+      Ops++;
+      /// Check presence of refs for OP_call2/call4.
+      while (Ops < Record.size())
+        Refs.push_back(getMDOrNull(Record[Ops++]));
+    }
+
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIExpression, (Context, Elts, Refs)), NextMetadataNo);
     NextMetadataNo++;
     break;
   }

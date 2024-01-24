@@ -4934,6 +4934,18 @@ bool TargetProperties::GetAutoInstallMainExecutable() const {
       idx, g_target_properties[idx].default_uint_value != 0);
 }
 
+llvm::StringRef TargetProperties::GetTargetCharset() const {
+  const uint32_t idx = ePropertyCharacterSet;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_target_properties[idx].default_cstr_value);
+}
+
+bool TargetProperties::GetHideInvalidLegacyFrames() const {
+  const uint32_t idx = ePropertyHideInvalidLegacyFrames;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
+}
+
 void TargetProperties::Arg0ValueChangedCallback() {
   m_launch_info.SetArg0(GetArg0());
 }

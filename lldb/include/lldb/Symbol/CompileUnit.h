@@ -422,6 +422,8 @@ protected:
   void *m_user_data;
   /// The programming language enumeration value.
   lldb::LanguageType m_language;
+  /// The programming language identifier case type
+  lldb::IdentifierCaseType m_identifier_case;
   /// Compile unit flags that help with partial parsing.
   Flags m_flags;
   /// Maps UIDs to functions.

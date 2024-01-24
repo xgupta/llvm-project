@@ -294,6 +294,27 @@ DIStringType *DIBuilder::createStringType(StringRef Name,
                            StringLengthExp, StrLocationExp, 0, 0, 0);
 }
 
+DIBasicType *DIBuilder::createBasicType(StringRef Name, StringRef Pic,
+                                        uint64_t SizeInBits, unsigned Encoding,
+                                        std::optional<uint16_t> DigitCount,
+                                        std::optional<uint16_t> DecimalSign,
+                                        std::optional<int16_t> Scale,
+                                        DINode::DIFlags Flags) {
+  assert(!Name.empty() && "Unable to create type without name");
+  assert((!Pic.empty() || DigitCount != std::nullopt ||
+          DecimalSign != std::nullopt || Scale != std::nullopt) &&
+         "Unable to create decimal info with empty attributes");
+
+  MDString *PicString = nullptr;
+  if (!Pic.empty())
+    PicString = MDString::get(VMContext, Pic);
+
+  return DIBasicType::get(
+      VMContext, dwarf::DW_TAG_base_type, Name, PicString, SizeInBits, 0,
+      Encoding, Flags,
+      DIBasicType::DecimalInfo{DigitCount, DecimalSign, Scale});
+}
+
 DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, FromTy, 0,
                             0, 0, std::nullopt, std::nullopt, DINode::FlagZero);
@@ -309,6 +330,14 @@ DIDerivedType *DIBuilder::createPtrAuthQualifiedType(
                                 std::in_place, Key, IsAddressDiscriminated,
                                 ExtraDiscriminator, IsaPointer,
                                 AuthenticatesNullValues),
+                            DINode::FlagZero);
+}
+
+DIDerivedType *DIBuilder::createDynamicType(DIType *BTy, DIExpression *Location,
+                                            DIExpression *Allocated) {
+  return DIDerivedType::get(VMContext, dwarf::DW_TAG_dynamic_type,
+                            MDString::get(VMContext, ""), nullptr, 0, nullptr,
+                            BTy, 0, 0, 0, std::nullopt, std::nullopt,
                             DINode::FlagZero);
 }
 
@@ -596,11 +625,13 @@ DIBuilder::createArrayType(uint64_t Size, uint32_t AlignInBits, DIType *Ty,
                            PointerUnion<DIExpression *, DIVariable *> DL,
                            PointerUnion<DIExpression *, DIVariable *> AS,
                            PointerUnion<DIExpression *, DIVariable *> AL,
-                           PointerUnion<DIExpression *, DIVariable *> RK) {
+                           PointerUnion<DIExpression *, DIVariable *> RK,
+                           StringRef ArrayName, bool IsStringHeader) {
   auto *R = DICompositeType::get(
-      VMContext, dwarf::DW_TAG_array_type, "", nullptr, 0, nullptr, Ty, Size,
-      AlignInBits, 0, DINode::FlagZero, Subscripts, 0, nullptr, nullptr, "",
-      nullptr,
+      VMContext, dwarf::DW_TAG_array_type, ArrayName, nullptr, 0, nullptr, Ty,
+      Size, AlignInBits, 0, DINode::FlagZero,
+      DICompositeType::packVendorDIFlags(IsStringHeader), Subscripts, 0,
+      nullptr, nullptr, "", nullptr,
       isa<DIExpression *>(DL) ? (Metadata *)cast<DIExpression *>(DL)
                               : (Metadata *)cast<DIVariable *>(DL),
       isa<DIExpression *>(AS) ? (Metadata *)cast<DIExpression *>(AS)
@@ -784,16 +815,17 @@ DIGlobalVariable *DIBuilder::createTempGlobalVariableFwdDecl(
 }
 
 static DILocalVariable *createLocalVariable(
-    LLVMContext &VMContext,
-    SmallVectorImpl<TrackingMDNodeRef> &PreservedNodes,
+    LLVMContext &VMContext, SmallVectorImpl<TrackingMDNodeRef> &PreservedNodes,
     DIScope *Context, StringRef Name, unsigned ArgNo, DIFile *File,
     unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags,
+    DILocalVariable::DIVarFlags VarFlags, unsigned LexicalScope,
     uint32_t AlignInBits, DINodeArray Annotations = nullptr) {
   // FIXME: Why doesn't this check for a subprogram or lexical block (AFAICT
   // the only valid scopes)?
   auto *Scope = cast<DILocalScope>(Context);
   auto *Node = DILocalVariable::get(VMContext, Scope, Name, File, LineNo, Ty,
-                                    ArgNo, Flags, AlignInBits, Annotations);
+                                    ArgNo, LexicalScope, Flags, VarFlags,
+                                    AlignInBits, Annotations);
   if (AlwaysPreserve) {
     // The optimizer may remove local variables. If there is an interest
     // to preserve variable info in such situation then stash it in a
@@ -812,7 +844,19 @@ DILocalVariable *DIBuilder::createAutoVariable(DIScope *Scope, StringRef Name,
          "Unexpected scope for a local variable.");
   return createLocalVariable(
       VMContext, getSubprogramNodesTrackingVector(Scope), Scope, Name,
-      /* ArgNo */ 0, File, LineNo, Ty, AlwaysPreserve, Flags, AlignInBits);
+      /* ArgNo */ 0, File, LineNo, Ty, AlwaysPreserve, Flags,
+      DILocalVariable::VarFlagZero, 0, AlignInBits);
+}
+
+DILocalVariable *DIBuilder::createAutoVariable2(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
+    unsigned LexicalScope, DIType *Ty, bool AlwaysPreserve,
+    DINode::DIFlags Flags, DILocalVariable::DIVarFlags VarFlags,
+    uint32_t AlignInBits) {
+  return createLocalVariable(VMContext, getSubprogramNodesTrackingVector(Scope),
+                             Scope, Name,
+                             /* ArgNo */ 0, File, LineNo, Ty, AlwaysPreserve,
+                             Flags, VarFlags, LexicalScope, AlignInBits);
 }
 
 DILocalVariable *DIBuilder::createParameterVariable(
@@ -824,7 +868,20 @@ DILocalVariable *DIBuilder::createParameterVariable(
          "Unexpected scope for a local variable.");
   return createLocalVariable(
       VMContext, getSubprogramNodesTrackingVector(Scope), Scope, Name, ArgNo,
-      File, LineNo, Ty, AlwaysPreserve, Flags, /*AlignInBits=*/0, Annotations);
+      File, LineNo, Ty, AlwaysPreserve, Flags, DILocalVariable::VarFlagZero,
+      /* LexScope */ 0, /*AlignInBits=*/0, Annotations);
+}
+
+DILocalVariable *DIBuilder::createParameterVariable2(
+    DIScope *Scope, StringRef Name, unsigned ArgNo, unsigned LexicalScope,
+    DIFile *File, unsigned LineNo, DIType *Ty, bool AlwaysPreserve,
+    DINode::DIFlags Flags, DILocalVariable::DIVarFlags VarFlags,
+    DINodeArray Annotations) {
+  assert(ArgNo && "Expected non-zero argument number for parameter");
+  return createLocalVariable(VMContext, getSubprogramNodesTrackingVector(Scope),
+                             Scope, Name, ArgNo, File, LineNo, Ty,
+                             AlwaysPreserve, Flags, VarFlags, LexicalScope,
+                             /*AlignInBits=*/0, Annotations);
 }
 
 DILabel *DIBuilder::createLabel(DIScope *Context, StringRef Name, DIFile *File,
@@ -841,8 +898,16 @@ DILabel *DIBuilder::createLabel(DIScope *Context, StringRef Name, DIFile *File,
   return Node;
 }
 
-DIExpression *DIBuilder::createExpression(ArrayRef<uint64_t> Addr) {
-  return DIExpression::get(VMContext, Addr);
+DIExpression *DIBuilder::createExpression(ArrayRef<uint64_t> Addr,
+                                          ArrayRef<Metadata *> Refs) {
+  return DIExpression::get(VMContext, Addr, Refs);
+}
+
+DIExpression *DIBuilder::createExpression(ArrayRef<int64_t> Signed,
+                                          ArrayRef<Metadata *> Refs) {
+  // TODO: Remove the callers of this signed version and delete.
+  SmallVector<uint64_t, 8> Addr(Signed.begin(), Signed.end());
+  return createExpression(Addr, Refs);
 }
 
 template <class... Ts>
@@ -857,14 +922,14 @@ DISubprogram *DIBuilder::createFunction(
     unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
     DINode::DIFlags Flags, DISubprogram::DISPFlags SPFlags,
     DITemplateParameterArray TParams, DISubprogram *Decl,
-    DITypeArray ThrownTypes, DINodeArray Annotations,
-    StringRef TargetFuncName) {
+    DITypeArray ThrownTypes, DINodeArray Annotations, StringRef TargetFuncName,
+    DIExpression *StaticLink, DIExpression *RcFrameBase) {
   bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
   auto *Node = getSubprogram(
       /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
       Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
       SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl, nullptr,
-      ThrownTypes, Annotations, TargetFuncName);
+      ThrownTypes, Annotations, TargetFuncName, StaticLink, RcFrameBase);
 
   if (IsDefinition)
     AllSubprograms.push_back(Node);
@@ -892,7 +957,7 @@ DISubprogram *DIBuilder::createMethod(
     unsigned LineNo, DISubroutineType *Ty, unsigned VIndex, int ThisAdjustment,
     DIType *VTableHolder, DINode::DIFlags Flags,
     DISubprogram::DISPFlags SPFlags, DITemplateParameterArray TParams,
-    DITypeArray ThrownTypes) {
+    DITypeArray ThrownTypes, DIExpression *StaticLink) {
   assert(getNonCompileUnitScope(Context) &&
          "Methods should have both a Context and a context that isn't "
          "the compile unit.");
@@ -902,7 +967,7 @@ DISubprogram *DIBuilder::createMethod(
       /*IsDistinct=*/IsDefinition, VMContext, cast<DIScope>(Context), Name,
       LinkageName, F, LineNo, Ty, LineNo, VTableHolder, VIndex, ThisAdjustment,
       Flags, SPFlags, IsDefinition ? CUNode : nullptr, TParams, nullptr,
-      nullptr, ThrownTypes);
+      nullptr, ThrownTypes, nullptr, "", StaticLink);
 
   if (IsDefinition)
     AllSubprograms.push_back(SP);
@@ -1225,4 +1290,15 @@ void DIBuilder::replaceArrays(DICompositeType *&T, DINodeArray Elements,
     trackIfUnresolved(Elements.get());
   if (TParams)
     trackIfUnresolved(TParams.get());
+}
+
+void DIBuilder::updateDISubprogramRaincodeFrameBase(DISubprogram *SP,
+                                                    llvm::Value *Storage) {
+  // nothing to do for now
+  // now I need to convert llvm::Value to a DIExpression, how can I do that
+  // and replace SP->RcFrameBaseExpr
+  // or I can create a DIExpression where I do call on a specific variable
+  // pointing to the raincode frame base maybe
+  SP->replaceRawRcFrameBaseExpr(
+      dyn_cast_or_null<Metadata>(ValueAsMetadata::get(Storage)));
 }

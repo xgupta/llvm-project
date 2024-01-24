@@ -1370,7 +1370,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
       std::optional<int> call_column;
       if (die.GetDIENamesAndRanges(name, mangled_name, ranges, decl_file,
                                    decl_line, decl_column, call_file, call_line,
-                                   call_column, nullptr)) {
+                                   call_column, nullptr, nullptr, nullptr)) {
         if (tag == DW_TAG_subprogram) {
           assert(subprogram_low_pc == LLDB_INVALID_ADDRESS);
           subprogram_low_pc = ranges.GetMinRangeBase(0);
@@ -3499,8 +3499,12 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   DWARFFormValue type_die_form;
   bool is_external = false;
   bool is_artificial = false;
+  bool has_descriptor = false;
   DWARFFormValue const_value_form, location_form;
   Variable::RangeList scope_ranges;
+  uint8_t lexical_scope = 0;
+  VariableSP var_sp;
+  DWARFDIE spec_die;
 
   for (size_t i = 0; i < attributes.Size(); ++i) {
     dw_attr_t attr = attributes.AttributeAtIndex(i);
@@ -3521,6 +3525,13 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       break;
     case DW_AT_name:
       name = form_value.AsCString();
+      break;
+    case DW_AT_RAINCODE_desc_type:
+      // TODO handle descriptor list/locator form values
+      has_descriptor = true;
+      break;
+    case DW_AT_RAINCODE_lexical_scope:
+      lexical_scope = form_value.Unsigned();
       break;
     case DW_AT_linkage_name:
     case DW_AT_MIPS_linkage_name:
@@ -3549,6 +3560,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     case DW_AT_endianity:
     case DW_AT_segment:
     case DW_AT_specification:
+      spec_die = form_value.Reference();
+      break;
     case DW_AT_visibility:
     default:
     case DW_AT_abstract_origin:
@@ -3738,10 +3751,19 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                           die.GetCU()->GetAddressByteSize());
   }
 
-  return std::make_shared<Variable>(
+  var_sp = std::make_shared<Variable>(
       die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
       scope_ranges, &decl, location_list, is_external, is_artificial,
-      location_is_const_value_data, is_static_member);
+      location_is_const_value_data, is_static_member, has_descriptor,
+      lexical_scope);
+  // Cache var_sp even if NULL (the variable was just a specification or was
+  // missing vital information to be able to be displayed in the debugger
+  // (missing location due to optimization, etc)) so we don't re-parse this
+  // DIE over and over later...
+  GetDIEToVariable()[die.GetDIE()] = var_sp;
+  if (spec_die)
+    GetDIEToVariable()[spec_die.GetDIE()] = var_sp;
+  return var_sp;
 }
 
 DWARFDIE

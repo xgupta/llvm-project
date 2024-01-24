@@ -2025,7 +2025,8 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
     Printer.printInt("count", CV->getSExtValue(),
                      /* ShouldSkipZero */ false);
   } else
-    Printer.printMetadata("count", Count, /*ShouldSkipNull */ true);
+    Printer.printMetadata("count", N->getRawCountNode(),
+                          /*ShouldSkipNull */ true);
 
   // A lowerBound of constant 0 should not be skipped, since it is different
   // from an unspecified lower bound (= nullptr).
@@ -2129,6 +2130,20 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
+
+  if (N->hasDecimalInfo()) {
+    Printer.printString("pic", N->getPictureString());
+
+    if (const auto &digits = N->getDigitCount())
+      Printer.printInt("digits", *digits);
+
+    if (const auto &sign = N->getDecimalSign())
+      Printer.printDwarfEnum("sign", *sign, dwarf::DecimalSignString);
+
+    if (const auto &scale = N->getScale())
+      Printer.printInt("scale", *scale, /*ShouldSkipZero*/ false);
+  }
+
   Printer.printDIFlags("flags", N->getFlags());
   Out << ")";
 }
@@ -2167,6 +2182,8 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
   Printer.printInt("offset", N->getOffsetInBits());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printMetadata("extraData", N->getRawExtraData());
+  Printer.printMetadata("location", N->getRawLocation());
+  Printer.printMetadata("allocated", N->getRawAllocated());
   if (const auto &DWARFAddressSpace = N->getDWARFAddressSpace())
     Printer.printInt("dwarfAddressSpace", *DWARFAddressSpace,
                      /* ShouldSkipZero */ false);
@@ -2298,6 +2315,8 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   Printer.printMetadata("thrownTypes", N->getRawThrownTypes());
   Printer.printMetadata("annotations", N->getRawAnnotations());
   Printer.printString("targetFuncName", N->getTargetFuncName());
+  Printer.printMetadata("staticLink", N->getRawStaticLinkExpr());
+  Printer.printMetadata("rcFrameBase", N->getRawRcFrameBaseExpr());
   Out << ")";
 }
 

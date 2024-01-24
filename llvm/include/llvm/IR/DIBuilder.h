@@ -251,12 +251,37 @@ namespace llvm {
     DIStringType *createStringType(StringRef Name,
                                    DIExpression *StringLengthExp,
                                    DIExpression *StrLocationExp = nullptr);
+    /// Create debugging information entry for a basic type with packed decimal
+    /// type.
+    /// \param Name        Type name.
+    /// \param Pic         Picture String
+    /// \param SizeInBits  Size of the type.
+    /// \param Encoding    DWARF encoding code, e.g., dwarf::DW_ATE_edited_type.
+    /// \param DigitCount  digit count
+    /// \param DecimalSign decimal sign
+    /// \param scale       scale
+    /// \param Flags       Optional DWARF attributes, e.g., DIFlagsBinaryScale
+    DIBasicType *
+    createBasicType(StringRef Name, StringRef Pic, uint64_t SizeInBits,
+                    unsigned Encoding,
+                    std::optional<uint16_t> DigitCount = std::nullopt,
+                    std::optional<uint16_t> DecimalSign = std::nullopt,
+                    std::optional<int16_t> Scale = std::nullopt,
+                    DINode::DIFlags Flags = DINode::FlagZero);
 
     /// Create debugging information entry for a qualified
     /// type, e.g. 'const int'.
     /// \param Tag         Tag identifing type, e.g. dwarf::TAG_volatile_type
     /// \param FromTy      Base Type.
     DIDerivedType *createQualifiedType(unsigned Tag, DIType *FromTy);
+
+    /// Create debugging information entry for a dynamic type
+    /// type, e.g. used in pl1 for decriptors.
+    /// \param BTy         Base type.
+    /// \param Location    Expression list to get to raw data.
+    /// \param Allocated   Expression list to deduct allocation status.
+    DIDerivedType *createDynamicType(DIType *BTy, DIExpression *Location,
+                                     DIExpression *Allocated);
 
     /// Create debugging information entry for a pointer.
     /// \param PointeeTy         Type pointed by this pointer.
@@ -594,7 +619,8 @@ namespace llvm {
         PointerUnion<DIExpression *, DIVariable *> DataLocation = nullptr,
         PointerUnion<DIExpression *, DIVariable *> Associated = nullptr,
         PointerUnion<DIExpression *, DIVariable *> Allocated = nullptr,
-        PointerUnion<DIExpression *, DIVariable *> Rank = nullptr);
+        PointerUnion<DIExpression *, DIVariable *> Rank = nullptr,
+        StringRef ArrayName = "", bool IsStringHeader = false);
 
     /// Create debugging information entry for a vector type.
     /// \param Size         Array size.
@@ -743,6 +769,21 @@ namespace llvm {
                        DINode::DIFlags Flags = DINode::FlagZero,
                        uint32_t AlignInBits = 0);
 
+    /// Create a new descriptor for an auto variable.  This is a local variable
+    /// that is not a subprogram parameter.
+    ///
+    /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
+    /// leads to a \a DISubprogram.
+    ///
+    /// If \c AlwaysPreserve, this variable will be referenced from its
+    /// containing subprogram, and will survive some optimizations.
+    DILocalVariable *createAutoVariable2(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
+        unsigned LexicalScope, DIType *Ty, bool AlwaysPreserve = false,
+        DINode::DIFlags Flags = DINode::FlagZero,
+        DILocalVariable::DIVarFlags VarFlags = DILocalVariable::VarFlagZero,
+        uint32_t AlignInBits = 0);
+
     /// Create a new descriptor for an label.
     ///
     /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
@@ -769,10 +810,32 @@ namespace llvm {
                             DINode::DIFlags Flags = DINode::FlagZero,
                             DINodeArray Annotations = nullptr);
 
+    /// Create a new descriptor for a parameter variable.
+    ///
+    /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
+    /// leads to a \a DISubprogram.
+    ///
+    /// \c ArgNo is the index (starting from \c 1) of this variable in the
+    /// subprogram parameters.  \c ArgNo should not conflict with other
+    /// parameters of the same subprogram.
+    ///
+    /// If \c AlwaysPreserve, this variable will be referenced from its
+    /// containing subprogram, and will survive some optimizations.
+    DILocalVariable *createParameterVariable2(
+        DIScope *Scope, StringRef Name, unsigned ArgNo, unsigned LexicalScope,
+        DIFile *File, unsigned LineNo, DIType *Ty, bool AlwaysPreserve = false,
+        DINode::DIFlags Flags = DINode::FlagZero,
+        DILocalVariable::DIVarFlags VarFlags = DILocalVariable::VarFlagZero,
+        DINodeArray Annotations = nullptr);
+
     /// Create a new descriptor for the specified
     /// variable which has a complex address expression for its address.
     /// \param Addr        An array of complex address operations.
-    DIExpression *createExpression(ArrayRef<uint64_t> Addr = {});
+    /// \param Refs        An array of Metadata ref for call2/call4 operations.
+    DIExpression *createExpression(ArrayRef<uint64_t> Addr = {},
+                                   ArrayRef<Metadata *> Refs = std::nullopt);
+    DIExpression *createExpression(ArrayRef<int64_t> Addr,
+                                   ArrayRef<Metadata *> Refs = std::nullopt);
 
     /// Create an expression for a variable that does not have an address, but
     /// does have a constant value.
@@ -798,16 +861,16 @@ namespace llvm {
     /// \param Annotations   Attribute Annotations.
     /// \param TargetFuncName The name of the target function if this is
     ///                       a trampoline.
-    DISubprogram *
-    createFunction(DIScope *Scope, StringRef Name, StringRef LinkageName,
-                   DIFile *File, unsigned LineNo, DISubroutineType *Ty,
-                   unsigned ScopeLine, DINode::DIFlags Flags = DINode::FlagZero,
-                   DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
-                   DITemplateParameterArray TParams = nullptr,
-                   DISubprogram *Decl = nullptr,
-                   DITypeArray ThrownTypes = nullptr,
-                   DINodeArray Annotations = nullptr,
-                   StringRef TargetFuncName = "");
+    DISubprogram *createFunction(
+        DIScope *Scope, StringRef Name, StringRef LinkageName, DIFile *File,
+        unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
+        DINode::DIFlags Flags = DINode::FlagZero,
+        DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
+        DITemplateParameterArray TParams = nullptr,
+        DISubprogram *Decl = nullptr, DITypeArray ThrownTypes = nullptr,
+        DINodeArray Annotations = nullptr, StringRef TargetFuncName = "",
+        DIExpression *StaticLink = nullptr,
+        DIExpression *RcFrameBase = nullptr);
 
     /// Identical to createFunction,
     /// except that the resulting DbgNode is meant to be RAUWed.
@@ -838,15 +901,14 @@ namespace llvm {
     /// \param SPFlags       Additional flags specific to subprograms.
     /// \param TParams       Function template parameters.
     /// \param ThrownTypes   Exception types this function may throw.
-    DISubprogram *
-    createMethod(DIScope *Scope, StringRef Name, StringRef LinkageName,
-                 DIFile *File, unsigned LineNo, DISubroutineType *Ty,
-                 unsigned VTableIndex = 0, int ThisAdjustment = 0,
-                 DIType *VTableHolder = nullptr,
-                 DINode::DIFlags Flags = DINode::FlagZero,
-                 DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
-                 DITemplateParameterArray TParams = nullptr,
-                 DITypeArray ThrownTypes = nullptr);
+    DISubprogram *createMethod(
+        DIScope *Scope, StringRef Name, StringRef LinkageName, DIFile *File,
+        unsigned LineNo, DISubroutineType *Ty, unsigned VTableIndex = 0,
+        int ThisAdjustment = 0, DIType *VTableHolder = nullptr,
+        DINode::DIFlags Flags = DINode::FlagZero,
+        DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
+        DITemplateParameterArray TParams = nullptr,
+        DITypeArray ThrownTypes = nullptr, DIExpression *StaticLink = nullptr);
 
     /// Create common block entry for a Fortran common block.
     /// \param Scope       Scope of this common block.
@@ -1055,6 +1117,10 @@ namespace llvm {
       N->replaceAllUsesWith(Replacement);
       return Replacement;
     }
+
+    /// Updates the RcFrameBase of a DISubprogram SP
+    void updateDISubprogramRaincodeFrameBase(DISubprogram *SP,
+                                             llvm::Value *Storage);
   };
 
   // Create wrappers for C Binding types (see CBindingWrapping.h).

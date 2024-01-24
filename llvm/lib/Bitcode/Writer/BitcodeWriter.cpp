@@ -1857,6 +1857,32 @@ void ModuleBitcodeWriter::writeDIBasicType(const DIBasicType *N,
   Record.push_back(N->getEncoding());
   Record.push_back(N->getFlags());
 
+  // Below are the optional decimal attributes in case base type is decimal type
+  // and one or more attributes are not needed, we encode 0 to mark the missing
+  // place except the `scale` attribute which is integer and may have valid zero
+  // value, to mark its validity we add one more non-zero record before it.
+  if (N->hasDecimalInfo()) {
+    Record.push_back(VE.getMetadataOrNullID(N->getRawPictureString()));
+
+    if (const auto &digits = N->getDigitCount())
+      Record.push_back(*digits);
+    else
+      Record.push_back(0);
+
+    if (const auto &sign = N->getDecimalSign())
+      Record.push_back(*sign);
+    else
+      Record.push_back(0);
+
+    if (const auto &scale = N->getScale()) {
+      Record.push_back(1);
+      Record.push_back(*scale);
+    } else {
+      Record.push_back(0);
+      Record.push_back(0);
+    }
+  }
+
   Stream.EmitRecord(bitc::METADATA_BASIC_TYPE, Record, Abbrev);
   Record.clear();
 }
@@ -1881,7 +1907,8 @@ void ModuleBitcodeWriter::writeDIStringType(const DIStringType *N,
 void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
                                              SmallVectorImpl<uint64_t> &Record,
                                              unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  const uint64_t Version = 2 << 1;
+  Record.push_back(N->isDistinct() | Version);
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
@@ -1900,6 +1927,8 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
     Record.push_back(*DWARFAddressSpace + 1);
   else
     Record.push_back(0);
+  Record.push_back(VE.getMetadataOrNullID(N->getLocation()));
+  Record.push_back(VE.getMetadataOrNullID(N->getAllocated()));
 
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
 
@@ -2035,6 +2064,8 @@ void ModuleBitcodeWriter::writeDISubprogram(const DISubprogram *N,
   Record.push_back(VE.getMetadataOrNullID(N->getThrownTypes().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawTargetFuncName()));
+  Record.push_back(VE.getMetadataOrNullID(N->getStaticLinkExpr()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRcFrameBaseExpr()));
 
   Stream.EmitRecord(bitc::METADATA_SUBPROGRAM, Record, Abbrev);
   Record.clear();
@@ -2246,8 +2277,12 @@ void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
                                             unsigned Abbrev) {
   Record.reserve(N->getElements().size() + 1);
   const uint64_t Version = 3 << 1;
-  Record.push_back((uint64_t)N->isDistinct() | Version);
+  const uint64_t NumEle = (N->getNumElements()) << 6;
+  Record.push_back((uint64_t)N->isDistinct() | Version | NumEle);
   Record.append(N->elements_begin(), N->elements_end());
+  for (const Metadata *Ref : N->operands()) {
+    Record.push_back(VE.getMetadataOrNullID(Ref));
+  }
 
   Stream.EmitRecord(bitc::METADATA_EXPRESSION, Record, Abbrev);
   Record.clear();

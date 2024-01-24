@@ -23,6 +23,7 @@
 #include "llvm/Support/JSON.h"
 
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
@@ -288,6 +289,9 @@ public:
 
   virtual CompilerType GetAtomicType(lldb::opaque_compiler_type_t type);
 
+  virtual CompilerType MutateBaseTypeSize(lldb::opaque_compiler_type_t type,
+                                          uint64_t sizeInBits);
+
   virtual CompilerType AddConstModifier(lldb::opaque_compiler_type_t type);
 
   virtual CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type);
@@ -314,6 +318,13 @@ public:
 
   virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                                      uint64_t &count) = 0;
+  virtual bool EncodeDataToType(
+      ExecutionContext &exe_scope, lldb::opaque_compiler_type_t src_type,
+      const DataExtractor &src_data, lldb::opaque_compiler_type_t dest_type,
+      DataExtractor &dest_data,
+      const lldb::LanguageType lang = lldb::eLanguageTypeUnknown) {
+    return false;
+  }
 
   virtual lldb::Format GetFormat(lldb::opaque_compiler_type_t type) = 0;
 
@@ -450,6 +461,9 @@ public:
 
   virtual unsigned GetTypeQualifiers(lldb::opaque_compiler_type_t type) = 0;
 
+  virtual bool IsCStringType(lldb::opaque_compiler_type_t type,
+                             uint32_t &length) = 0;
+
   virtual std::optional<size_t>
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                   ExecutionContextScope *exe_scope) = 0;
@@ -459,6 +473,20 @@ public:
   virtual CompilerType CreateGenericFunctionPrototype() {
     return CompilerType();
   }
+
+  virtual CompilerType DynGetBaseType(lldb::opaque_compiler_type_t type) const;
+
+  virtual DWARFExpressionList
+  DynGetLocation(lldb::opaque_compiler_type_t type) const;
+
+  virtual DWARFExpressionList
+  DynGetAllocated(lldb::opaque_compiler_type_t type) const;
+
+  virtual DWARFExpressionList
+  DynArrGetCountExp(lldb::opaque_compiler_type_t type) const;
+
+  virtual bool DynArrUpdateLength(lldb::opaque_compiler_type_t type,
+                                  uint64_t length);
 
   virtual CompilerType
   GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,

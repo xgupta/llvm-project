@@ -196,7 +196,8 @@ symbols:         []
   ObjectFile *object_file = module_sp->GetObjectFile();
   ASSERT_NE(object_file, nullptr);
 
-  std::unique_ptr<CallFrameInfo> cfi = object_file->CreateCallFrameInfo();
+  std::unique_ptr<lldb_private::CallFrameInfo> cfi =
+      object_file->CreateCallFrameInfo();
   ASSERT_NE(cfi.get(), nullptr);
 
   SectionList *sect_list = object_file->GetSectionList();
