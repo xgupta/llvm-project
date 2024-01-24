@@ -201,6 +201,12 @@ let Definition = "target" in {
   def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
     DefaultFalse,
     Desc<"Enable debugging of LLDB-internal utility expressions.">;
+  def CharacterSet: Property<"charset", "String">,
+    DefaultStringValue<"ASCII">,
+    Desc<"Set Target character set.">;
+  def HideInvalidLegacyFrames: Property<"hide-invalid-legacy-frames", "Boolean">,
+    DefaultTrue,
+    Desc<"hides invalid legacy frames while printing.">;
 }
 
 let Definition = "process_experimental" in {

@@ -1228,6 +1228,7 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
               (N.getTag() == dwarf::DW_TAG_variable && N.isStaticMember()) ||
               N.getTag() == dwarf::DW_TAG_inheritance ||
               N.getTag() == dwarf::DW_TAG_friend ||
+              N.getTag() == dwarf::DW_TAG_dynamic_type ||
               N.getTag() == dwarf::DW_TAG_set_type ||
               N.getTag() == dwarf::DW_TAG_template_alias,
           "invalid tag", &N);
@@ -1251,10 +1252,15 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
     }
   }
 
+  if (N.getTag() == dwarf::DW_TAG_dynamic_type) {
+    CheckDI(N.getLocation(), "missing data location attribute in dynamic type",
+            &N);
+    CheckDI(cast<DIExpression>(N.getLocation())->isValid(),
+            "invalid data location expression in dynamic type", &N);
+  }
   CheckDI(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());
   CheckDI(isType(N.getRawBaseType()), "invalid base type", &N,
           N.getRawBaseType());
-
   if (N.getDWARFAddressSpace()) {
     CheckDI(N.getTag() == dwarf::DW_TAG_pointer_type ||
                 N.getTag() == dwarf::DW_TAG_reference_type ||
@@ -1467,6 +1473,10 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
   }
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
           "invalid reference flags", &N);
+
+  CheckDI(!(N.isDescLocSubProgram() && N.isDescListSubProgram()),
+          "subprogram cannot have both descriptor list and descriptor locator",
+          &N);
 
   auto *Unit = N.getRawUnit();
   if (N.isDefinition()) {

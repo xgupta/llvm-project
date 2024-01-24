@@ -26,6 +26,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 
 namespace lldb_private {
 

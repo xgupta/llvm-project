@@ -4610,6 +4610,11 @@ struct DwarfTagField : public MDUnsignedField {
       : MDUnsignedField(DefaultTag, dwarf::DW_TAG_hi_user) {}
 };
 
+struct DwarfDecimalSignField : public MDUnsignedField {
+  DwarfDecimalSignField() : MDUnsignedField(dwarf::DW_DS_Invalid) {}
+  DwarfDecimalSignField(dwarf::DecimalSignEncoding DS) : MDUnsignedField(DS) {}
+};
+
 struct DwarfMacinfoTypeField : public MDUnsignedField {
   DwarfMacinfoTypeField() : MDUnsignedField(0, dwarf::DW_MACINFO_vendor_ext) {}
   DwarfMacinfoTypeField(dwarf::MacinfoRecordType DefaultType)
@@ -4762,6 +4767,26 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, DwarfTagField &Result) {
   assert(Tag <= Result.Max && "Expected valid DWARF tag");
 
   Result.assign(Tag);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+                            DwarfDecimalSignField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::DwarfDecimalSign)
+    return tokError("expected DWARF Decimal sign");
+
+  unsigned DS = dwarf::getDecimalSign(Lex.getStrVal());
+  if (DS == dwarf::DW_DS_Invalid)
+    return tokError("invalid DWARF decimal sign" + Twine(" '") +
+                    Lex.getStrVal() + "'");
+  assert(DS <= Result.Max && "Expected valid DWARF decimal sign");
+
+  Result.assign(DS);
   Lex.Lex();
   return false;
 }
@@ -5317,9 +5342,11 @@ bool LLParser::parseDIEnumerator(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
-/// parseDIBasicType:
-///   ::= !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32,
-///                    encoding: DW_ATE_encoding, flags: 0)
+/// ParseDIBasicType:
+/// ::= !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 1,
+///                  encoding: DW_ATE_encoding, pic: "picture_string",
+///                  digits: digit_count, sign: decimal_sign,
+///                  scale: decimal/binary scale, flags: 0)
 bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_base_type));                     \
@@ -5327,12 +5354,30 @@ bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
+  OPTIONAL(pic, MDStringField, );                                              \
+  OPTIONAL(digits, MDUnsignedField, );                                         \
+  OPTIONAL(sign, DwarfDecimalSignField, (dwarf::DW_DS_Invalid));               \
+  OPTIONAL(scale, MDSignedField, );                                            \
   OPTIONAL(flags, DIFlagField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(DIBasicType, (Context, tag.Val, name.Val, size.Val,
-                                         align.Val, encoding.Val, flags.Val));
+  if (pic.Seen || digits.Seen || sign.Seen || scale.Seen) {
+    DIBasicType::DecimalInfo DAInfo;
+    if (digits.Seen)
+      DAInfo.DigitCount = digits.Val;
+    if (sign.Seen)
+      DAInfo.DecimalSign = sign.Val;
+    if (scale.Seen)
+      DAInfo.Scale = scale.Val;
+
+    Result = GET_OR_DISTINCT(DIBasicType,
+                             (Context, tag.Val, name.Val, pic.Val, size.Val,
+                              align.Val, encoding.Val, flags.Val, DAInfo));
+  } else {
+    Result = GET_OR_DISTINCT(DIBasicType, (Context, tag.Val, name.Val, size.Val,
+                                           align.Val, encoding.Val, flags.Val));
+  }
   return false;
 }
 
@@ -5380,6 +5425,8 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(offset, MDUnsignedField, (0, UINT64_MAX));                          \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(extraData, MDField, );                                              \
+  OPTIONAL(location, MDField, );                                               \
+  OPTIONAL(allocated, MDField, );                                              \
   OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));      \
   OPTIONAL(annotations, MDField, );                                            \
   OPTIONAL(ptrAuthKey, MDUnsignedField, (0, 7));                               \
@@ -5400,11 +5447,11 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
         (unsigned)ptrAuthExtraDiscriminator.Val, ptrAuthIsaPointer.Val,
         ptrAuthAuthenticatesNullValues.Val);
 
-  Result = GET_OR_DISTINCT(DIDerivedType,
-                           (Context, tag.Val, name.Val, file.Val, line.Val,
-                            scope.Val, baseType.Val, size.Val, align.Val,
-                            offset.Val, DWARFAddressSpace, PtrAuthData,
-                            flags.Val, extraData.Val, annotations.Val));
+  Result = GET_OR_DISTINCT(
+      DIDerivedType,
+      (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
+       size.Val, align.Val, offset.Val, DWARFAddressSpace, PtrAuthData,
+       flags.Val, extraData.Val, annotations.Val, location.Val, allocated.Val));
   return false;
 }
 
@@ -5588,7 +5635,9 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(retainedNodes, MDField, );                                          \
   OPTIONAL(thrownTypes, MDField, );                                            \
   OPTIONAL(annotations, MDField, );                                            \
-  OPTIONAL(targetFuncName, MDStringField, );
+  OPTIONAL(targetFuncName, MDStringField, );                                   \
+  OPTIONAL(staticLink, MDField, );                                             \
+  OPTIONAL(rcFrameBase, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5608,7 +5657,7 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
        type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
        thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
        declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
-       targetFuncName.Val));
+       targetFuncName.Val, staticLink.Val, rcFrameBase.Val));
   return false;
 }
 
@@ -5850,12 +5899,26 @@ bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
     return true;
 
   SmallVector<uint64_t, 8> Elements;
+  SmallVector<Metadata *, 4> Refs;
   if (Lex.getKind() != lltok::rparen)
     do {
       if (Lex.getKind() == lltok::DwarfOp) {
         if (unsigned Op = dwarf::getOperationEncoding(Lex.getStrVal())) {
           Lex.Lex();
           Elements.push_back(Op);
+          if ((Op == dwarf::DW_OP_call2) || (Op == dwarf::DW_OP_call4)) {
+            MDField offset;
+            Lex.Lex();
+            parseMDField("offset", offset);
+            if (!offset.Seen) {
+              return tokError(Twine("expected ref for DWARF op '") +
+                              dwarf::OperationEncodingString(Op) + "'");
+            }
+            const auto it = llvm::find(Refs, offset.Val);
+            Elements.push_back(it - Refs.begin());
+            if (it == Refs.end())
+              Refs.push_back(offset.Val);
+          }
           continue;
         }
         return tokError(Twine("invalid DWARF op '") + Lex.getStrVal() + "'");
@@ -5884,7 +5947,7 @@ bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
+  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements, Refs));
   return false;
 }
 

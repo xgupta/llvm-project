@@ -13,13 +13,16 @@
 using namespace lldb_private;
 
 RegularExpression::RegularExpression(llvm::StringRef str,
-                                     llvm::Regex::RegexFlags flags)
-    : m_regex_text(std::string(str)),
-      // m_regex does not reference str anymore after it is constructed.
-      m_regex(llvm::Regex(str, flags)) {}
+                                     llvm::Regex::RegexFlags flags, bool icase)
+    : m_regex_text(std::string(str)) {
+  unsigned Flags = icase ? llvm::Regex::IgnoreCase : llvm::Regex::NoFlags;
+  // m_regex does not reference str anymore after it is constructed.
+  m_regex = llvm::Regex(str, Flags);
+}
 
 RegularExpression::RegularExpression(const RegularExpression &rhs)
-    : RegularExpression(rhs.GetText()) {}
+    : RegularExpression(rhs.GetText(), rhs.icase ? llvm::Regex::IgnoreCase
+                                                 : llvm::Regex::NoFlags) {}
 
 bool RegularExpression::Execute(
     llvm::StringRef str,

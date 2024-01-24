@@ -1,0 +1,22 @@
+COB_CC ?= cobrc
+COB_FLAGS ?= -EXE -Debug -LLVMLink=FALSE
+LDFLAGS ?= -no-pie
+
+COB_FLAGS += $(COBFLAGS_EXTRAS)
+EXE ?= a.out
+LDLIBS = -lrclz
+
+#----------------------------------------------------------------------
+# Check if we have any Cobol source files
+#----------------------------------------------------------------------
+OBJECTS +=$(strip $(COB_SOURCES:.cob=.o))
+
+%.o : %.cob
+	$(COB_CC) $(COB_FLAGS) $<
+
+$(EXE) : $(OBJECTS)
+	$(CC) $(LDFLAGS) $(OBJECTS) -o "$(EXE)" $(LDLIBS)
+
+all : $(EXE)
+.PHONY : clean
+	$(RM) -rf $(OBJECT)

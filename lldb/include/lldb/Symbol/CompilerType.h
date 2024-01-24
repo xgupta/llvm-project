@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Casting.h"
@@ -140,6 +142,8 @@ public:
   bool IsCompleteType() const;
 
   bool IsConst() const;
+
+  bool IsCStringType(uint32_t &length) const;
 
   bool IsDefined() const;
 
@@ -381,6 +385,21 @@ public:
   /// supports ptrauth modifiers, else return an invalid type. Note that this
   /// does not check if this type is a pointer.
   CompilerType AddPtrAuthModifier(uint32_t payload) const;
+
+  /// Dynamic type get base type
+  CompilerType DynGetBaseType() const;
+
+  /// Dynamic type get location expression
+  DWARFExpressionList DynGetLocation() const;
+
+  /// Dynamic type get allocated expression
+  DWARFExpressionList DynGetAllocated() const;
+
+  /// Dynamic array type get count expression
+  DWARFExpressionList DynArrGetCountExp() const;
+
+  /// Dynamic array type update length
+  bool DynArrUpdateLength(uint64_t length);
   /// \}
 
   /// Exploring the type.
@@ -394,6 +413,10 @@ public:
 
   lldb::Encoding GetEncoding(uint64_t &count) const;
 
+  bool EncodeDataToType(ExecutionContext &exe_scope,
+                        lldb::opaque_compiler_type_t src_type,
+                        const DataExtractor &src_data,
+                        DataExtractor &dest_data);
   lldb::Format GetFormat() const;
 
   std::optional<size_t> GetTypeBitAlign(ExecutionContextScope *exe_scope) const;

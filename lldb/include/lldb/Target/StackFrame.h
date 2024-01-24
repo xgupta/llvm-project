@@ -216,6 +216,36 @@ public:
   ///   Returns the corresponding DWARF expression, or NULL.
   DWARFExpressionList *GetFrameBaseExpression(Status *error_ptr);
 
+  /// Return the Canonical Static Link Address for this frame.
+  ///
+  /// For lexical nested funtions, the static link will point to the CFA of
+  /// nestee function.
+  ///
+  /// Live StackFrames will always have a CFA but other types of frames may
+  /// not be able to supply one.
+  ///
+  /// \param [out] value
+  ///   The static link address of the CFA for nestee frame, if available.
+  ///
+  /// \param [out] error_ptr
+  ///   If there is an error determining the CFA address, this may contain a
+  ///   string explaining the failure.
+  ///
+  /// \return
+  ///   Returns true if the CFA value was successfully set in value.  Some
+  ///   Will return false if failed.
+  bool GetStaticLinkValue(Scalar &value, Status *error_ptr);
+
+  /// Get the DWARFExpression corresponding to the Static link Address.
+  ///
+  /// \param [out] error
+  ///   If there is an error determining the CFA address, this may contain a
+  ///   string explaining the failure.
+  ///
+  /// \return
+  ///   Returns the corresponding DWARF expression, or NULL.
+  DWARFExpressionList *GetStaticLinkExpression(Status &error);
+
   /// Get the current lexical scope block for this StackFrame, if possible.
   ///
   /// If debug information is available for this stack frame, return a pointer
@@ -433,6 +463,25 @@ public:
   ///   derived from.
   uint32_t GetConcreteFrameIndex() const { return m_concrete_frame_index; }
 
+  /// Searches nested agregate Valobject for named variable for first occurance
+  ///
+  /// \params [in] name
+  ///   The name of the Variable to search
+  ///
+  /// \param [in] valobj_sp
+  ///   Top level valueObject to search into
+  ///
+  /// \params [in] use_dynamic
+  ///     Whether the correct dynamic type of the variable should be
+  ///     determined before creating the ValueObject, or if the static type
+  ///     is sufficient.  One of the DynamicValueType enumerated values.
+  ///
+  /// \return
+  //    A name matched ValueObject.
+  lldb::ValueObjectSP GetValueObjectForFrameAggregateVariable(
+      ConstString name, lldb::ValueObjectSP &valobj_sp,
+      lldb::DynamicValueType use_dynamic, bool look_in_array = false);
+
   /// Create a ValueObject for a given Variable in this StackFrame.
   ///
   /// \param [in] variable_sp
@@ -448,6 +497,22 @@ public:
   lldb::ValueObjectSP
   GetValueObjectForFrameVariable(const lldb::VariableSP &variable_sp,
                                  lldb::DynamicValueType use_dynamic);
+
+  /// Add an arbitrary Variable object (e.g. one that specifics a global or
+  /// static) to a StackFrame's list of ValueObjects.
+  ///
+  /// \params [in] variable_sp
+  ///   The Variable to base this ValueObject on
+  ///
+  /// \params [in] use_dynamic
+  ///     Whether the correct dynamic type of the variable should be
+  ///     determined before creating the ValueObject, or if the static type
+  ///     is sufficient.  One of the DynamicValueType enumerated values.
+  ///
+  /// \return
+  ///     A ValueObject for this variable.
+  lldb::ValueObjectSP TrackGlobalVariable(const lldb::VariableSP &variable_sp,
+                                          lldb::DynamicValueType use_dynamic);
 
   /// Query this frame to determine what the default language should be when
   /// parsing expressions given the execution context.
@@ -539,6 +604,8 @@ private:
   Flags m_flags;
   Scalar m_frame_base;
   Status m_frame_base_error;
+  Scalar m_static_link;
+  Status m_static_link_error;
   uint16_t m_frame_recognizer_generation = 0;
   /// Does this frame have a CFA?  Different from CFA == LLDB_INVALID_ADDRESS.
   bool m_cfa_is_valid;
