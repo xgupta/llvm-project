@@ -1290,7 +1290,7 @@ PowerPC Support
 - Added support for ``builtin_cpu_supports`` on AIX, along with a subset of
   features that can be queried.
 
-- ``__attribute__((rvv_vector_bits(N))) is now supported for RVV vbool*_t types.
+- ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
