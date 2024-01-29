@@ -251,6 +251,11 @@ C++20 Feature Support
 - User defined constructors are allowed for copy-list-initialization with CTAD.
   (#GH62925).
 
+- Clang won't perform ODR checks for decls in the global module fragment any
+  more to ease the implementation and improve the user's using experience.
+  This follows the MSVC's behavior.
+  (`#79240 <https://github.com/llvm/llvm-project/issues/79240>`_).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
