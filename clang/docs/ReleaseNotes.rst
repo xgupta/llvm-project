@@ -317,6 +317,10 @@ Bug Fixes in This Version
 - Fixed a crash when diagnosing format strings and encountering an empty
   delimited escape sequence (e.g., ``"\o{}"``). #GH102218
 
+- Clang now doesn't produce false-positive warning `-Wconstant-logical-operand`
+  for logical operators in C23.
+  Fixes (`#64356 <https://github.com/llvm/llvm-project/issues/64356>`_).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
