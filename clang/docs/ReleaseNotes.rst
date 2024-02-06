@@ -911,6 +911,10 @@ Bug Fixes in This Version
 - Fixed the definition of ``ATOMIC_FLAG_INIT`` in ``<stdatomic.h>`` so it can
   be used in C++.
 
+- Clang now doesn't produce false-positive warning `-Wconstant-logical-operand`
+  for logical operators in C23.
+  Fixes (`#64356 <https://github.com/llvm/llvm-project/issues/64356>`_).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
