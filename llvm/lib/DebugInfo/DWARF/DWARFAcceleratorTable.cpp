@@ -903,7 +903,7 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
       return std::nullopt; // End of bucket
 
     NameTableEntry NTE = CurrentIndex->getNameTableEntry(Index);
-    if (NTE.getString() == Key)
+    if (StringRef(NTE.getString()).equals_insensitive(key))
       return NTE.getEntryOffset();
   }
   return std::nullopt;
