@@ -988,7 +988,7 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
       continue;
 
     NameTableEntry NTE = CurrentIndex->getNameTableEntry(Index);
-    if (StringRef(NTE.getString()).equals_insensitive(key))
+    if (StringRef(NTE.getString()).equals_insensitive(Key))
       return NTE.getEntryOffset();
   }
   return std::nullopt;
