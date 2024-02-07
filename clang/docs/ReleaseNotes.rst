@@ -1268,6 +1268,8 @@ Windows Support
   to ensure compatibility with msvc. Previously strict aliasing was only disabled if the
   driver mode was cl.
 
+- Clang now passes relevant LTO options to the linker (LLD) in MinGW mode.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
