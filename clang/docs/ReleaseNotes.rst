@@ -1235,6 +1235,12 @@ Arm and AArch64 Support
  - The C23 ``_BitInt`` implementation has been brought into compliance
    with AAPCS32 and AAPCS64.
 
+- Function Multi Versioning has been extended to support Load-Acquire RCpc
+  instructions v3 (rcpc3) as well as Memory Copy and Memory Set Acceleration
+  instructions (mops) when targeting AArch64. The feature identifiers (in
+  parenthesis) can be used with either of the ``target_version`` and
+  ``target_clones`` attributes.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
