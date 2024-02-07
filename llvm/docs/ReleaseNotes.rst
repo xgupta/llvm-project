@@ -75,6 +75,14 @@ Changes to the AArch64 Backend
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
 
+* Assembler/disassembler support has been added for 2023 architecture
+  extensions.
+
+* Support has been added for Stack Clash Protection. During function frame
+  creation and dynamic stack allocations, the compiler will issue memory
+  accesses at reguilar intervals so that a guard area at the top of the stack
+  can't be skipped over.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
