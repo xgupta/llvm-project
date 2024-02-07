@@ -146,6 +146,14 @@ Changes to the AArch64 Backend
 * Added codegeneration support for ``llvm.ptrauth.auth`` and
   ``llvm.ptrauth.resign`` intrinsics.
 
+* Assembler/disassembler support has been added for 2023 architecture
+  extensions.
+
+* Support has been added for Stack Clash Protection. During function frame
+  creation and dynamic stack allocations, the compiler will issue memory
+  accesses at reguilar intervals so that a guard area at the top of the stack
+  can't be skipped over.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
