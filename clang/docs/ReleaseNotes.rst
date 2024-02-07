@@ -460,6 +460,8 @@ Windows Support
   When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
   allowed as VS2013 and prior allow it.
 
+- Clang now passes relevant LTO options to the linker (LLD) in MinGW mode.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
