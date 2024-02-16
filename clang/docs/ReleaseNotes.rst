@@ -96,6 +96,22 @@ Clang Python Bindings Potentially Breaking Changes
   but after the end of the ``SourceRange``, ``SourceRange.__contains__``
   used to incorrectly return ``True``. (#GH22617), (#GH52827)
 
+Clang Frontend Potentially Breaking Changes
+-------------------------------------------
+- Target OS macros extension
+  A new Clang extension (see :ref:`here <target_os_detail>`) is enabled for
+  Darwin (Apple platform) targets. Clang now defines ``TARGET_OS_*`` macros for
+  these targets, which could break existing code bases with improper checks for
+  the ``TARGET_OS_`` macros. For example, existing checks might fail to include
+  the ``TargetConditionals.h`` header from Apple SDKs and therefore leaving the
+  macros undefined and guarded code unexercised.
+
+  Affected code should be checked to see if it's still intended for the specific
+  target and fixed accordingly.
+
+  The extension can be turned off by the option ``-fno-define-target-os-macros``
+  as a workaround.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -195,6 +211,15 @@ New Compiler Flags
   only for thread-local variables, and none (which corresponds to the
   existing ``-fno-c++-static-destructors`` flag) skips all static
   destructors registration.
+
+.. _target_os_detail:
+
+* ``-fdefine-target-os-macros`` and its complement
+  ``-fno-define-target-os-macros``. Enables or disables the Clang extension to
+  provide built-in definitions of a list of ``TARGET_OS_*`` macros based on the
+  target triple.
+
+  The extension is enabled by default for Darwin (Apple platform) targets.
 
 Deprecated Compiler Flags
 -------------------------
