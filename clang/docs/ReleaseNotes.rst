@@ -1346,6 +1346,7 @@ PowerPC Support
   features that can be queried.
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
+- ``-mtls-dialect=desc`` is now supported to enable TLS descriptors (TLSDESC).
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
