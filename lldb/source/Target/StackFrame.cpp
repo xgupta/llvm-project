@@ -1922,7 +1922,18 @@ lldb::ValueObjectSP StackFrame::FindVariable(ConstString name) {
     const bool get_parent_variables = true;
     const bool stop_if_block_is_inlined_function = true;
 
-    if (sc.block->AppendVariables(
+    /*
+      This change is in reference to 1156032652.
+      `Block::AppendVariable` traverse the parent block-chain and appends all the in-scope
+      variables to `variable_list`, it may also append file-global variables as the top-most block
+      must be the file itself.
+      I guess that doesn't work for Legacy Languages as the parent block is empty.
+    */
+    if (LegacyLangauage) {
+      VariableListSP var_list_sp(GetInScopeVariableList(true));
+      VariableList *var_list = var_list_sp.get();
+      var_sp = var_list->FindVariable(name, true, false);
+    } else if (sc.block->AppendVariables(
             can_create, get_parent_variables, stop_if_block_is_inlined_function,
             [this](Variable *v) { return v->IsInScope(this); },
             &variable_list)) {
