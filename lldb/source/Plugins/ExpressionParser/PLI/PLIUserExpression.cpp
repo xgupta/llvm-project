@@ -512,7 +512,7 @@ PLIInterpreter::VisitFuncCallExpr(const PLIASTFuncCallExpr *expr) {
   if (!param)
     return nullptr;
 
-  uint32_t data_size = param->GetByteSize().value();
+  auto data_size = param->GetByteSize().value();
   DataBufferSP buffer(new DataBufferHeap(sizeof(data_size), 0));
   TargetSP target = m_exe_ctx.GetTargetSP();
   if (!target)
@@ -524,9 +524,9 @@ PLIInterpreter::VisitFuncCallExpr(const PLIASTFuncCallExpr *expr) {
 
   ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
   uint8_t addr_size = target->GetArchitecture().GetAddressByteSize();
-  DataEncoder enc(buffer->GetBytes(), data_size, byte_order, addr_size);
-  enc.PutData(0, &data_size, sizeof(uint64_t));
-  DataExtractor data(buffer, byte_order, addr_size);
+  DataEncoder enc(buffer->GetBytes(), sizeof(data_size), byte_order, addr_size);
+  enc.PutData(0, &data_size, sizeof(data_size));
+  DataExtractor data(enc.GetDataBuffer(), byte_order, addr_size);
 
   CompilerType comp_type = type_sys->get()->GetBasicTypeFromAST(eBasicTypeUnsignedInt);
   return ValueObject::CreateValueObjectFromData(llvm::StringRef(), data,
