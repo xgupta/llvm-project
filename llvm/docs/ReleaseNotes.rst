@@ -251,6 +251,17 @@ Changes to the RISC-V Backend
 * ``-mcpu=native`` now detects available features with hwprobe (RISC-V Hardware Probing Interface) on Linux 6.4 or later.
 * The version of Zicfilp/Zicfiss is updated to 1.0.
 
+Changes to the SystemZ Backend
+------------------------------
+
+* Properly support 16 byte atomic int/fp types and ops.
+* Support i128 as legal type in VRs.
+* Add an i128 cost model.
+* Support building individual functions with backchain using the
+  __attribute__((target("backchain"))) syntax.
+* Add exception handling for XPLINK.
+* Add support for llvm-objcopy.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 

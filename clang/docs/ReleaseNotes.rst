@@ -1387,6 +1387,11 @@ NetBSD Support
 
 - Removed support for building NetBSD/i386 6.x or older binaries.
 
+SystemZ Support
+^^^^^^^^^^^^^^^
+- Properly support 16 byte atomic int/fp types and ops. Atomic __int128 (and
+  long double) variables are now aligned to 16 bytes by default (like gcc 14).
+
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
