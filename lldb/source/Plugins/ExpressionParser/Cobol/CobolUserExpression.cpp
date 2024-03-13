@@ -605,7 +605,7 @@ CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {
   if (!param)
     return nullptr;
 
-  uint32_t data_size = param->GetByteSize().value();
+  auto data_size = param->GetByteSize().value();
   DataBufferSP buffer(new DataBufferHeap(sizeof(data_size), 0));
   TargetSP target = m_exe_ctx.GetTargetSP();
   if (!target)
