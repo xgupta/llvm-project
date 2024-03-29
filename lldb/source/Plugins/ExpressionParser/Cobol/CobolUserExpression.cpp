@@ -523,6 +523,7 @@ CobolInterpreter::FindFieldInStructArray(const CobolASTRefModifierExpr *expr) {
 
   for (auto result : candidates_sp->GetObjects()) {
     m_error.Clear();
+    auto isArray = result->IsArrayType();
     for (size_t i = 0; i < indices->GetNumberOfIndices(); ++i) {
       auto index = GetUIntFromValueObjectSP(EvaluateExpr(indices->GetIndices()[i].get()));
       if (m_error.Fail()) {
@@ -530,7 +531,9 @@ CobolInterpreter::FindFieldInStructArray(const CobolASTRefModifierExpr *expr) {
         break;
       }
       
-      auto level = indices->GetNumberOfIndices() - i;
+      auto level = indices->GetNumberOfIndices() - (i + (isArray ? 1UL : 0UL));
+      if (level == 0)
+        return GetElementAtIndex(result, index);
       auto top_level_parent = result->GetParent()->FollowParentChain([&level](ValueObject* par) {
         if (par->GetCompilerType().IsArrayType())
           level--;
@@ -571,18 +574,23 @@ ValueObjectSP
 CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
   auto index_expr = llvm::cast<CobolASTIndexExpr>(expr->GetStartExpr());
   ValueObjectSP var = EvaluateExpr(expr->GetExpr());
-  if (!var || index_expr->GetNumberOfIndices() != 1) {
+  if (!var) {
     m_error.Clear();
-    return FindFieldInStructArray(expr);
+    switch (expr->GetExpr()->GetKind())
+    {
+    case CobolASTNode::eIdent:
+      return FindFieldInStructArray(expr);
+    default:
+      return nullptr;
+    }
   }
 
   auto start_var = EvaluateExpr(index_expr->GetIndices()[0].get());
   auto start = GetUIntFromValueObjectSP(start_var);
   if (m_error.Fail()) return nullptr;
   auto len_var = EvaluateExpr(expr->GetLenExpr());
-  uint32_t len;
   if (len_var) {
-    len = GetUIntFromValueObjectSP(len_var);
+    auto len = GetUIntFromValueObjectSP(len_var);
     if (m_error.Fail()) return nullptr;
     return GetElementAtIndex(var, start, len);
   }
