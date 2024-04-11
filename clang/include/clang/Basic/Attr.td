@@ -1701,6 +1701,7 @@ def RegCall : DeclOrTypeAttr {
 }
 
 def Final : InheritableAttr {
+  let CanPrintOnLeft = 0;
   let Spellings = [CustomKeyword<"final">, CustomKeyword<"sealed">];
   let Accessors = [Accessor<"isSpelledAsSealed", [CustomKeyword<"sealed">]>];
   let SemaHandler = 0;
@@ -2634,6 +2635,7 @@ def Overloadable : Attr {
 }
 
 def Override : InheritableAttr {
+  let CanPrintOnLeft = 0;
   let Spellings = [CustomKeyword<"override">];
   let SemaHandler = 0;
   // Omitted from docs, since this is language syntax, not an attribute, as far
