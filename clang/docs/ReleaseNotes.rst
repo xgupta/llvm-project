@@ -1499,6 +1499,10 @@ Crash and bug fixes
   ``std::forward_like``, ``std::move``, ``std::move_if_noexcept``, are now
   modeled just like their builtin counterpart. (#GH94193)
 
+- Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
+  matched user-defined ``strerror`` and similar library functions.
+  (`#88181 <https://github.com/llvm/llvm-project/issues/88181>`_)
+
 Improvements
 ^^^^^^^^^^^^
 
