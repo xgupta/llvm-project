@@ -533,7 +533,7 @@ ValueObjectListSP CobolInterpreter::FindAllCandidates(ConstString var_name) {
 
 /*
 result: Shared pointer to a value corresponding to element with all indices 1.
-indices: Index expression 
+indices: Index expression
 var_name: Name of the field
 */
 ValueObjectSP CobolInterpreter::GetIndexedExpression(
@@ -612,7 +612,24 @@ CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
   ValueObjectSP var = EvaluateExpr(expr->GetExpr());
   if (!var || index_expr->GetNumberOfIndices() != 1) {
     m_error.Clear();
-    return FindFieldInStructArray(expr);
+    switch (expr->GetExpr()->GetKind()) {
+    case CobolASTNode::eIdent:
+      return FindFieldInStructArray(expr);
+    case CobolASTNode::eSelectorExpr: {
+      auto selector = llvm::cast<CobolASTSelectorExpr>(expr->GetExpr());
+      auto target = EvaluateExpr(selector->GetExpr());
+      if (!target)
+        return nullptr;
+      auto memberName = selector->GetSel()->GetName().m_text;
+      auto result = m_frame->GetValueObjectForFrameAggregateVariable(
+          ConstString(memberName), target, m_use_dynamic, true);
+      return GetIndexedExpression(
+          result, llvm::cast<CobolASTIndexExpr>(expr->GetStartExpr()),
+          memberName);
+    }
+    default:
+      return nullptr;
+    }
   }
 
   auto start_var = EvaluateExpr(index_expr->GetIndices()[0].get());
