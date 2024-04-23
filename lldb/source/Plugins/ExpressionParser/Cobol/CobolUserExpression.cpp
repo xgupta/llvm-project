@@ -27,8 +27,8 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 #include "llvm/Support/Casting.h"
 
@@ -404,12 +404,37 @@ CobolInterpreter::VisitSelectorExpr(const CobolASTSelectorExpr *expr) {
       }
     }
   }
+  if (auto ref = llvm::dyn_cast<CobolASTRefModifierExpr>(expr->GetExpr())) {
+    if (auto ident = llvm::dyn_cast<const CobolASTIdent>(ref->GetExpr())) {
+      auto varName = ident->GetName().m_text;
+      auto isMember = false;
+      auto target =
+          FindGlobalVariable(m_exe_ctx.GetTargetSP(), varName, isMember);
+      if (!target || !m_frame)
+        return nullptr;
+      auto targetSP =
+          m_frame->GetValueObjectForFrameVariable(target, m_use_dynamic);
+      auto indices = llvm::cast<CobolASTIndexExpr>(ref->GetStartExpr());
+      auto memberName = expr->GetSel()->GetName().m_text;
+      auto result = m_frame->GetValueObjectForFrameAggregateVariable(
+          ConstString(memberName), targetSP, m_use_dynamic, true);
+
+      if (!result) {
+        m_error.SetErrorStringWithFormat("Unknown child %s",
+                                         memberName.str().c_str());
+        return nullptr;
+      }
+
+      return GetIndexedExpression(result, indices, memberName);
+    }
+  }
   return nullptr;
 }
 
 // Gets an element from array where `var` is shared pointer to array type
-ValueObjectSP
-CobolInterpreter::GetElementAtIndex(lldb::ValueObjectSP var, uint32_t start, uint32_t len) {
+ValueObjectSP CobolInterpreter::GetElementAtIndex(lldb::ValueObjectSP var,
+                                                  uint32_t start,
+                                                  uint32_t len) {
   CompilerType elem_type;
   uint64_t max_elem;
   bool is_incomplete;
@@ -466,7 +491,7 @@ CobolInterpreter::GetElementAtIndex(lldb::ValueObjectSP var, uint32_t start, uin
     const uint64_t offset = start * child_byte_size;
     AddressType address_type = eAddressTypeInvalid;
     auto addr = var->GetAddressOf(true, &address_type);
-    result_type = len == 1 ?  elem_type : elem_type.GetArrayType(len);
+    result_type = len == 1 ? elem_type : elem_type.GetArrayType(len);
     return ValueObject::CreateValueObjectFromAddress(
         llvm::StringRef(), addr + offset, m_exe_ctx, result_type);
   }
@@ -506,6 +531,45 @@ ValueObjectListSP CobolInterpreter::FindAllCandidates(ConstString var_name) {
   return candidates;
 }
 
+/*
+result: Shared pointer to a value corresponding to element with all indices 1.
+indices: Index expression 
+var_name: Name of the field
+*/
+ValueObjectSP CobolInterpreter::GetIndexedExpression(
+    lldb::ValueObjectSP result, const lldb_private::CobolASTIndexExpr *indices,
+    llvm::StringRef var_name) {
+  for (size_t i = 0; i < indices->GetNumberOfIndices(); ++i) {
+    auto index =
+        GetUIntFromValueObjectSP(EvaluateExpr(indices->GetIndices()[i].get()));
+    if (m_error.Fail()) {
+      result = nullptr;
+      break;
+    }
+
+    auto level = indices->GetNumberOfIndices() - i;
+    auto top_level_parent =
+        result->GetParent()->FollowParentChain([&level](ValueObject *par) {
+          if (par->GetCompilerType().IsArrayType())
+            level--;
+          return (level != 0);
+        });
+
+    if (!top_level_parent) {
+      result = nullptr;
+      break;
+    }
+
+    result = GetElementAtIndex(top_level_parent->GetSP(), index);
+    if (!result)
+      break;
+
+    result = m_frame->GetValueObjectForFrameAggregateVariable(
+        ConstString(var_name), result, m_use_dynamic, true);
+  }
+  return result;
+}
+
 ValueObjectSP
 CobolInterpreter::FindFieldInStructArray(const CobolASTRefModifierExpr *expr) {
   auto ident = llvm::cast<const CobolASTIdent>(expr->GetExpr());
@@ -523,36 +587,11 @@ CobolInterpreter::FindFieldInStructArray(const CobolASTRefModifierExpr *expr) {
 
   for (auto result : candidates_sp->GetObjects()) {
     m_error.Clear();
-    for (size_t i = 0; i < indices->GetNumberOfIndices(); ++i) {
-      auto index = GetUIntFromValueObjectSP(EvaluateExpr(indices->GetIndices()[i].get()));
-      if (m_error.Fail()) {
-        result = nullptr;
-        break;
-      }
-      
-      auto level = indices->GetNumberOfIndices() - i;
-      auto top_level_parent = result->GetParent()->FollowParentChain([&level](ValueObject* par) {
-        if (par->GetCompilerType().IsArrayType())
-          level--;
-        return (level != 0);
-      });
-      
-      if (!top_level_parent) {
-        result = nullptr;
-        break;
-      }
-      
-      result = GetElementAtIndex(top_level_parent->GetSP(), index);
-      if (!result)
-        break;
-      
-      result = m_frame->GetValueObjectForFrameAggregateVariable(
-          ConstString(var_name), result, m_use_dynamic, true);
-    }
+    result = GetIndexedExpression(result, indices, var_name);
     if (result)
-        return result;
+      return result;
   }
-  
+
   return nullptr;
 }
 
@@ -578,12 +617,14 @@ CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
 
   auto start_var = EvaluateExpr(index_expr->GetIndices()[0].get());
   auto start = GetUIntFromValueObjectSP(start_var);
-  if (m_error.Fail()) return nullptr;
+  if (m_error.Fail())
+    return nullptr;
   auto len_var = EvaluateExpr(expr->GetLenExpr());
   uint32_t len;
   if (len_var) {
     len = GetUIntFromValueObjectSP(len_var);
-    if (m_error.Fail()) return nullptr;
+    if (m_error.Fail())
+      return nullptr;
     return GetElementAtIndex(var, start, len);
   }
   return GetElementAtIndex(var, start);
@@ -621,7 +662,8 @@ CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {
   enc.PutData(0, &data_size, sizeof(data_size));
   DataExtractor data(enc.GetDataBuffer(), byte_order, addr_size);
 
-  CompilerType comp_type = type_sys->get()->GetBasicTypeFromAST(eBasicTypeUnsignedInt);
+  CompilerType comp_type =
+      type_sys->get()->GetBasicTypeFromAST(eBasicTypeUnsignedInt);
   return ValueObject::CreateValueObjectFromData(llvm::StringRef(), data,
                                                 m_exe_ctx, comp_type);
 }
