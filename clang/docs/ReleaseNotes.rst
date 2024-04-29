@@ -118,6 +118,12 @@ ABI Changes in This Version
   `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
   (GH#70899).
 
+- Fixed Microsoft calling convention for returning certain classes with a
+  templated constructor. If a class has a templated constructor, it should
+  be returned indirectly even if it meets all the other requirements for
+  returning a class in a register. This affects some uses of std::pair.
+  (#GH86384).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
