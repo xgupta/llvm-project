@@ -62,8 +62,11 @@ public:
     KIND_DYNAMIC,
     KIND_INVALID,
 
+    KIND_L88,
+
     KIND_MASK = (1 << 5) - 1,
     KIND_MAX = (1 << 5),
+
   };
 
   enum LLVMSign {
@@ -1194,6 +1197,8 @@ TypeSystemLegacy::GetBitSize(opaque_compiler_type_t type,
         static_cast<LegacyDynamic *>(type)->GetBaseType();
     return dyn_base_type.GetBitSize(exe_scope);
   }
+  case LegacyType::KIND_L88:
+    return 1UL;
   }
   return std::nullopt;
 }
@@ -1223,6 +1228,8 @@ Format TypeSystemLegacy::GetFormat(opaque_compiler_type_t type) {
         static_cast<LegacyDynamic *>(type)->GetBaseType();
     return dyn_base_type.GetFormat();
   }
+  case LegacyType::KIND_L88:
+    return eFormatBoolean;
   default:
     return eFormatBytes;
   }
@@ -1770,6 +1777,9 @@ CompilerType TypeSystemLegacy::CreateBaseType(
     else
       kind = LegacyType::KIND_FLOAT;
   } break;
+  case DW_ATE_boolean:
+    kind = LegacyType::KIND_L88;
+    break;
   }
 
   uint32_t sign;
