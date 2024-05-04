@@ -461,6 +461,9 @@ public:
 
   virtual unsigned GetTypeQualifiers(lldb::opaque_compiler_type_t type) = 0;
 
+  virtual bool IsCStringType(lldb::opaque_compiler_type_t type,
+                             uint32_t &length) = 0;
+
   virtual std::optional<size_t>
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                   ExecutionContextScope *exe_scope) = 0;

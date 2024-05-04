@@ -143,7 +143,8 @@ public:
                        std::vector<Value> &stack, bool expression_call = false);
 
   static bool EvaluateCall(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
-                           lldb::ModuleSP module_sp, const DWARFUnit *dwarf_cu,
+                           lldb::ModuleSP module_sp,
+                           const plugin::dwarf::DWARFUnit *dwarf_cu,
                            dw_offset_t die_ref_offset,
                            const lldb::RegisterKind reg_set,
                            const Value *initial_value_ptr,

@@ -33,54 +33,64 @@ class CompileUnit;
 class DWARFDebugInfoEntry;
 class DWARFDIECollection;
 
-class DWARFASTParserLegacy : public DWARFASTParser {
+class DWARFASTParserLegacy
+    : public lldb_private::plugin::dwarf::DWARFASTParser {
 public:
   DWARFASTParserLegacy(std::weak_ptr<lldb_private::TypeSystemLegacy> ast);
 
   ~DWARFASTParserLegacy() override;
 
-  lldb::TypeSP ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
-                                  const DWARFDIE &die,
-                                  bool *type_is_new_ptr) override;
+  lldb::TypeSP
+  ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
+                     const lldb_private::plugin::dwarf::DWARFDIE &die,
+                     bool *type_is_new_ptr) override;
 
   lldb_private::Function *
   ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
-                         const DWARFDIE &die, const lldb_private::AddressRange &func_range) override;
+                         const lldb_private::plugin::dwarf::DWARFDIE &die,
+                         const lldb_private::AddressRange &func_range) override;
 
-  bool CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Type *type,
+  bool CompleteTypeFromDWARF(const lldb_private::plugin::dwarf::DWARFDIE &die,
+                             lldb_private::Type *type,
                              lldb_private::CompilerType &legacy_type) override;
 
-  lldb_private::CompilerDeclContext
-  GetDeclContextForUIDFromDWARF(const DWARFDIE &die) override {
+  lldb_private::CompilerDeclContext GetDeclContextForUIDFromDWARF(
+      const lldb_private::plugin::dwarf::DWARFDIE &die) override {
     return lldb_private::CompilerDeclContext();
   }
 
-  lldb_private::CompilerDeclContext
-  GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) override {
+  lldb_private::CompilerDeclContext GetDeclContextContainingUIDFromDWARF(
+      const lldb_private::plugin::dwarf::DWARFDIE &die) override {
     return lldb_private::CompilerDeclContext();
   }
 
-  lldb_private::CompilerDecl
-  GetDeclForUIDFromDWARF(const DWARFDIE &die) override {
+  lldb_private::CompilerDecl GetDeclForUIDFromDWARF(
+      const lldb_private::plugin::dwarf::DWARFDIE &die) override {
     return lldb_private::CompilerDecl();
   }
 
   void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) override {}
 
-  lldb_private::ConstString
-  GetDIEClassTemplateParams(const DWARFDIE &die) override { return lldb_private::ConstString(); }
-  lldb_private::ConstString
-  ConstructDemangledNameFromDWARF(const DWARFDIE &die) override { return lldb_private::ConstString(); }
+  lldb_private::ConstString GetDIEClassTemplateParams(
+      const lldb_private::plugin::dwarf::DWARFDIE &die) override {
+    return lldb_private::ConstString();
+  }
+  lldb_private::ConstString ConstructDemangledNameFromDWARF(
+      const lldb_private::plugin::dwarf::DWARFDIE &die) override {
+    return lldb_private::ConstString();
+  }
+
 private:
   std::weak_ptr<lldb_private::TypeSystemLegacy> m_ast;
 
   size_t ParseChildParameters(
-      lldb_private::CompileUnit &comp_unit, const DWARFDIE &parent_die,
+      lldb_private::CompileUnit &comp_unit,
+      const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
       bool &is_variadic,
       std::vector<lldb_private::CompilerType> &function_param_types);
 
-  size_t ParseChildMembers(const DWARFDIE &die,
+  size_t ParseChildMembers(const lldb_private::plugin::dwarf::DWARFDIE &die,
                            lldb_private::CompilerType &class_compiler_type);
 };
 

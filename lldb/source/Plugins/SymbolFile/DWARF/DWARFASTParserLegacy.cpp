@@ -42,13 +42,12 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
 DWARFASTParserLegacy::DWARFASTParserLegacy(std::weak_ptr<TypeSystemLegacy> ast)
-    : m_ast(ast) {}
+    : DWARFASTParser(Kind::DWARFASTParserLegacy), m_ast(ast) {}
 DWARFASTParserLegacy::~DWARFASTParserLegacy() {}
 
-TypeSP
-DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
-                                         const DWARFDIE &die,
-                                         bool *type_is_new_ptr) {
+TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
+    const lldb_private::SymbolContext &sc,
+    const lldb_private::plugin::dwarf::DWARFDIE &die, bool *type_is_new_ptr) {
   TypeSP type_sp;
 
 
@@ -57,16 +56,17 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
 
   Log *log(GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups));
   if (die) {
-    SymbolFileDWARF *dwarf = die.GetDWARF();
+    plugin::dwarf::SymbolFileDWARF *dwarf = die.GetDWARF();
     if (log) {
       dwarf->GetObjectFile()->GetModule()->LogMessage(
           log,
           "DWARFASTParserLegacy::ParseTypeFromDWARF (die = 0x%8.8x) %s name = "
           "'%s')",
-          die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.GetName());
+          die.GetOffset(), plugin::dwarf::DW_TAG_value_to_name(die.Tag()),
+          die.GetName());
     }
 
-    Type *type_ptr = dwarf->m_die_to_type.lookup(die.GetDIE());
+    Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
 
     if (!type_ptr) {
       if (type_is_new_ptr)
@@ -74,8 +74,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
 
       const dw_tag_t tag = die.Tag();
       CompilerType compiler_type;
-      DWARFAttributes attributes;
-      DWARFFormValue form_value;
+      plugin::dwarf::DWARFAttributes attributes;
+      plugin::dwarf::DWARFFormValue form_value;
       dw_attr_t attr;
       Declaration decl;
       const char *type_name_cstr = nullptr;
@@ -90,8 +90,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
       case DW_TAG_pointer_type:
       case DW_TAG_reference_type:
       case DW_TAG_base_type: {
-        dwarf->m_die_to_type[die.GetDIE()] = DIE_IS_BEING_PARSED;
-        DWARFFormValue encoding_uid;
+        dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
+        plugin::dwarf::DWARFFormValue encoding_uid;
         uint32_t bit_size = 0;
         uint32_t encoding = 0;
         uint32_t sign = 0;
@@ -197,7 +197,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
         // Set a bit that lets us know that we are currently parsing this
         dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
 
-        DWARFFormValue type_die_form;
+        plugin::dwarf::DWARFFormValue type_die_form;
         uint32_t byte_stride = 0;
         uint32_t bit_stride = 0;
         bool isVarString = false;
@@ -305,13 +305,13 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
                 "DWARFASTParserLegacy::ParseTypeFromDWARF (die = 0x%8.8x) %s "
                 "name "
                 "= '%s'), incomplete type array element not supported, yet!.",
-                die.GetOffset(), DW_TAG_value_to_name(die.Tag()),
+                die.GetOffset(), plugin::dwarf::DW_TAG_value_to_name(die.Tag()),
                 die.GetName());
         }
       } break;
       case DW_TAG_union_type:
       case DW_TAG_structure_type: {
-        dwarf->m_die_to_type[die.GetDIE()] = DIE_IS_BEING_PARSED;
+        dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
         bool byte_size_valid = false;
         unsigned byte_size = 0;
 
@@ -335,8 +335,8 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
           }
         }
 
-        std::unique_ptr<UniqueDWARFASTType> unique_ast_entry_ap(
-            new UniqueDWARFASTType());
+        std::unique_ptr<plugin::dwarf::UniqueDWARFASTType> unique_ast_entry_ap(
+            new plugin::dwarf::UniqueDWARFASTType());
 
         if (type_name_const_str &&
             dwarf->GetUniqueDWARFASTTypeMap().Find(
@@ -344,7 +344,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
                 byte_size_valid ? byte_size : -1, *unique_ast_entry_ap)) {
           type_sp = unique_ast_entry_ap->m_type_sp;
           if (type_sp) {
-            dwarf->m_die_to_type[die.GetDIE()] = type_sp.get();
+            dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
             return type_sp;
           }
         }
@@ -354,13 +354,14 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
 
         bool compiler_type_was_created = false;
         compiler_type.SetCompilerType(
-            m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+            m_ast,
+            dwarf->GetForwardDeclDIEToCompilerType().lookup(die.GetDIE()));
         if (!compiler_type) {
           compiler_type_was_created = true;
           compiler_type =
               m_ast.lock()->CreateStructType(type_name_const_str, byte_size);
         }
-        SymbolFileDWARF *dwarf = die.GetDWARF();
+        lldb_private::plugin::dwarf::SymbolFileDWARF *dwarf = die.GetDWARF();
         type_sp = dwarf->MakeType(
             die.GetID(), type_name_const_str, byte_size, nullptr,
             LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, compiler_type,
@@ -376,18 +377,17 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
         if (!die.HasChildren())
           m_ast.lock()->CompleteStructType(compiler_type);
         else if (compiler_type_was_created) {
-          dwarf->GetForwardDeclDieToClangType()[die.GetDIE()] =
+          dwarf->GetForwardDeclDIEToCompilerType()[die.GetDIE()] =
               compiler_type.GetOpaqueQualType();
-          dwarf->GetForwardDeclClangTypeToDie().try_emplace(
-           compiler_type.GetOpaqueQualType(),
-          *die.GetDIERef());
+          dwarf->GetForwardDeclCompilerTypeToDIE().try_emplace(
+              compiler_type.GetOpaqueQualType(), *die.GetDIERef());
         }
       } break;
       case DW_TAG_dynamic_type: {
-        dwarf->m_die_to_type[die.GetDIE()] = DIE_IS_BEING_PARSED;
+        dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
         attributes = die.GetAttributes();
         const size_t num_attributes = attributes.Size();
-        DWARFFormValue type_die_form;
+        lldb_private::plugin::dwarf::DWARFFormValue type_die_form;
         DWARFExpressionList dw_location, dw_allocated;
         ModuleSP module(die.GetModule());
         ConstString empty_name;
@@ -402,13 +402,15 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
               type_die_form = form_value;
               break;
             case DW_AT_data_location: {
-              if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
+              if (!plugin::dwarf::DWARFFormValue::IsBlockForm(
+                      form_value.Form())) {
                 dwarf->GetObjectFile()->GetModule()->ReportError(
                     "{0x%8.8x}: dynamic type tag 0x%4.4x (%s), has invalid"
                     " DW_AT_data_location expression type."
                     "please file a bug and attach the file at the "
                     "start of this error message",
-                    die.GetOffset(), tag, DW_TAG_value_to_name(tag));
+                    die.GetOffset(), tag,
+                    plugin::dwarf::DW_TAG_value_to_name(tag));
               }
 
               auto data = die.GetData();
@@ -418,13 +420,15 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
                   module, DataExtractor(data, offset, length), die.GetCU());
             } break;
             case DW_AT_allocated: {
-              if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
+              if (!plugin::dwarf::DWARFFormValue::IsBlockForm(
+                      form_value.Form())) {
                 dwarf->GetObjectFile()->GetModule()->ReportError(
                     "{0x%8.8x}: dynamic type tag 0x%4.4x (%s), has invalid"
                     " DW_AT_allocated expression type."
                     "please file a bug and attach the file at the "
                     "start of this error message",
-                    die.GetOffset(), tag, DW_TAG_value_to_name(tag));
+                    die.GetOffset(), tag,
+                    plugin::dwarf::DW_TAG_value_to_name(tag));
               }
 
               auto data = die.GetData();
@@ -455,11 +459,12 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
             log,
             "DWARFASTParserLegacy::ParseTypeFromDWARF (die = 0x%8.8x) %s name "
             "= '%s'), not supported, yet!.",
-            die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.GetName());
+            die.GetOffset(), plugin::dwarf::DW_TAG_value_to_name(die.Tag()),
+            die.GetName());
         break;
       case DW_TAG_subprogram:
       case DW_TAG_subroutine_type: {
-        dwarf->m_die_to_type[die.GetDIE()] = DIE_IS_BEING_PARSED;
+        dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
 
         bool is_variadic = false;
 
@@ -502,13 +507,14 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
             "{0x%8.8x}: unhandled type tag 0x%4.4x (%s), "
             "please file a bug and attach the file at the "
             "start of this error message",
-            die.GetOffset(), tag, DW_TAG_value_to_name(tag));
+            die.GetOffset(), tag,
+            lldb_private::plugin::dwarf::DW_TAG_value_to_name(tag));
         break;
       }
 
       if (type_sp.get()) {
-        DWARFDIE sc_parent_die =
-            SymbolFileDWARF::GetParentSymbolContextDIE(die);
+        lldb_private::plugin::dwarf::DWARFDIE sc_parent_die =
+            plugin::dwarf::SymbolFileDWARF::GetParentSymbolContextDIE(die);
         dw_tag_t sc_parent_tag = sc_parent_die.Tag();
 
         SymbolContextScope *symbol_context_scope = nullptr;
@@ -526,7 +532,7 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
           type_sp->SetSymbolContextScope(symbol_context_scope);
         }
 
-        dwarf->m_die_to_type[die.GetDIE()] = type_sp.get();
+        dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
       }
     } else if (type_ptr != DIE_IS_BEING_PARSED) {
       type_sp = type_ptr->shared_from_this();
@@ -535,9 +541,10 @@ DWARFASTParserLegacy::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
   return type_sp;
 }
 
-lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
-                                                       const DWARFDIE &die,
-                                                       const lldb_private::AddressRange &func_range) {
+lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(
+    lldb_private::CompileUnit &comp_unit,
+    const lldb_private::plugin::dwarf::DWARFDIE &die,
+    const lldb_private::AddressRange &func_range) {
   if (die.Tag() != DW_TAG_subprogram)
     return nullptr;
 
@@ -582,9 +589,9 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(lldb_privat
             comp_unit.GetSupportFiles().GetFileSpecAtIndex(decl_file.value()),
             decl_line.value(), decl_column.value()));
 
-      SymbolFileDWARF *dwarf = die.GetDWARF();
+      plugin::dwarf::SymbolFileDWARF *dwarf = die.GetDWARF();
       // Supply the type _only_ if it has already been parsed
-      Type *func_type = dwarf->m_die_to_type.lookup(die.GetDIE());
+      Type *func_type = dwarf->GetDIEToType().lookup(die.GetDIE());
 
       assert(func_type == NULL || func_type != DIE_IS_BEING_PARSED);
 
@@ -611,9 +618,9 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(lldb_privat
   return nullptr;
 }
 
-bool DWARFASTParserLegacy::CompleteTypeFromDWARF(const DWARFDIE &die,
-                                                 Type *type,
-                                                 CompilerType &comp_type) {
+bool DWARFASTParserLegacy::CompleteTypeFromDWARF(
+    const lldb_private::plugin::dwarf::DWARFDIE &die, Type *type,
+    CompilerType &comp_type) {
 
   if (!die)
     return false;
@@ -633,15 +640,16 @@ bool DWARFASTParserLegacy::CompleteTypeFromDWARF(const DWARFDIE &die,
 }
 
 size_t DWARFASTParserLegacy::ParseChildParameters(
-    CompileUnit &comp_unit, const DWARFDIE &parent_die, bool &is_variadic,
+    CompileUnit &comp_unit,
+    const lldb_private::plugin::dwarf::DWARFDIE &parent_die, bool &is_variadic,
     std::vector<CompilerType> &function_param_types) {
 
   if (!parent_die)
     return 0;
 
   size_t arg_idx = 0;
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (lldb_private::plugin::dwarf::DWARFDIE die = parent_die.GetFirstChild();
+       die.IsValid(); die = die.GetSibling()) {
     dw_tag_t tag = die.Tag();
     switch (tag) {
     case DW_TAG_formal_parameter:
@@ -653,25 +661,25 @@ size_t DWARFASTParserLegacy::ParseChildParameters(
   return arg_idx;
 }
 
-size_t
-DWARFASTParserLegacy::ParseChildMembers(const DWARFDIE &parent_die,
-                                        CompilerType &struct_compiler_type) {
+size_t DWARFASTParserLegacy::ParseChildMembers(
+    const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
+    CompilerType &struct_compiler_type) {
   size_t member_idx = 0;
 
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (lldb_private::plugin::dwarf::DWARFDIE die = parent_die.GetFirstChild();
+       die.IsValid(); die = die.GetSibling()) {
     dw_tag_t tag = die.Tag();
 
     if (tag == DW_TAG_member) {
-      DWARFAttributes attributes;
+      plugin::dwarf::DWARFAttributes attributes;
       const char *name = NULL;
-      DWARFFormValue encoding_uid;
+      plugin::dwarf::DWARFFormValue encoding_uid;
       attributes = die.GetAttributes();
       const size_t num_attributes = attributes.Size();
       uint32_t member_offset_in_bits = UINT32_MAX;
       for (size_t i = 0; i < num_attributes; ++i) {
         const dw_attr_t attr = attributes.AttributeAtIndex(i);
-        DWARFFormValue form_value;
+        plugin::dwarf::DWARFFormValue form_value;
 
         if (attributes.ExtractFormValueAtIndex(i, form_value)) {
           switch (attr) {

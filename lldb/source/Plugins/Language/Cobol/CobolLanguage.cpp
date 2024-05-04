@@ -90,7 +90,7 @@ CobolLanguage::GetHardcodedSynthetics() {
 }
 
 bool CobolLanguage::IsSourceFile(llvm::StringRef file_path) const {
-  return file_path.endswith_insensitive(".cob");
+  return file_path.ends_with_insensitive(".cob");
 }
 
 void CobolLanguage::LoadCobolFormatters(lldb::TypeCategoryImplSP category_sp) {
