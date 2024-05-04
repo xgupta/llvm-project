@@ -20,7 +20,7 @@
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserLegacy.h"
 #include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Core/StreamFile.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Log.h"
@@ -1914,7 +1914,8 @@ void TypeSystemLegacy::Terminate() {
 
 void TypeSystemLegacy::Finalize() {}
 
-DWARFASTParser *TypeSystemLegacy::GetDWARFParser() {
+lldb_private::plugin::dwarf::DWARFASTParser *
+TypeSystemLegacy::GetDWARFParser() {
   if (!m_dwarf_ast_parser_ap)
     m_dwarf_ast_parser_ap.reset(new DWARFASTParserLegacy(std::static_pointer_cast<TypeSystemLegacy>(weak_from_this().lock())));
   return m_dwarf_ast_parser_ap.get();
@@ -1932,57 +1933,6 @@ TypeSystemLegacy::dump(lldb::opaque_compiler_type_t type) const {
   return;
 }
 #endif
-
-void TypeSystemLegacy::DumpValue(
-    opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream &s,
-    Format format, const DataExtractor &data, offset_t data_byte_offset,
-    size_t data_byte_size, uint32_t bitfield_bit_size,
-    uint32_t bitfield_bit_offset, bool show_types, bool show_summary,
-    bool verbose, uint32_t depth) {
-
-  LegacyType *base_type = static_cast<LegacyType *>(type);
-  auto type_kind = base_type->GetLegacyKind();
-  switch (type_kind) {
-  case LegacyType::KIND_ARRAY: {
-    const auto array_type = base_type->GetArray();
-    CompilerType elem_type = array_type->GetElementType();
-    std::optional<uint64_t> element_byte_size =
-        elem_type.GetByteSize(exe_ctx->GetBestExecutionContextScope());
-    if (!element_byte_size)
-      return;
-
-    size_t length = array_type->GetLength();
-    uint64_t elem_idx = 0;
-    for (; elem_idx < length; ++elem_idx) {
-      if (elem_idx)
-        s.PutChar(',');
-      else
-        s.PutChar('{');
-
-      // Indent and print the index
-      s.Printf("\n%*s[%" PRIu64 "] ", depth + DEPTH_INCREMENT, "", elem_idx);
-
-      // Figure out the field offset within the current struct/union/class type
-      uint64_t element_offset = elem_idx * (*element_byte_size);
-
-      elem_type.DumpValue(exe_ctx, &s, format, data,
-                          data_byte_offset + element_offset, *element_byte_size,
-                          0, 0, show_types, show_summary, verbose,
-                          depth + DEPTH_INCREMENT);
-    }
-
-    if (elem_idx > 0)
-      s.Printf("\n%*s}", depth, "");
-
-  } break;
-  case LegacyType::KIND_STRUCT:
-  default:
-    // We are down to a scalar type that we just need to display.
-    DumpDataExtractor(data, &s, data_byte_offset, format, data_byte_size, 1,
-                      UINT32_MAX, LLDB_INVALID_ADDRESS, bitfield_bit_size,
-                      bitfield_bit_offset);
-  }
-}
 
 bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream &s,
                                      Format format, const DataExtractor &data,
@@ -2175,15 +2125,6 @@ void TypeSystemLegacy::DumpTypeDescription(opaque_compiler_type_t type,
 
   ConstString name = GetTypeName(type, true);
   s.PutCString(name.AsCString());
-}
-
-void TypeSystemLegacy::DumpSummary(opaque_compiler_type_t type,
-                                   ExecutionContext *exe_ctx, Stream &s,
-                                   const DataExtractor &data,
-                                   offset_t data_offset,
-                                   size_t data_byte_size) {
-  Host::SystemLog("Error: DumpSummary not supported yet.\n");
-  return;
 }
 
 UserExpression *TypeSystemLegacy::GetUserExpression(

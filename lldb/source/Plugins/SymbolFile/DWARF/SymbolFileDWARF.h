@@ -361,6 +361,8 @@ public:
 
   Type *ResolveTypeUID(const DIERef &die_ref);
 
+  bool FixupAddress(Address &addr);
+
 protected:
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
   const SymbolFileDWARF &operator=(const SymbolFileDWARF &) = delete;
@@ -469,8 +471,6 @@ protected:
   /// binary. Returns the adjusted address, or \p file_addr if no adjustment is
   /// needed, on success and LLDB_INVALID_ADDRESS otherwise.
   lldb::addr_t FixupAddress(lldb::addr_t file_addr);
-
-  bool FixupAddress(Address &addr);
 
   typedef llvm::SetVector<Type *> TypeSet;
 

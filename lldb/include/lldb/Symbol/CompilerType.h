@@ -143,6 +143,8 @@ public:
 
   bool IsConst() const;
 
+  bool IsCStringType(uint32_t &length) const;
+
   bool IsDefined() const;
 
   bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;

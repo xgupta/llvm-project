@@ -108,6 +108,13 @@ bool CompilerType::IsConst() const {
   return false;
 }
 
+bool CompilerType::IsCStringType(uint32_t &length) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsCStringType(m_type, length);
+  return false;
+}
+
 bool CompilerType::IsFunctionType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
