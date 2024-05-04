@@ -64,7 +64,7 @@ public:
 
   uint32_t GetPluginVersion();
 
-  DWARFASTParser *GetDWARFParser() override;
+  plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
 
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Module *module, Target *target);
@@ -453,13 +453,6 @@ public:
   LLVM_DUMP_METHOD void dump(lldb::opaque_compiler_type_t type) const override;
 #endif
 
-  void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                 Stream &s, lldb::Format format, const DataExtractor &data,
-                 lldb::offset_t data_offset, size_t data_byte_size,
-                 uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                 bool show_types, bool show_summary, bool verbose,
-                 uint32_t depth) override;
-
   bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream &s,
                      lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
@@ -482,10 +475,6 @@ public:
   bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) override {
     return false;
   }
-
-  void DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                   Stream &s, const DataExtractor &data,
-                   lldb::offset_t data_offset, size_t data_byte_size) override;
 
   //----------------------------------------------------------------------
   // TODO: Determine if these methods should move to ClangASTContext.
@@ -562,7 +551,7 @@ private:
   typedef std::map<lldb::BasicType, std::unique_ptr<LegacyType>> BasicTypeMap;
   typedef std::map<ConstString, std::unique_ptr<LegacyType>> MutatedTypeMap;
   int m_pointer_byte_size;
-  std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_ap;
+  std::unique_ptr<plugin::dwarf::DWARFASTParser> m_dwarf_ast_parser_ap;
   lldb::TargetWP m_target_wp;
   std::unique_ptr<TypeMap> m_types;
   std::unique_ptr<BasicTypeMap> m_basic_types;

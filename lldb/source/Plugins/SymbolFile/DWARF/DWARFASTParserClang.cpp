@@ -550,7 +550,7 @@ ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
       /*ExecutionContext=*/nullptr,
       /*RegisterContext=*/nullptr, module_sp,
       DataExtractor(debug_info_data, block_offset, block_length), die.GetCU(),
-      eRegisterKindDWARF, &initialValue, nullptr);
+      eRegisterKindDWARF, &initialValue, nullptr, stack);
   if (!memberOffset) {
     LLDB_LOG_ERROR(log, memberOffset.takeError(),
                    "ExtractDataMemberLocation failed: {0}");
@@ -1488,26 +1488,9 @@ void DWARFASTParserClang::ParseInheritance(
         encoding_form = form_value;
         break;
       case DW_AT_data_member_location:
-        if (form_value.BlockData()) {
-          Value initialValue(0);
-          Value memberOffset(0);
-          const DWARFDataExtractor &debug_info_data = die.GetData();
-          uint32_t block_length = form_value.Unsigned();
-          uint32_t block_offset =
-              form_value.BlockData() - debug_info_data.GetDataStart();
-          if (DWARFExpression::Evaluate(
-                  nullptr, nullptr, module_sp,
-                  DataExtractor(debug_info_data, block_offset, block_length),
-                  die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr, stack,
-                  memberOffset, nullptr)) {
-            member_byte_offset = memberOffset.ResolveValue(nullptr).UInt();
-          }
-        } else {
-          // With DWARF 3 and later, if the value is an integer constant,
-          // this form value is the offset in bytes from the beginning of
-          // the containing entity.
-          member_byte_offset = form_value.Unsigned();
-        }
+        if (auto maybe_offset =
+                ExtractDataMemberLocation(die, form_value, module_sp))
+          member_byte_offset = *maybe_offset;
         break;
 
       case DW_AT_accessibility:

@@ -1001,9 +1001,7 @@ uint16_t ValueObject::GetVarStringLength(Status &error) {
     return UINT16_MAX;
 
   lldb::WritableDataBufferSP buffer_sp;
-  auto result = ReadPointedString(buffer_sp, error, 2, true);
-  if (result.first != 2)
-    return UINT16_MAX;
+  ReadPointedString(buffer_sp, error, true);
 
   offset_t offset = 0;
   DataExtractor data(buffer_sp, lldb::eByteOrderBig, 8);

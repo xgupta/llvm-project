@@ -108,6 +108,7 @@ bool CompilerType::IsConst() const {
   return false;
 }
 
+<<<<<<< HEAD
 unsigned CompilerType::GetPtrAuthKey() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -126,6 +127,12 @@ bool CompilerType::GetPtrAuthAddressDiversity() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetPtrAuthAddressDiversity(m_type);
+=======
+bool CompilerType::IsCStringType(uint32_t &length) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsCStringType(m_type, length);
+>>>>>>> da5e815536e2 ([lldb] Fixes After Rebase on llvmorg-18.1.4)
   return false;
 }
 
