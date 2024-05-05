@@ -635,7 +635,7 @@ bool TypeSystemLegacy::IsCStringType(opaque_compiler_type_t type,
   LegacyType *base_type = static_cast<LegacyType *>(type);
   if (LegacyArray *array = base_type->GetArray()) {
     if (array->GetElementType().IsCharType()) {
-      length = array->GetLength();
+      length = array->GetLength() + (array->isVarString() ? 2UL : 0UL);
       return true;
     }
   }
@@ -1182,7 +1182,7 @@ TypeSystemLegacy::GetBitSize(opaque_compiler_type_t type,
     LegacyArray *array = base_type->GetArray();
     if (std::optional<uint64_t> bit_size =
             array->GetElementType().GetBitSize(exe_scope))
-      return array->GetLength() * (*bit_size);
+      return (array->GetLength() + (array->isVarString() ? 2UL : 0UL)) * (*bit_size);
     return std::nullopt;
   }
   case LegacyType::KIND_PTR:
