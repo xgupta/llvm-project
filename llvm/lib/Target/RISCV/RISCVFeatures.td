@@ -1317,6 +1317,11 @@ def FeatureUnalignedVectorMem
                       "true", "Has reasonably performant unaligned vector "
                       "loads and stores">;
 
+def FeatureUnalignedScalarMem
+   : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
+                      "true", "Has reasonably performant unaligned scalar "
+                      "loads and stores">;
+
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
