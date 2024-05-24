@@ -155,10 +155,19 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   if (frame) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
     if (valobj_sp && valobj_sp->GetTypeName() == "Level88ConditionName") {
-      /*
-      * Do nothing when the frame variable is a level88 type.
-      * We want it to be evaluated as source expression.
-      */
+      auto *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
+      ValueObjectSP valobj_sp;
+      auto c_expr_str = "const char* arg = \"" + expr.str() +
+                       "\"; rc_cob_level88(arg)";
+      StringRef c_expr(c_expr_str);
+      eval_options.SetLanguage(lldb::eLanguageTypeC);
+      ExpressionResults expr_result =
+          target.EvaluateExpression(c_expr, exe_scope, valobj_sp, eval_options);
+      if (expr_result == eExpressionCompleted) {
+        valobj_sp->Dump(result.GetOutputStream(), dump_options);
+        result.SetStatus(eReturnStatusSuccessFinishResult);
+        return true;
+      }
     } else if (valobj_sp && valobj_sp->GetError().Success()) {
       if (!suppress_result) {
         if (auto persisted_valobj = valobj_sp->Persist())
