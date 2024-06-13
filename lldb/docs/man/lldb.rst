@@ -61,6 +61,10 @@ COMMANDS
 
  Alias for --batch
 
+.. option:: infix
+
+ Convert the postfix expression to infix expression
+
 .. option:: -K <value>
 
  Alias for --source-on-crash
