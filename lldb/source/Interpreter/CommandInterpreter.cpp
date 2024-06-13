@@ -24,6 +24,7 @@
 #include "Commands/CommandObjectFrame.h"
 #include "Commands/CommandObjectGUI.h"
 #include "Commands/CommandObjectHelp.h"
+#include "Commands/CommandObjectPostFix.h"
 #include "Commands/CommandObjectLanguage.h"
 #include "Commands/CommandObjectLog.h"
 #include "Commands/CommandObjectMemory.h"
@@ -563,6 +564,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("help", CommandObjectHelp);
   REGISTER_COMMAND_OBJECT("log", CommandObjectLog);
   REGISTER_COMMAND_OBJECT("memory", CommandObjectMemory);
+  REGISTER_COMMAND_OBJECT("postfix", CommandObjectPostFix);
   REGISTER_COMMAND_OBJECT("platform", CommandObjectPlatform);
   REGISTER_COMMAND_OBJECT("plugin", CommandObjectPlugin);
   REGISTER_COMMAND_OBJECT("process", CommandObjectMultiwordProcess);

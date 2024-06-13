@@ -20,6 +20,7 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
   CommandObjectMemory.cpp
   CommandObjectMemoryTag.cpp
   CommandObjectMultiword.cpp
+  CommandObjectPostFix.cpp
   CommandObjectPlatform.cpp
   CommandObjectPlugin.cpp
   CommandObjectProcess.cpp

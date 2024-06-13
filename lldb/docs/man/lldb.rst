@@ -97,6 +97,10 @@ COMMANDS
 
  Alias for --one-line
 
+.. option:: postfix
+
+ Evalaute the postfix expression.
+
 .. option:: -Q
 
  Alias for --source-quietly
