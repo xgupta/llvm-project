@@ -205,6 +205,55 @@ lldb::ValueObjectSP CobolInterpreter::EvaluateExpr(const CobolASTExpr *expr) {
   return ValueObjectSP();
 }
 
+lldb::ValueObjectSP CobolInterpreter::GetLevel88(llvm::StringRef var_name,
+                                                 ValueObjectSP &result,
+                                                 CompilerType comp_type) {
+  auto target = m_exe_ctx.GetTargetSP();
+  EvaluateExpressionOptions eval_options;
+  eval_options.SetLanguage(lldb::eLanguageTypeC);
+
+  /* Get Parent Name from the runtime */
+  auto parent_expr = "const char* arg = \"" + var_name.str() +
+                     "\"; rc_cob_get_level88_parent(arg)";
+  target->EvaluateExpression(parent_expr,
+                             m_exe_ctx.GetBestExecutionContextScope(), result,
+                             eval_options);
+  if (!result)
+    return ValueObjectSP();
+  std::string parent_name;
+  result->GetValueAsCString(eFormatCString, parent_name);
+  /* Get truth value of level88 */
+  auto value_expr =
+      "const char* arg = \"" + var_name.str() + "\"; rc_cob_level88(arg)";
+  target->EvaluateExpression(value_expr,
+                             m_exe_ctx.GetBestExecutionContextScope(), result,
+                             eval_options);
+  if (!result)
+    return ValueObjectSP();
+  auto truth_value = GetUIntFromValueObjectSP(result) == 0 ? "false" : "true";
+
+  auto result_str = "(" + parent_name + ") " + truth_value;
+  llvm::StringRef result_ref(result_str);
+
+  auto data_ptr = result_ref.data();
+  auto data_length = result_ref.size();
+
+  auto byte_order = endian::InlHostByteOrder();
+  auto addr_size = target->GetArchitecture().GetAddressByteSize();
+
+  DataBufferSP buffer(new DataBufferHeap(data_length, 0));
+  DataEncoder enc(buffer->GetBytes(), data_length, byte_order, addr_size);
+  enc.PutData(/*offset */ 0, data_ptr, data_length);
+  DataExtractor data(enc.GetDataBuffer(), byte_order, addr_size);
+
+  result.reset();
+  result = ValueObject::CreateValueObjectFromData(
+      var_name, data, m_exe_ctx,
+      comp_type.GetBasicTypeFromAST(eBasicTypeOther));
+  result->GetValue().SetValueType(Value::ValueType::Invalid);
+  return result;
+}
+
 lldb::ValueObjectSP CobolInterpreter::VisitIdent(const CobolASTIdent *ident) {
   ValueObjectSP result;
   llvm::StringRef var_name = ident->GetName().m_text;
@@ -222,8 +271,11 @@ lldb::ValueObjectSP CobolInterpreter::VisitIdent(const CobolASTIdent *ident) {
       var_sp = var_list->FindVariable(ConstString(var_name),
                                       /* include_static_members */ true,
                                       /* case_sensitive */ false);
-      if (var_sp) {
+      if (var_sp && var_sp->GetType()->GetName() != "Level88ConditionName") {
         result = m_frame->GetValueObjectForFrameVariable(var_sp, m_use_dynamic);
+      } else if (var_sp) {
+        return GetLevel88(var_name, result,
+                          var_sp->GetType()->GetFullCompilerType());
       }
     }
 
