@@ -171,17 +171,13 @@ public:
         m_count_exp(count_exp) {}
 
   static bool classof(const LegacyType *type) {
-    return type->GetLegacyKind() == LegacyType::KIND_ARRAY
-            && (static_cast<const LegacyArray*>(type)->isDynamic());
+    return type->GetLegacyKind() == LegacyType::KIND_ARRAY &&
+           (static_cast<const LegacyArray *>(type)->isDynamic());
   }
 
-  DWARFExpressionList GetCountExp() const {
-    return m_count_exp;
-  }
+  DWARFExpressionList GetCountExp() const { return m_count_exp; }
 
-  void UpdateLength(uint64_t length) {
-    SetLength(length);
-  }
+  void UpdateLength(uint64_t length) { SetLength(length); }
 
   bool isDynamic() const override { return true; }
 
@@ -587,15 +583,15 @@ bool TypeSystemLegacy::IsCharType(opaque_compiler_type_t type) {
 
 bool TypeSystemLegacy::IsFunctionType(opaque_compiler_type_t type) {
   switch (static_cast<LegacyType *>(type)->GetLegacyKind()) {
-    default:
-      break;
-    case LegacyType::KIND_FUNC:
-      return true;
-    case LegacyType::KIND_DYNAMIC: {
-      const auto dyn_base_type =
-          static_cast<LegacyDynamic *>(type)->GetBaseType();
-      return dyn_base_type.IsFunctionType();
-    }
+  default:
+    break;
+  case LegacyType::KIND_FUNC:
+    return true;
+  case LegacyType::KIND_DYNAMIC: {
+    const auto dyn_base_type =
+        static_cast<LegacyDynamic *>(type)->GetBaseType();
+    return dyn_base_type.IsFunctionType();
+  }
   }
   return false;
 }
@@ -761,7 +757,8 @@ bool TypeSystemLegacy::GetCompleteType(opaque_compiler_type_t type) {
   return true;
 }
 
-ConstString TypeSystemLegacy::GetTypeName(opaque_compiler_type_t type, bool baseType) {
+ConstString TypeSystemLegacy::GetTypeName(opaque_compiler_type_t type,
+                                          bool baseType) {
   if (!type)
     return ConstString();
 
@@ -982,8 +979,9 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
       break;
     }
     DataExtractor temp(&iu, ty_length, src_byte_order, GetPointerByteSize());
-    temp.CopyByteOrderedData(0, temp.GetByteSize(), (void*)dest_buffer->GetBytes(),
-                             ty_length, type_byte_order);
+    temp.CopyByteOrderedData(0, temp.GetByteSize(),
+                             (void *)dest_buffer->GetBytes(), ty_length,
+                             type_byte_order);
     return true;
   }
   case LegacyType::KIND_FLOAT: {
@@ -1003,8 +1001,9 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     }
     DataExtractor temp(&value, sizeof(value), src_byte_order,
                        GetPointerByteSize());
-    temp.CopyByteOrderedData(0, temp.GetByteSize(), (void*)dest_buffer->GetBytes(),
-                             sizeof(value), type_byte_order);
+    temp.CopyByteOrderedData(0, temp.GetByteSize(),
+                             (void *)dest_buffer->GetBytes(), sizeof(value),
+                             type_byte_order);
     return true;
   }
   case LegacyType::KIND_DOUBLE: {
@@ -1023,8 +1022,9 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     }
     DataExtractor temp(&value, sizeof(value), src_byte_order,
                        GetPointerByteSize());
-    temp.CopyByteOrderedData(0, temp.GetByteSize(), (void*)dest_buffer->GetBytes(),
-                             sizeof(value), type_byte_order);
+    temp.CopyByteOrderedData(0, temp.GetByteSize(),
+                             (void *)dest_buffer->GetBytes(), sizeof(value),
+                             type_byte_order);
     return true;
   }
   case LegacyType::KIND_ARRAY: {
@@ -1064,8 +1064,9 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     }
     DataExtractor temp(val_str.c_str(), val_str.size(), type_byte_order,
                        GetPointerByteSize());
-    temp.CopyByteOrderedData(0, temp.GetByteSize(), (void*)dest_buffer->GetBytes(),
-                             val_str.size(), type_byte_order);
+    temp.CopyByteOrderedData(0, temp.GetByteSize(),
+                             (void *)dest_buffer->GetBytes(), val_str.size(),
+                             type_byte_order);
     return true;
   } break;
   case LegacyType::KIND_DECIMAL:
@@ -1150,8 +1151,9 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
       val_str.copy((char *)buffer, count);
     }
     DataExtractor temp(buffer, count, src_byte_order, GetPointerByteSize());
-    temp.CopyByteOrderedData(0, temp.GetByteSize(), (void*)dest_buffer->GetBytes(),
-                             count, type_byte_order);
+    temp.CopyByteOrderedData(0, temp.GetByteSize(),
+                             (void *)dest_buffer->GetBytes(), count,
+                             type_byte_order);
     return true;
   }
   return false;
@@ -1185,7 +1187,8 @@ TypeSystemLegacy::GetBitSize(opaque_compiler_type_t type,
     LegacyArray *array = base_type->GetArray();
     if (std::optional<uint64_t> bit_size =
             array->GetElementType().GetBitSize(exe_scope))
-      return (array->GetLength() + (array->isVarString() ? 2UL : 0UL)) * (*bit_size);
+      return (array->GetLength() + (array->isVarString() ? 2UL : 0UL)) *
+             (*bit_size);
     return std::nullopt;
   }
   case LegacyType::KIND_PTR:
@@ -1344,6 +1347,10 @@ CompilerType TypeSystemLegacy::GetBasicTypeFromAST(BasicType basic_type) {
                        8, 0, 0, 0, endian::InlHostByteOrder(), false);
     (*m_basic_types)[basic_type].reset(type);
     break;
+  case eBasicTypeOther:
+    type = new LegacyType(LegacyType::KIND_L88, ConstString("Level88"),
+                          ConstString(), 0, 0, 0, 0, endian::InlHostByteOrder(),
+                          false);
   }
   return CompilerType(weak_from_this(), type);
 }
@@ -1393,29 +1400,28 @@ TypeSystemLegacy::DynArrGetCountExp(lldb::opaque_compiler_type_t type) const {
     return DWARFExpressionList();
 
   int kind = static_cast<LegacyType *>(type)->GetLegacyKind();
-  if (kind != LegacyType::KIND_ARRAY
-      || !static_cast<LegacyArray *>(type)->isDynamic())
+  if (kind != LegacyType::KIND_ARRAY ||
+      !static_cast<LegacyArray *>(type)->isDynamic())
     return DWARFExpressionList();
 
   const auto dyn_arr = static_cast<LegacyDynamicArray *>(type);
   return dyn_arr->GetCountExp();
 }
 
-bool
-TypeSystemLegacy::DynArrUpdateLength(lldb::opaque_compiler_type_t type, uint64_t length) {
+bool TypeSystemLegacy::DynArrUpdateLength(lldb::opaque_compiler_type_t type,
+                                          uint64_t length) {
   if (!type)
     return false;
 
   int kind = static_cast<LegacyType *>(type)->GetLegacyKind();
-  if (kind != LegacyType::KIND_ARRAY
-      || !static_cast<LegacyArray *>(type)->isDynamic())
+  if (kind != LegacyType::KIND_ARRAY ||
+      !static_cast<LegacyArray *>(type)->isDynamic())
     return false;
 
   const auto dyn_array = static_cast<LegacyDynamicArray *>(type);
   dyn_array->UpdateLength(length);
   return true;
 }
-
 
 lldb::BasicType
 TypeSystemLegacy::GetBasicTypeEnumeration(opaque_compiler_type_t type) {
@@ -1641,9 +1647,10 @@ CompilerType TypeSystemLegacy::CreateArrayType(
 
   if (element_count == 0) {
     char buffer[128];
-    sprintf(buffer, "Warning: need to add support for "
-		    "DW_TAG_array_type '%s' with dynamic size",
-		    name.GetCString());
+    sprintf(buffer,
+            "Warning: need to add support for "
+            "DW_TAG_array_type '%s' with dynamic size",
+            name.GetCString());
     Host::SystemLog(std::string(buffer));
     return CompilerType();
   }
@@ -1663,8 +1670,8 @@ CompilerType TypeSystemLegacy::CreateArrayType(
   if (!element_type.IsValid())
     return CompilerType();
 
-  LegacyType *array_type = new LegacyDynamicArray(array_type_name, name, element_type,
-                                                  element_count, isVarString);
+  LegacyType *array_type = new LegacyDynamicArray(
+      array_type_name, name, element_type, element_count, isVarString);
   return CompilerType(weak_from_this(), array_type);
 }
 
@@ -1696,9 +1703,9 @@ CompilerType TypeSystemLegacy::GetArrayType(lldb::opaque_compiler_type_t type,
     return CompilerType();
 
   LegacyType *element_type = static_cast<LegacyType *>(type);
-  LegacyType *array_type =
-      new LegacyArray(ConstString(), ConstString(""),
-                      CompilerType(weak_from_this(), element_type), size, false);
+  LegacyType *array_type = new LegacyArray(
+      ConstString(), ConstString(""),
+      CompilerType(weak_from_this(), element_type), size, false);
   return CompilerType(weak_from_this(), array_type);
 }
 
@@ -1802,12 +1809,12 @@ CompilerType TypeSystemLegacy::CreateBaseType(
 
   if (kind == LegacyType::KIND_INVALID) {
     char buffer[256];
-    sprintf(buffer, "Warning: need to add support for "
-                    "DW_TAG_base_type '%s' encoded with "
-                    "DW_ATE = 0x%x, bit_size = %u\n, "
-                    "sign = %u, scale = %d, byte_order = %u.\n",
-                    name.GetCString(), dw_ate, bitsize, dw_sign, scale,
-                    byte_order);
+    sprintf(buffer,
+            "Warning: need to add support for "
+            "DW_TAG_base_type '%s' encoded with "
+            "DW_ATE = 0x%x, bit_size = %u\n, "
+            "sign = %u, scale = %d, byte_order = %u.\n",
+            name.GetCString(), dw_ate, bitsize, dw_sign, scale, byte_order);
     std::string message(buffer);
     Host::SystemLog(message);
     return CompilerType();
@@ -1821,8 +1828,9 @@ CompilerType TypeSystemLegacy::CreateBaseType(
 //----------------------------------------------------------------------
 // Creating related types
 //----------------------------------------------------------------------
-CompilerType TypeSystemLegacy::GetArrayElementType(opaque_compiler_type_t type,
-                                                   ExecutionContextScope *exe_scope) {
+CompilerType
+TypeSystemLegacy::GetArrayElementType(opaque_compiler_type_t type,
+                                      ExecutionContextScope *exe_scope) {
   LegacyArray *array = static_cast<LegacyType *>(type)->GetArray();
   if (array) {
     return array->GetElementType();
@@ -1927,7 +1935,8 @@ void TypeSystemLegacy::Finalize() {}
 lldb_private::plugin::dwarf::DWARFASTParser *
 TypeSystemLegacy::GetDWARFParser() {
   if (!m_dwarf_ast_parser_ap)
-    m_dwarf_ast_parser_ap.reset(new DWARFASTParserLegacy(std::static_pointer_cast<TypeSystemLegacy>(weak_from_this().lock())));
+    m_dwarf_ast_parser_ap.reset(new DWARFASTParserLegacy(
+        std::static_pointer_cast<TypeSystemLegacy>(weak_from_this().lock())));
   return m_dwarf_ast_parser_ap.get();
 }
 
@@ -2031,8 +2040,8 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream &s,
         TargetCharsetReader Conv(exe_scope->CalculateTarget());
         if (!Conv.IsValid()) {
           char buffer[64];
-	  sprintf(buffer, "WARNING: Invalid target charset %s.\n",
-			  Conv.getTargetFormat().GetCString());
+          sprintf(buffer, "WARNING: Invalid target charset %s.\n",
+                  Conv.getTargetFormat().GetCString());
           Host::SystemLog(std::string(buffer));
         } else
           Conv.convert(reinterpret_cast<char *>(buffer), byte_size);
@@ -2116,6 +2125,12 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream &s,
                                      bitfield_bit_size, bitfield_bit_offset,
                                      exe_scope);
   }
+  case LegacyType::KIND_L88: {
+    return DumpDataExtractor(data, &s, byte_offset, eFormatCharPrintable, byte_size,
+                             data.GetDataEnd() - data.GetDataStart(),
+                             UINT32_MAX, LLDB_INVALID_ADDRESS,
+                             bitfield_bit_size, bitfield_bit_offset, exe_scope);
+  }
   }
   Host::SystemLog("Error: DumpTypeValue not handled yet.\n");
   return false;
@@ -2150,8 +2165,10 @@ UserExpression *TypeSystemLegacy::GetUserExpression(
     switch (language) {
     default:
       char buffer[64];
-      sprintf(buffer, "LegacyTypeSystem: UserExpression for language %s not supported.\n",
-                      Language::GetNameForLanguageType(language));
+      sprintf(
+          buffer,
+          "LegacyTypeSystem: UserExpression for language %s not supported.\n",
+          Language::GetNameForLanguageType(language));
       Host::SystemLog(std::string(buffer));
       break;
     case eLanguageTypeCobol74:
@@ -2171,4 +2188,3 @@ UserExpression *TypeSystemLegacy::GetUserExpression(
 PersistentExpressionState *TypeSystemLegacy::GetPersistentExpressionState() {
   return nullptr;
 }
-
