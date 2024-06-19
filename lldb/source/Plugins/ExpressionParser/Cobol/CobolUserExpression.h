@@ -91,6 +91,8 @@ private:
   GetIndexedExpression(lldb::ValueObjectSP result,
                        const lldb_private::CobolASTIndexExpr *indices,
                        llvm::StringRef var_name);
+  lldb::ValueObjectSP GetLevel88(llvm::StringRef var_name,
+                                 lldb::ValueObjectSP &result, CompilerType comp_type);
 };
 
 class CobolUserExpression : public UserExpression {
