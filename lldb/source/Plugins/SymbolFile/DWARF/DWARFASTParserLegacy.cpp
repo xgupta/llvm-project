@@ -664,7 +664,6 @@ size_t DWARFASTParserLegacy::ParseChildParameters(
 size_t DWARFASTParserLegacy::ParseChildMembers(
     const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
     CompilerType &struct_compiler_type) {
-  size_t member_idx = 0;
 
   for (lldb_private::plugin::dwarf::DWARFDIE die = parent_die.GetFirstChild();
        die.IsValid(); die = die.GetSibling()) {
@@ -712,7 +711,6 @@ size_t DWARFASTParserLegacy::ParseChildMembers(
         m_ast.lock()->AddFieldToStruct(struct_compiler_type, ConstString(name),
                                member_full_type, member_offset_in_bits);
       }
-      ++member_idx;
     }
   }
 

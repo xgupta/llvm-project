@@ -876,7 +876,7 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
 bool DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-    const DWARFUnit *dwarf_cu, const lldb::RegisterKind reg_kind, const Value *initial_value_ptr, 
+    const DWARFUnit *dwarf_cu, const lldb::RegisterKind reg_kind, const Value *initial_value_ptr,
     const Value *object_address_ptr, std::vector<Value> &stack, Value &result,
     Status *error_ptr, bool expression_call) {
 
@@ -2726,7 +2726,7 @@ bool DWARFExpression::EvaluateCall(ExecutionContext *exe_ctx,
     if (error_ptr)
       error_ptr->SetErrorStringWithFormat(
           "unable to find DW_OP_call[2|4] reference = %" PRIu32,
-          die_ref_offset);
+          static_cast<unsigned int>(die_ref_offset));
     return false;
   }
 
@@ -2741,7 +2741,7 @@ bool DWARFExpression::EvaluateCall(ExecutionContext *exe_ctx,
       error_ptr->SetErrorStringWithFormat(
           "DW_OP_call[2|4] to reference = %" PRIu32
           " with location list is not supported.",
-          die_ref_offset);
+          static_cast<unsigned int>(die_ref_offset));
     return false;
   }
 
