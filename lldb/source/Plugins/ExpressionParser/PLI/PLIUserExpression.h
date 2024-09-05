@@ -96,7 +96,7 @@ public:
   static bool classof(const Expression *obj) { return obj->isA(&ID); }
 
   PLIUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
-                    llvm::StringRef prefix, lldb::LanguageType language,
+                    llvm::StringRef prefix, SourceLanguage language,
                     ResultType desired_type,
                     const EvaluateExpressionOptions &options);
 

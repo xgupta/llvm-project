@@ -53,8 +53,8 @@ static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
   if (index != 0)
     return true;
 
-  const size_t total_count = comp_type->GetNumChildren(true, nullptr);
-  for (size_t i = 0; i < total_count; ++i) {
+  uint32_t total_count = comp_type->GetNumChildren(true, nullptr).get();
+  for (uint32_t i = 0; i < total_count; ++i) {
     std::string child_name;
     uint32_t child_byte_size;
     int32_t child_byte_offset = 0;
@@ -64,10 +64,23 @@ static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
     bool child_is_deref_of_parent;
     uint64_t language_flags;
 
-    CompilerType child_type = comp_type->GetChildCompilerTypeAtIndex(
-        nullptr, i, true, true, true, child_name, child_byte_size,
-        child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-        child_is_base_class, child_is_deref_of_parent, nullptr, language_flags);
+    //CompilerType child_type = comp_type->GetChildCompilerTypeAtIndex(
+    //    nullptr, i, true, true, true, child_name, child_byte_size,
+    //    child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
+    //    child_is_base_class, child_is_deref_of_parent, nullptr, language_flags);
+
+    llvm::Expected<CompilerType> expected_child_type = comp_type->GetChildCompilerTypeAtIndex(
+    nullptr, i, true, true, true, child_name, child_byte_size,
+    child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
+    child_is_base_class, child_is_deref_of_parent, nullptr, language_flags);
+
+    if (!expected_child_type) {
+        // Handle the error, e.g., by returning or logging it.
+        llvm::consumeError(expected_child_type.takeError());
+        return false; // or handle accordingly
+    }
+    CompilerType child_type = *expected_child_type; // Extract the actual value safely
+
     if (SearchCompilerTypeForMemberWithName(&child_type, name))
       return true;
   }
@@ -98,7 +111,7 @@ static VariableSP SearchMemberByName(TargetSP target, llvm::Twine name) {
 
   for (size_t i = 0; i < variable_list.GetSize(); ++i) {
     VariableSP result = variable_list.GetVariableAtIndex(i);
-    CompilerType comp_type = result->GetType()->GetForwardCompilerType();
+    auto comp_type = result->GetType()->GetForwardCompilerType();
 
     if (SearchCompilerTypeForMemberWithName(&comp_type, name))
       return result;
@@ -113,7 +126,7 @@ static VariableSP FindGlobalVariable(TargetSP target, llvm::Twine name,
     return nullptr;
   }
   target->GetImages().FindGlobalVariables(
-      RegularExpression(llvm::StringRef("^" + name.str() + "$"),
+      RegularExpression(llvm::StringRef("^" + name.str() + "$"), llvm::Regex::NoFlags,
                         true /* case-insensitive */),
       1, variable_list);
 
@@ -187,7 +200,7 @@ PLIInterpreter::EvaluateStatement(const lldb_private::PLIASTStmt *stmt) {
   // Handle other
   switch (stmt->GetKind()) {
   default:
-    m_error.SetErrorStringWithFormat("%s node not supported",
+    m_error = Status::FromErrorStringWithFormat("%s node not supported",
                                      stmt->GetKindName());
     break;
   case PLIASTNode::eExprStmt:
@@ -210,7 +223,7 @@ lldb::ValueObjectSP PLIInterpreter::VisitIdent(const PLIASTIdent *ident) {
     VariableSP var_sp;
     if (var_name[0] == '$') {
       m_error.Clear();
-      m_error.SetErrorString("Consistent var lookup not implemented yet");
+      m_error = Status::FromErrorString("Consistent var lookup not implemented yet");
       return nullptr;
     }
 
@@ -254,7 +267,7 @@ lldb::ValueObjectSP PLIInterpreter::VisitIdent(const PLIASTIdent *ident) {
       TargetSP target = m_frame->CalculateTarget();
       if (!target) {
         m_error.Clear();
-        m_error.SetErrorString("No target");
+        m_error = Status::FromErrorString("No target");
         return nullptr;
       }
 
@@ -271,7 +284,7 @@ lldb::ValueObjectSP PLIInterpreter::VisitIdent(const PLIASTIdent *ident) {
     }
   }
   if (!result)
-    m_error.SetErrorStringWithFormat("Unknown variable %s",
+    m_error = Status::FromErrorStringWithFormat("Unknown variable %s",
                                      var_name.str().c_str());
   return result;
 }
@@ -308,14 +321,14 @@ ValueObjectSP PLIInterpreter::VisitBasicLit(const PLIASTBasicLit *expr) {
   const void *data_ptr = nullptr;
   switch (expr->GetValue().m_type) {
   default:
-    m_error.SetErrorStringWithFormat("Non-Const lexical type for %s",
+    m_error = Status::FromErrorStringWithFormat("Non-Const lexical type for %s",
                                      value_string.str().c_str());
     return nullptr;
   case PLILexer::LIT_INTEGER:
     if (value_string.front() == '+')
       value_string = value_string.drop_front(1);
     if (value_string.getAsInteger(0, iValue)) {
-      m_error.SetErrorStringWithFormat("integer conversion error %s",
+      m_error = Status::FromErrorStringWithFormat("integer conversion error %s",
                                        value_string.str().c_str());
       return nullptr;
     }
@@ -325,7 +338,7 @@ ValueObjectSP PLIInterpreter::VisitBasicLit(const PLIASTBasicLit *expr) {
     break;
   case PLILexer::LIT_FLOAT:
     if (value_string.getAsDouble(dValue)) {
-      m_error.SetErrorStringWithFormat("double conversion error %s",
+      m_error = Status::FromErrorStringWithFormat("double conversion error %s",
                                        value_string.str().c_str());
       return nullptr;
     }
@@ -386,7 +399,7 @@ PLIInterpreter::VisitSelectorExpr(const PLIASTSelectorExpr *expr) {
     ConstString field(expr->GetSel()->GetName().m_text);
     ValueObjectSP result = target->GetChildMemberWithName(field, true);
     if (!result)
-      m_error.SetErrorStringWithFormat("Unknown child %s", field.AsCString());
+      m_error = Status::FromErrorStringWithFormat("Unknown child %s", field.AsCString());
     return result;
   }
   if (const PLIASTIdent *package =
@@ -409,7 +422,7 @@ ValueObjectSP
 PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
   ValueObjectSP var = EvaluateExpr(expr->GetExpr());
   if (!var) {
-    m_error.SetErrorString("variable not found.");
+    m_error = Status::FromErrorString("variable not found.");
     return nullptr;
   }
 
@@ -419,7 +432,7 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
 
   if (!var->GetCompilerType().IsArrayType(&elem_type, &max_elem,
                                           &is_incomplete)) {
-    m_error.SetErrorStringWithFormat("variable %s is not an array.",
+    m_error = Status::FromErrorStringWithFormat("variable %s is not an array.",
                                      var->GetName().AsCString());
     return nullptr;
   }
@@ -428,7 +441,7 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
 
   ValueObjectSP start_var = EvaluateExpr(expr->GetStartExpr());
   if (!start_var) {
-    m_error.SetErrorString("ref modifier invalid indexes.");
+    m_error = Status::FromErrorString("ref modifier invalid indexes.");
     return nullptr;
   }
 
@@ -436,7 +449,7 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
   uint8_t bit_pos;
   llvm::StringRef index_string(start_var->GetValueAsCString());
   if (index_string.getAsInteger(10, start)) {
-    m_error.SetErrorStringWithFormat("ref modifier invalid index %s.",
+    m_error = Status::FromErrorStringWithFormat("ref modifier invalid index %s.",
                                      index_string.str().c_str());
     return nullptr;
   }
@@ -448,7 +461,7 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
   }
 
   if (start >= max_elem) {
-    m_error.SetErrorStringWithFormat("out of bound index: %d.", start + 1);
+    m_error = Status::FromErrorStringWithFormat("out of bound index: %d.", start + 1);
     return nullptr;
   }
 
@@ -465,7 +478,7 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
   uint32_t len;
   llvm::StringRef len_string(len_var->GetValueAsCString());
   if (len_string.getAsInteger(10, len)) {
-    m_error.SetErrorStringWithFormat("ref modifier invalid index %s.",
+    m_error = Status::FromErrorStringWithFormat("ref modifier invalid index %s.",
                                      len_string.str().c_str());
     return nullptr;
   }
@@ -499,12 +512,12 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
 ValueObjectSP
 PLIInterpreter::VisitFuncCallExpr(const PLIASTFuncCallExpr *expr) {
   llvm::StringRef funcName = expr->GetFuncName().m_text;
-  if (!funcName.equals(llvm::StringRef("sizeof")))
+  if (funcName == (llvm::StringRef("sizeof")))
     // TODO
     return nullptr;
 
   if (expr->getTotalNumParams() != 1) {
-    m_error.SetErrorString("wrong number of params for sizeof operator.");
+    m_error = Status::FromErrorString("wrong number of params for sizeof operator.");
     return nullptr;
   }
 
@@ -580,7 +593,7 @@ PLIInterpreter::VisitAssignmentExpr(const PLIASTAssignmentExpr *expr) {
 PLIUserExpression::PLIUserExpression(ExecutionContextScope &exe_scope,
                                      llvm::StringRef expr,
                                      llvm::StringRef prefix,
-                                     lldb::LanguageType language,
+                                     SourceLanguage language,
                                      ResultType desired_type,
                                      const EvaluateExpressionOptions &options)
     : UserExpression(exe_scope, expr, prefix, language, desired_type, options) {
@@ -596,7 +609,7 @@ bool PLIUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   if (m_interpreter->Parse())
     return true;
 
-  diagnostic_manager.Printf(eDiagnosticSeverityError,
+  diagnostic_manager.Printf(lldb::eSeverityError,
                             "PLI expression can't be interpreted");
   return false;
 }
@@ -623,14 +636,14 @@ PLIUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
         log->Printf("== [PLIUserExpression::Evaluate] Expression may not run, "
                     "but is not constant ==");
 
-      diagnostic_manager.PutString(eDiagnosticSeverityError,
+      diagnostic_manager.PutString(lldb::eSeverityError,
                                    "expression needed to run but couldn't");
 
       return execution_results;
     }
   }
 
-  LanguageType language = target->GetLanguage();
+  SourceLanguage language = target->GetLanguage();
   m_interpreter->set_use_dynamic(options.GetUseDynamic());
   ValueObjectSP result_val_sp = m_interpreter->Evaluate(exe_ctx);
   Status err = m_interpreter->error();
@@ -639,9 +652,9 @@ PLIUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   if (!result_val_sp) {
     const char *error_cstr = err.AsCString();
     if (error_cstr && error_cstr[0])
-      diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
+      diagnostic_manager.PutString(lldb::eSeverityError, error_cstr);
     else
-      diagnostic_manager.PutString(eDiagnosticSeverityError,
+      diagnostic_manager.PutString(lldb::eSeverityError,
                                    "expression can't be interpreted or run");
     return lldb::eExpressionDiscarded;
   }
@@ -651,7 +664,8 @@ PLIUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   result->m_live_sp = result->m_frozen_sp = result_val_sp;
   result->m_flags |= ExpressionVariable::EVIsProgramReference;
   PersistentExpressionState *pv =
-      target->GetPersistentExpressionStateForLanguage(language);
+      target->GetPersistentExpressionStateForLanguage(
+            language.AsLanguageType());
   if (pv != nullptr) {
     if (result_val_sp->GetName().IsEmpty())
       result->SetName(pv->GetNextPersistentVariableName());

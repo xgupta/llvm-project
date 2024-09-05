@@ -238,13 +238,13 @@ public:
 
   /// Get the DWARFExpression corresponding to the Static link Address.
   ///
-  /// \param [out] error_ptr
+  /// \param [out] error
   ///   If there is an error determining the CFA address, this may contain a
   ///   string explaining the failure.
   ///
   /// \return
   ///   Returns the corresponding DWARF expression, or NULL.
-  DWARFExpressionList *GetStaticLinkExpression(Status *error_ptr);
+  DWARFExpressionList *GetStaticLinkExpression(Status &error);
 
   /// Get the current lexical scope block for this StackFrame, if possible.
   ///

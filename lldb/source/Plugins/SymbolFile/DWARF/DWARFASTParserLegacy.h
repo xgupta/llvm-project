@@ -36,7 +36,8 @@ class DWARFDIECollection;
 class DWARFASTParserLegacy
     : public lldb_private::plugin::dwarf::DWARFASTParser {
 public:
-  DWARFASTParserLegacy(std::weak_ptr<lldb_private::TypeSystemLegacy> ast);
+  // DWARFASTParserLegacy(std::weak_ptr<lldb_private::TypeSystemLegacy> ast);
+  DWARFASTParserLegacy(lldb_private::TypeSystemLegacy &ast);
 
   ~DWARFASTParserLegacy() override;
 
@@ -50,9 +51,14 @@ public:
                          const lldb_private::plugin::dwarf::DWARFDIE &die,
                          const lldb_private::AddressRange &func_range) override;
 
-  bool CompleteTypeFromDWARF(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                             lldb_private::Type *type,
-                             lldb_private::CompilerType &legacy_type) override;
+  //bool CompleteTypeFromDWARF(const lldb_private::plugin::dwarf::DWARFDIE &die,
+  //                           lldb_private::Type *type,
+  //                           //const lldb_private::CompilerType &legacy_type) override;
+  //                           const CompilerType &legacy_type) override;
+
+  bool CompleteTypeFromDWARF(const lldb_private::plugin::dwarf::DWARFDIE &die, lldb_private::Type *type,
+                             const lldb_private::CompilerType &legacy_type) override;
+
 
   lldb_private::CompilerDeclContext GetDeclContextForUIDFromDWARF(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override {
@@ -72,9 +78,9 @@ public:
   void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) override {}
 
-  lldb_private::ConstString GetDIEClassTemplateParams(
+  std::string  GetDIEClassTemplateParams(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override {
-    return lldb_private::ConstString();
+    return {};
   }
   lldb_private::ConstString ConstructDemangledNameFromDWARF(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override {
@@ -82,7 +88,8 @@ public:
   }
 
 private:
-  std::weak_ptr<lldb_private::TypeSystemLegacy> m_ast;
+  // std::weak_ptr<lldb_private::TypeSystemLegacy> m_ast;
+  lldb_private::TypeSystemLegacy &m_ast;
 
   size_t ParseChildParameters(
       lldb_private::CompileUnit &comp_unit,
@@ -91,7 +98,7 @@ private:
       std::vector<lldb_private::CompilerType> &function_param_types);
 
   size_t ParseChildMembers(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                           lldb_private::CompilerType &class_compiler_type);
+                           const lldb_private::CompilerType &class_compiler_type);
 };
 
 #endif // SymbolFileDWARF_DWARFASTParserLegacy_h_

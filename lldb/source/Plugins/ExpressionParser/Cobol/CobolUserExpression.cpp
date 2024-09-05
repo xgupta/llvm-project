@@ -37,6 +37,7 @@ using namespace lldb;
 
 char CobolUserExpression::ID;
 
+
 static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
                                                 llvm::Twine name) {
 
@@ -55,8 +56,9 @@ static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
   if (index != 0)
     return true;
 
-  const size_t total_count = comp_type->GetNumChildren(true, nullptr);
-  for (size_t i = 0; i < total_count; ++i) {
+  //const llvm::Expected<uint32_t> total_count = comp_type->GetNumChildren(true, nullptr);
+  uint32_t total_count = comp_type->GetNumChildren(true, nullptr).get();
+  for (uint32_t i = 0; i < total_count; ++i) {
     std::string child_name;
     uint32_t child_byte_size;
     int32_t child_byte_offset = 0;
@@ -66,15 +68,29 @@ static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
     bool child_is_deref_of_parent;
     uint64_t language_flags;
 
-    CompilerType child_type = comp_type->GetChildCompilerTypeAtIndex(
-        nullptr, i, true, true, true, child_name, child_byte_size,
-        child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-        child_is_base_class, child_is_deref_of_parent, nullptr, language_flags);
+    //CompilerType child_type = comp_type->GetChildCompilerTypeAtIndex(
+    //    nullptr, i, true, true, true, child_name, child_byte_size,
+    //    child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
+    //    child_is_base_class, child_is_deref_of_parent, nullptr, language_flags);
+
+    llvm::Expected<CompilerType> expected_child_type = comp_type->GetChildCompilerTypeAtIndex(
+    nullptr, i, true, true, true, child_name, child_byte_size,
+    child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
+    child_is_base_class, child_is_deref_of_parent, nullptr, language_flags);
+
+    if (!expected_child_type) {
+        // Handle the error, e.g., by returning or logging it.
+        llvm::consumeError(expected_child_type.takeError());
+        return false; // or handle accordingly
+    }
+    CompilerType child_type = *expected_child_type; // Extract the actual value safely
+
     if (SearchCompilerTypeForMemberWithName(&child_type, name))
       return true;
   }
   return false;
 }
+
 
 /// TODO: improve performance
 static VariableSP SearchMemberByName(TargetSP target, llvm::Twine name) {
@@ -100,7 +116,7 @@ static VariableSP SearchMemberByName(TargetSP target, llvm::Twine name) {
 
   for (size_t i = 0; i < variable_list.GetSize(); ++i) {
     VariableSP result = variable_list.GetVariableAtIndex(i);
-    CompilerType comp_type = result->GetType()->GetForwardCompilerType();
+    auto comp_type = result->GetType()->GetForwardCompilerType();
 
     if (SearchCompilerTypeForMemberWithName(&comp_type, name))
       return result;
@@ -115,7 +131,7 @@ static VariableSP FindGlobalVariable(TargetSP target, llvm::Twine name,
     return nullptr;
   }
   target->GetImages().FindGlobalVariables(
-      RegularExpression(llvm::StringRef("^" + name.str() + "$"),
+      RegularExpression(llvm::StringRef("^" + name.str() + "$"), llvm::Regex::NoFlags,
                         true /* case-insensitive */),
       1, variable_list);
 
@@ -189,7 +205,7 @@ CobolInterpreter::EvaluateStatement(const lldb_private::CobolASTStmt *stmt) {
   // Handle other
   switch (stmt->GetKind()) {
   default:
-    m_error.SetErrorStringWithFormat("%s node not supported",
+    m_error = Status::FromErrorStringWithFormat("%s node not supported",
                                      stmt->GetKindName());
     break;
   case CobolASTNode::eExprStmt:
@@ -264,7 +280,7 @@ lldb::ValueObjectSP CobolInterpreter::VisitIdent(const CobolASTIdent *ident) {
     VariableSP var_sp;
     if (var_name[0] == '$') {
       m_error.Clear();
-      m_error.SetErrorString("Consistent var lookup not implemented yet");
+      m_error = Status::FromErrorString("Consistent var lookup not implemented yet");
       return nullptr;
     }
 
@@ -311,7 +327,7 @@ lldb::ValueObjectSP CobolInterpreter::VisitIdent(const CobolASTIdent *ident) {
       TargetSP target = m_frame->CalculateTarget();
       if (!target) {
         m_error.Clear();
-        m_error.SetErrorString("No target");
+        m_error = Status::FromErrorString("No target");
         return nullptr;
       }
 
@@ -328,7 +344,7 @@ lldb::ValueObjectSP CobolInterpreter::VisitIdent(const CobolASTIdent *ident) {
     }
   }
   if (!result)
-    m_error.SetErrorStringWithFormat("Unknown variable %s",
+    m_error = Status::FromErrorStringWithFormat("Unknown variable %s",
                                      var_name.str().c_str());
   return result;
 }
@@ -365,14 +381,14 @@ ValueObjectSP CobolInterpreter::VisitBasicLit(const CobolASTBasicLit *expr) {
   const void *data_ptr = nullptr;
   switch (expr->GetValue().m_type) {
   default:
-    m_error.SetErrorStringWithFormat("Non-Const lexical type for %s",
+    m_error = Status::FromErrorStringWithFormat("Non-Const lexical type for %s",
                                      value_string.str().c_str());
     return nullptr;
   case CobolLexer::LIT_INTEGER:
     if (value_string.front() == '+')
       value_string = value_string.drop_front(1);
     if (value_string.getAsInteger(0, iValue)) {
-      m_error.SetErrorStringWithFormat("integer conversion error %s",
+      m_error = Status::FromErrorStringWithFormat("integer conversion error %s",
                                        value_string.str().c_str());
       return nullptr;
     }
@@ -382,7 +398,7 @@ ValueObjectSP CobolInterpreter::VisitBasicLit(const CobolASTBasicLit *expr) {
     break;
   case CobolLexer::LIT_FLOAT:
     if (value_string.getAsDouble(dValue)) {
-      m_error.SetErrorStringWithFormat("double conversion error %s",
+      m_error = Status::FromErrorStringWithFormat("double conversion error %s",
                                        value_string.str().c_str());
       return nullptr;
     }
@@ -443,7 +459,7 @@ CobolInterpreter::VisitSelectorExpr(const CobolASTSelectorExpr *expr) {
     ConstString field(expr->GetSel()->GetName().m_text);
     ValueObjectSP result = target->GetChildMemberWithName(field, true);
     if (!result)
-      m_error.SetErrorStringWithFormat("Unknown child %s", field.AsCString());
+      m_error = Status::FromErrorStringWithFormat("Unknown child %s", field.AsCString());
     return result;
   }
   if (const CobolASTIdent *package =
@@ -475,7 +491,7 @@ CobolInterpreter::VisitSelectorExpr(const CobolASTSelectorExpr *expr) {
           ConstString(memberName), targetSP, m_use_dynamic, true);
 
       if (!result) {
-        m_error.SetErrorStringWithFormat("Unknown child %s",
+        m_error = Status::FromErrorStringWithFormat("Unknown child %s",
                                          memberName.str().c_str());
         return nullptr;
       }
@@ -503,7 +519,7 @@ ValueObjectSP CobolInterpreter::GetElementAtIndex(lldb::ValueObjectSP var,
   }
 
   if ((start < 1) || (start > max_elem)) {
-    m_error.SetErrorStringWithFormat("Out of bound index: %d.", start);
+    m_error = Status::FromErrorStringWithFormat("Out of bound index: %d.", start);
     return nullptr;
   }
   start -= 1; // convert 1-based indexing to 0-based.
@@ -635,7 +651,7 @@ CobolInterpreter::FindFieldInStructArray(const CobolASTRefModifierExpr *expr) {
   auto candidates_sp = FindAllCandidates(ConstString(var_name));
 
   if (candidates_sp->GetSize() == 0) {
-    m_error.SetErrorStringWithFormat("Unknown variable %s",
+    m_error = Status::FromErrorStringWithFormat("Unknown variable %s",
                                      var_name.str().c_str());
     return nullptr;
   }
@@ -658,7 +674,7 @@ uint32_t CobolInterpreter::GetUIntFromValueObjectSPReportIndex(ValueObjectSP var
   uint32_t index;
   llvm::StringRef index_string(var->GetValueAsCString());
   if (index_string.getAsInteger(10, index)) {
-    m_error.SetErrorStringWithFormat("ref modifier invalid index %s",
+    m_error = Status::FromErrorStringWithFormat("ref modifier invalid index %s",
                                     reportIndex? index_string.str().c_str(): "");
     return 0;
   }
@@ -678,7 +694,7 @@ CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
       auto var_sp = var_list->FindVariable(ConstString(var_name), true, false);
       if (var_sp && var_sp->GetType()->GetName() == "Level88ConditionName") {
         if (index_expr->GetNumberOfIndices() > 1) {
-          Host::SystemLog(
+          Host::SystemLog(lldb::eSeverityWarning,
               "More than one index for level88 is not supported yet");
           return ValueObjectSP();
         }
@@ -729,12 +745,13 @@ CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
 ValueObjectSP
 CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {
   llvm::StringRef funcName = expr->GetFuncName().m_text;
-  if (!funcName.equals(llvm::StringRef("sizeof")))
+  // if (!funcName.equals(llvm::StringRef("sizeof")))
+  if (funcName == (llvm::StringRef("sizeof")))
     // TODO
     return nullptr;
 
   if (expr->getTotalNumParams() != 1) {
-    m_error.SetErrorString("wrong number of params for sizeof operator.");
+    m_error = Status::FromErrorString("wrong number of params for sizeof operator.");
     return nullptr;
   }
 
@@ -847,7 +864,7 @@ CobolInterpreter::VisitAssignmentExpr(const CobolASTAssignmentExpr *expr) {
 
 CobolUserExpression::CobolUserExpression(
     ExecutionContextScope &exe_scope, llvm::StringRef expr,
-    llvm::StringRef prefix, lldb::LanguageType language,
+    llvm::StringRef prefix, SourceLanguage language,
     ResultType desired_type, const EvaluateExpressionOptions &options)
     : UserExpression(exe_scope, expr, prefix, language, desired_type, options) {
 }
@@ -864,7 +881,7 @@ bool CobolUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     return true;
 
   LLDB_LOGF(log, "error while parsing the following code:%s\n", GetUserText());
-  diagnostic_manager.Printf(eDiagnosticSeverityError,
+  diagnostic_manager.Printf(lldb::eSeverityError,
                             "cobol expression can't be interpreted");
   return false;
 }
@@ -892,14 +909,15 @@ CobolUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
             "== [CobolUserExpression::Evaluate] Expression may not run, "
             "but is not constant ==");
 
-      diagnostic_manager.PutString(eDiagnosticSeverityError,
+      diagnostic_manager.PutString(lldb::eSeverityError,
                                    "expression needed to run but couldn't");
 
       return execution_results;
     }
   }
 
-  LanguageType language = target->GetLanguage();
+  SourceLanguage language = target->GetLanguage();
+
   m_interpreter->set_use_dynamic(options.GetUseDynamic());
   ValueObjectSP result_val_sp = m_interpreter->Evaluate(exe_ctx);
   Status err = m_interpreter->error();
@@ -908,11 +926,11 @@ CobolUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   if (!result_val_sp) {
     const char *error_cstr = err.AsCString();
     if (error_cstr && error_cstr[0]) {
-      diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
+      diagnostic_manager.PutString(lldb::eSeverityError, error_cstr);
       if (log)
         LLDB_LOGF(log, "expression interpretation error: %s\n.", error_cstr);
     } else {
-      diagnostic_manager.PutString(eDiagnosticSeverityError,
+      diagnostic_manager.PutString(lldb::eSeverityError,
                                    "expression can't be interpreted or run");
       if (log)
         LLDB_LOGF(log, "expression interpretation Unknown error\n.");
@@ -925,7 +943,8 @@ CobolUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   result->m_live_sp = result->m_frozen_sp = result_val_sp;
   result->m_flags |= ExpressionVariable::EVIsProgramReference;
   PersistentExpressionState *pv =
-      target->GetPersistentExpressionStateForLanguage(language);
+            target->GetPersistentExpressionStateForLanguage(
+                language.AsLanguageType());
   if (pv != nullptr) {
     if (result_val_sp->GetName().IsEmpty())
       result->SetName(pv->GetNextPersistentVariableName());

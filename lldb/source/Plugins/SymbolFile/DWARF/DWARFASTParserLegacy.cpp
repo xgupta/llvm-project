@@ -41,8 +41,12 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
-DWARFASTParserLegacy::DWARFASTParserLegacy(std::weak_ptr<TypeSystemLegacy> ast)
+//DWARFASTParserLegacy::DWARFASTParserLegacy(std::weak_ptr<TypeSystemLegacy> ast)
+//    : DWARFASTParser(Kind::DWARFASTParserLegacy), m_ast(ast) {}
+
+DWARFASTParserLegacy::DWARFASTParserLegacy(lldb_private::TypeSystemLegacy &ast)
     : DWARFASTParser(Kind::DWARFASTParserLegacy), m_ast(ast) {}
+
 DWARFASTParserLegacy::~DWARFASTParserLegacy() {}
 
 TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
@@ -173,7 +177,7 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
         switch (tag) {
         default:
         case DW_TAG_base_type:
-          compiler_type = m_ast.lock()->CreateBaseType(
+          compiler_type = m_ast.CreateBaseType(
               type_name_const_str, pic_const_str, encoding, bit_size, sign,
               scale, digit_count, byte_order, bin_scale);
           resolve_state = Type::ResolveState::Full;
@@ -267,8 +271,9 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
               uint64_t num_elements = 0;
               for (auto pos = array_info->element_orders.rbegin(); pos != end;
                    ++pos) {
-                num_elements = *pos;
-                compiler_type = m_ast.lock()->CreateArrayType(
+                // num_elements = *pos;
+                num_elements = pos->value();  // Retrieve the value
+                compiler_type = m_ast.CreateArrayType(
                     type_name_const_str, empty_name, array_element_type,
                     num_elements, isVarString);
                 array_element_type = compiler_type;
@@ -280,7 +285,7 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
               for (auto pos = array_info->element_orders_exp.rbegin(); pos != end;
                    ++pos) {
                 DWARFExpressionList num_elements = *pos;
-                compiler_type = m_ast.lock()->CreateArrayType(
+                compiler_type = m_ast.CreateArrayType(
                     type_name_const_str, empty_name, array_element_type,
                     num_elements, isVarString);
                 array_element_type = compiler_type;
@@ -289,7 +294,7 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
               }
             } else
               compiler_type =
-                  m_ast.lock()->CreateArrayType(type_name_const_str, empty_name,
+                  m_ast.CreateArrayType(type_name_const_str, empty_name,
                                         array_element_type, (size_t) 0, isVarString);
 
             type_sp = dwarf->MakeType(
@@ -338,10 +343,12 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
         std::unique_ptr<plugin::dwarf::UniqueDWARFASTType> unique_ast_entry_ap(
             new plugin::dwarf::UniqueDWARFASTType());
 
+        bool is_forward_declaration = false;
         if (type_name_const_str &&
             dwarf->GetUniqueDWARFASTTypeMap().Find(
                 type_name_const_str, die, decl,
-                byte_size_valid ? byte_size : -1, *unique_ast_entry_ap)) {
+                // byte_size_valid ? byte_size : -1, *unique_ast_entry_ap)) {
+                byte_size_valid ? byte_size : -1, is_forward_declaration)) {
           type_sp = unique_ast_entry_ap->m_type_sp;
           if (type_sp) {
             dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
@@ -353,13 +360,13 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
                      DW_TAG_value_to_name(tag), type_name_cstr);
 
         bool compiler_type_was_created = false;
-        compiler_type.SetCompilerType(
-            m_ast,
-            dwarf->GetForwardDeclDIEToCompilerType().lookup(die.GetDIE()));
+        // compiler_type.SetCompilerType(
+        //     m_ast,
+        //     dwarf->GetForwardDeclDIEToCompilerType().lookup(die.GetDIE()));
         if (!compiler_type) {
           compiler_type_was_created = true;
           compiler_type =
-              m_ast.lock()->CreateStructType(type_name_const_str, byte_size);
+              m_ast.CreateStructType(type_name_const_str, byte_size);
         }
         lldb_private::plugin::dwarf::SymbolFileDWARF *dwarf = die.GetDWARF();
         type_sp = dwarf->MakeType(
@@ -375,9 +382,10 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
                                                  *unique_ast_entry_ap);
 
         if (!die.HasChildren())
-          m_ast.lock()->CompleteStructType(compiler_type);
+          m_ast.CompleteStructType(compiler_type);
         else if (compiler_type_was_created) {
-          dwarf->GetForwardDeclDIEToCompilerType()[die.GetDIE()] =
+          // dwarf->GetForwardDeclDIEToCompilerType()[die.GetDIE()] =
+         // dwarf->GetForwardDeclDIEToCompilerType()[die.GetDIE()] =
               compiler_type.GetOpaqueQualType();
           dwarf->GetForwardDeclCompilerTypeToDIE().try_emplace(
               compiler_type.GetOpaqueQualType(), *die.GetDIERef());
@@ -445,7 +453,7 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
 
         Type *base_type =
             dwarf->ResolveTypeUID(type_die_form.Reference(), true);
-        compiler_type = m_ast.lock()->CreateDynamicType(
+        compiler_type = m_ast.CreateDynamicType(
             base_type->GetForwardCompilerType(), dw_location, dw_allocated);
         type_sp = dwarf->MakeType(
             die.GetID(), empty_name, 0, nullptr,
@@ -492,7 +500,7 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
           ParseChildParameters(*sc.comp_unit, die, is_variadic,
                                function_params_types);
 
-        compiler_type = m_ast.lock()->CreateFunctionType(
+        compiler_type = m_ast.CreateFunctionType(
             type_name_const_str, function_params_types.data(),
             function_params_types.size(), is_variadic);
         type_sp = dwarf->MakeType(
@@ -620,7 +628,7 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(
 
 bool DWARFASTParserLegacy::CompleteTypeFromDWARF(
     const lldb_private::plugin::dwarf::DWARFDIE &die, Type *type,
-    CompilerType &comp_type) {
+    const CompilerType &comp_type) {
 
   if (!die)
     return false;
@@ -633,7 +641,7 @@ bool DWARFASTParserLegacy::CompleteTypeFromDWARF(
     if (die.HasChildren())
       ParseChildMembers(die, comp_type);
 
-    m_ast.lock()->CompleteStructType(comp_type);
+    m_ast.CompleteStructType(comp_type);
     return true;
   }
   return false;
@@ -663,7 +671,7 @@ size_t DWARFASTParserLegacy::ParseChildParameters(
 
 size_t DWARFASTParserLegacy::ParseChildMembers(
     const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
-    CompilerType &struct_compiler_type) {
+    const CompilerType &struct_compiler_type) {
   size_t member_idx = 0;
 
   for (lldb_private::plugin::dwarf::DWARFDIE die = parent_die.GetFirstChild();
@@ -709,7 +717,7 @@ size_t DWARFASTParserLegacy::ParseChildMembers(
       Type *member_type = die.ResolveTypeUID(encoding_uid.Reference());
       if (member_type) {
         CompilerType member_full_type = member_type->GetFullCompilerType();
-        m_ast.lock()->AddFieldToStruct(struct_compiler_type, ConstString(name),
+        m_ast.AddFieldToStruct(struct_compiler_type, ConstString(name),
                                member_full_type, member_offset_in_bits);
       }
       ++member_idx;

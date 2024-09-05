@@ -126,6 +126,9 @@ bool CompilerType::GetPtrAuthAddressDiversity() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetPtrAuthAddressDiversity(m_type);
+  return false;
+}
+
 bool CompilerType::IsCStringType(uint32_t &length) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())

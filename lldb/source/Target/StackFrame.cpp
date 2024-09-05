@@ -659,7 +659,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   }
 
   llvm::StringRef type_name(valobj_sp->GetTypeName().GetStringRef());
-  const bool is_bit_type = type_name.startswith("BIT ");
+  const bool is_bit_type = type_name.starts_with("BIT ");
 
   // We are dumping at least one child
   while (!var_expr.empty()) {
@@ -808,7 +808,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       }
 
       if (var_expr.find_first_of(':') != llvm::StringRef::npos) {
-        error.SetErrorString("member select with length not supported.");
+        error = Status::FromErrorString("member select with length not supported.");
         return ValueObjectSP();
       }
 
@@ -842,7 +842,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       // index correction of legacy languages.
       if (is_sep_mem_select) {
         if (child_index < 1) {
-          error.SetErrorString("invalid index.");
+          error = Status::FromErrorString("invalid index.");
           return ValueObjectSP();
         }
         child_index -= 1;
@@ -1208,7 +1208,7 @@ DWARFExpressionList *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
 bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_cfa_is_valid) {
-    m_static_link_error.SetErrorString(
+    m_static_link_error = Status::FromErrorString(
         "No static link available for this historical stack frame.");
     return false;
   }
@@ -1228,18 +1228,18 @@ bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
                 exe_ctx.GetTargetPtr());
 
       if (!m_sc.function->GetStaticLinkExpression().Evaluate(
-              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr,
-              expr_value, &m_static_link_error)) {
+              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr)) {
+              // expr_value, &m_static_link_error)) {
         // We should really have an error if evaluate returns, but in case we
         // don't, lets set the error to something at least.
         if (m_static_link_error.Success())
-          m_static_link_error.SetErrorString(
+          m_static_link_error = Status::FromErrorString(
               "Evaluation of the static link expression failed.");
       } else {
         m_static_link = expr_value.ResolveValue(&exe_ctx);
       }
     } else {
-      m_static_link_error.SetErrorString("No function in symbol context.");
+      m_static_link_error = Status::FromErrorString("No function in symbol context.");
     }
   }
 
@@ -1251,14 +1251,11 @@ bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
   return m_static_link_error.Success();
 }
 
-DWARFExpressionList *StackFrame::GetStaticLinkExpression(Status *error_ptr) {
+DWARFExpressionList *StackFrame::GetStaticLinkExpression(Status &error) {
   if (!m_sc.function) {
-    if (error_ptr) {
-      error_ptr->SetErrorString("No function in symbol context.");
-    }
+      error = Status::FromErrorString("No function in symbol context.");
     return nullptr;
   }
-
   return &m_sc.function->GetStaticLinkExpression();
 }
 
@@ -1293,7 +1290,10 @@ ValueObjectSP StackFrame::GetValueObjectForFrameAggregateVariable(
   if (result)
     return result;
 
-  for (size_t index = 0; index < valobj_sp->GetNumChildren(); ++index) {
+  uint32_t num_children = valobj_sp->GetNumChildren().get(); 
+  // for (size_t index = 0; index < valobj_sp->GetNumChildren(); ++index) {
+  for (uint32_t index = 0; index < num_children; ++index) {
+
     ValueObjectSP child = valobj_sp->GetChildAtIndex(index, true);
     if (!child)
       continue;

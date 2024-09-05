@@ -174,24 +174,27 @@ bool ValueObjectVariable::UpdateValue() {
     Value old_value(m_value);
     llvm::Expected<Value> maybe_value = expr_list.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
                                  nullptr, nullptr);
-    if (maybe_value) {
+    if (maybe_value)
       m_value = *maybe_value;
 
     CompilerType comp_type(GetCompilerType());
     const bool is_dynamic = (comp_type.GetTypeInfo() & lldb::eTypeIsDynamic);
 
     if (is_dynamic && maybe_value) {
-      DWARFExpression alloc_expr = comp_type.DynGetAllocated();
+      DWARFExpressionList alloc_expr = comp_type.DynGetAllocated();
       if (alloc_expr.IsValid()) {
         Value obj_addr(m_value);
         Value allocated;
+      // if (!alloc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
+      //                          nullptr, &obj_addr, allocated)) {
       if (!alloc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
-                               nullptr, &obj_addr, allocated, &m_error)) {
-        m_error.SetErrorString("dynamic variable allocated attribute read error");
-        return m_error.maybe_value();
+                               nullptr, &obj_addr)) {
+        m_error = Status::FromErrorString("dynamic variable allocated attribute read error");
+        //return m_error.maybe_value();
+        return m_error.Success();
       }
       if (allocated.ResolveValue(&exe_ctx).IsZero()) {
-        m_error.SetErrorString("dynamic variable not allocated");
+        m_error = Status::FromErrorString("dynamic variable not allocated");
         return false;
               }
       }
@@ -199,13 +202,14 @@ bool ValueObjectVariable::UpdateValue() {
 
     if (maybe_value) {
       if (is_dynamic) {
-        DWARFExpression loc_expr = comp_type.DynGetLocation();
+        DWARFExpressionList loc_expr = comp_type.DynGetLocation();
       if (loc_expr.IsValid()) {
         Value obj_addr(m_value);
         if (!loc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
-                               nullptr, &obj_addr, m_value, &m_error)) {
-          m_error.SetErrorString("dynamic variable location read error");
-          return m_error.maybe_value();
+                               nullptr, &obj_addr)) {
+          m_error = Status::FromErrorString("dynamic variable location read error");
+          //return m_error.maybe_value();
+          return m_error.Success();
           }
           CompilerType base_type = comp_type.DynGetBaseType();
           bool base_type_is_dyn_arr = (base_type.GetTypeInfo()
@@ -214,15 +218,18 @@ bool ValueObjectVariable::UpdateValue() {
             DWARFExpressionList count_exp = base_type.DynArrGetCountExp();
             if (count_exp.IsValid()) {
               Value length_value;
+              //if (!count_exp.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
+              //                        nullptr, &obj_addr, length_value)) {
               if (!count_exp.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
-                                      nullptr, &obj_addr, length_value, &m_error)) {
-                m_error.SetErrorString("dynamic array count read error");
+                                      nullptr, &obj_addr)) {
+
+                m_error = Status::FromErrorString("dynamic array count read error");
                 return m_error.Success();
               }
               auto m_value = length_value.ResolveValue(&exe_ctx);
               uint64_t length = m_value.UInt();
               if (!base_type.DynArrUpdateLength(length)) {
-                m_error.SetErrorString("dynamic array count update error");
+                m_error = Status::FromErrorString("dynamic array count update error");
                 return m_error.Success();
               }
             }
@@ -374,8 +381,6 @@ void ValueObjectVariable::DoUpdateChildrenAddressType(ValueObject &valobj) {
     break;
   }
 }
-
-
 
 bool ValueObjectVariable::IsInScope() {
   const ExecutionContextRef &exe_ctx_ref = GetExecutionContextRef();

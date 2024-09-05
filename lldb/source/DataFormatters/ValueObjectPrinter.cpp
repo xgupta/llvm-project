@@ -369,10 +369,10 @@ void ValueObjectPrinter::GetValueSummaryError(std::string &value,
   bool skip_summary = false;
   if (m_options.m_pointer_as_array)
     valobj.GetValueAsCString(lldb::eFormatDefault, value);
-  else if (format != eFormatDefault && format != valobj.GetFormat())
+  else if (format != eFormatDefault && format != valobj.GetFormat()) {
     valobj.GetValueAsCString(format, value);
     skip_summary = true;
-
+   }
   else {
     const char *val_cstr = valobj.GetValueAsCString();
     if (val_cstr)
@@ -842,7 +842,7 @@ llvm::Error ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
        (m_options.m_pointer_as_array) || m_options.m_show_location)
           ? false
           : ((m_options.m_format == eFormatDefault) &&
-             DataVisualization::ShouldPrintAsOneLiner(*m_valobj));
+             DataVisualization::ShouldPrintAsOneLiner(valobj));
 
   if (print_children && IsInstancePointer()) {
     uint64_t instance_ptr_value = valobj.GetValueAsUnsigned(0);

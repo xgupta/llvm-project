@@ -1115,7 +1115,7 @@ private:
           unsigned Line, Metadata *Scope, Metadata *BaseType,
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
                     std::optional<unsigned> DWARFAddressSpace,
-                    std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
+                    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
           Metadata *ExtraData, Metadata *Annotations, Metadata *Location,
           Metadata *Allocated, StorageType Storage, bool ShouldCreate = true);
 
