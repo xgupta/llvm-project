@@ -107,7 +107,7 @@ struct COFFShortExport {
   /// Specifies EXPORTAS name. In a .def file, this is "bar" in
   /// "EXPORTS\nfoo EXPORTAS bar".
   std::string ExportAs;
-  
+
   uint16_t Ordinal = 0;
   bool Noname = false;
   bool Data = false;

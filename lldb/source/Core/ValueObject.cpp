@@ -464,7 +464,6 @@ llvm::Expected<uint32_t> ValueObject::GetNumChildren(uint32_t max) {
     else
       return num_children_or_err;
   }
-
   return m_children.GetChildrenCount();
 }
 
@@ -1738,6 +1737,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
 
   uint64_t count = 0;
   const Encoding encoding = GetCompilerType().GetEncoding(count);
+
   const size_t byte_size = GetByteSize().value_or(0);
 
   Value::ValueType value_type = m_value.GetValueType();

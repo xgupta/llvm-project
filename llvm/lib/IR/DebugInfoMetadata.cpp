@@ -674,7 +674,7 @@ DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIBasicType, (Tag, Name, PictureString, SizeInBits,
                                       AlignInBits, Encoding, Flags, DAInfo));
-  Metadata *Ops[] = { nullptr, nullptr, Name, PictureString };
+  Metadata *Ops[] = {nullptr, nullptr, Name, PictureString};
   DEFINE_GETIMPL_STORE(DIBasicType,
                       
                        (Tag, SizeInBits, AlignInBits, Encoding, Flags, DAInfo),  Ops);
@@ -2259,7 +2259,7 @@ DIExpression::isConstant() const {
   // Recognize signed and unsigned constants.
   // An signed constants can be represented as DW_OP_consts C DW_OP_stack_value
   // (DW_OP_LLVM_fragment of Len).
-  // l
+  //
   // An unsigned constant can be represented as
   // DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment of Len).
 

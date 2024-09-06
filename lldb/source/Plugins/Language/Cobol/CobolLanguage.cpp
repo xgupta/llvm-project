@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Threading.h"
 
@@ -154,8 +153,6 @@ bool formatters::RaincodeStringSummaryProvider(ValueObject &valobj,
   ExecutionContextScope *exe_scope = process_sp.get();
   TargetCharsetReader Conv(exe_scope->CalculateTarget());
   if (!Conv.IsValid()) {
-    // Host::SystemLog(StringRef(std::string("WARNING: Invalid target charset ") + 
-    //                 std::string(Conv.getTargetFormat().GetCString()) + std::string("\n")));
     Host::SystemLog(lldb::eSeverityWarning, StringRef(std::string("WARNING: Invalid target charset ") + 
                     std::string(Conv.getTargetFormat().GetCString()) + std::string("\n")));
     return false;

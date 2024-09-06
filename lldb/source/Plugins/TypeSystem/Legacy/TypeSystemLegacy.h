@@ -10,8 +10,6 @@
 #ifndef liblldb_TypeSystemLegacy_h_
 #define liblldb_TypeSystemLegacy_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <memory>
 #include <set>
@@ -24,8 +22,6 @@
 #include "llvm/Support/Errno.h"
 #endif
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"

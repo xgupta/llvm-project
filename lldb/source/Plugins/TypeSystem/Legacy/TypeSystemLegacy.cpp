@@ -1,4 +1,5 @@
-//===-- TypeSystemLegacy.h -------------------------------------*- C++ -*-===//
+//===-- TypeSystemLegacy.cpp -------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -1488,21 +1489,14 @@ llvm::Expected<CompilerType> TypeSystemLegacy::GetChildCompilerTypeAtIndex(
     bool &child_is_base_class, bool &child_is_deref_of_parent,
     ValueObject *valobj, uint64_t &language_flags) {
 
-  //const bool idx_is_valid =
-  //    idx < GetNumChildren(type, omit_empty_base_classes, exe_ctx);
-
-auto num_children_or_error = GetNumChildren(type, omit_empty_base_classes, exe_ctx);
-if (!num_children_or_error) {
-    // Handle the error appropriately.
-    //llvm::errs() << "Error: " << num_children_or_error.takeError() << "\n";
+  auto num_children_or_error =
+      GetNumChildren(type, omit_empty_base_classes, exe_ctx);
+  if (!num_children_or_error) {
     return num_children_or_error.takeError();
-}
+  }
 
-uint32_t num_children = *num_children_or_error;
-const bool idx_is_valid = idx < num_children;
-
-  //const uint32_t num_children = *GetNumChildren(type, omit_empty_base_classes, exe_ctx);
-  //const bool idx_is_valid = idx < num_children;
+  uint32_t num_children = *num_children_or_error;
+  const bool idx_is_valid = idx < num_children;
 
   auto get_exe_scope = [&exe_ctx]() {
     return exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
@@ -1517,7 +1511,7 @@ const bool idx_is_valid = idx < num_children;
     CompilerType pointee_type(GetPointeeType(type));
 
     if (transparent_pointers && pointee_type.IsAggregateType()) {
-      // ToDO
+      // TODO
       return CompilerType();
     } else {
       child_is_deref_of_parent = true;
@@ -1915,12 +1909,9 @@ TypeSystemSP TypeSystemLegacy::CreateInstance(lldb::LanguageType language,
 
     if (module) {
       arch = module->GetArchitecture();
-      //ast_sp = std::shared_ptr<TypeSystemLegacy>(new TypeSystemLegacy);
       ast_sp = std::make_shared<TypeSystemLegacy>();
     } else if (target) {
       arch = target->GetArchitecture();
-      // ast_sp = std::shared_ptr<TypeSystemLegacy>(
-      //     new TypeSystemLegacy(target->shared_from_this()));
       ast_sp = std::make_shared<TypeSystemLegacy>(target->shared_from_this());
     }
 
@@ -1965,8 +1956,6 @@ void TypeSystemLegacy::Finalize() {}
 lldb_private::plugin::dwarf::DWARFASTParser *
 TypeSystemLegacy::GetDWARFParser() {
   if (!m_dwarf_ast_parser_ap)
-    //m_dwarf_ast_parser_ap.reset(new DWARFASTParserLegacy(
-    //    std::static_pointer_cast<TypeSystemLegacy>(weak_from_this().lock())));
     m_dwarf_ast_parser_ap.reset(new DWARFASTParserLegacy(
     *std::static_pointer_cast<TypeSystemLegacy>(weak_from_this().lock())));
 
@@ -1997,7 +1986,7 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream &s,
 
   if (IsAggregateType(type)) {
     /*
-    // FIX me
+    // FIXME
     ExecutionContext exe_ctx(exe_scope);
     DumpValue(type, &exe_ctx, s, format, data, byte_offset, byte_size,
               bitfield_bit_size, bitfield_bit_offset, true, true, true, 0);
@@ -2194,7 +2183,6 @@ UserExpression *TypeSystemLegacy::GetUserExpression(
     Log *log = GetLog(LLDBLog::Expressions);
 
     LLDB_LOGF(log, "LegacyTypeSystem: UserExpression %s for %s.\n",
-              // expr.str().c_str(), Language::GetNameForLanguageType(language));
               expr.str().c_str(), language.GetDescription().data());
 
     switch (language) {
@@ -2203,7 +2191,6 @@ UserExpression *TypeSystemLegacy::GetUserExpression(
       sprintf(
           buffer,
           "LegacyTypeSystem: UserExpression for language %s not supported.\n",
-          // Language::GetNameForLanguageType(language));
           language.GetDescription().data());
       Host::SystemLog(lldb::eSeverityError, std::string(buffer));
       break;

@@ -543,11 +543,11 @@ DWARF:
     DataExtractor extractor;
     std::vector<Value> stack;
     expr.GetExpressionData(extractor);
-    return DWARFExpression::Evaluate(
-        &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor, dwarf_cu,
-        lldb::eRegisterKindLLDB,
-        /*initial_value_ptr*/ nullptr,
-        /*object_address_ptr*/ nullptr, stack);
+    return DWARFExpression::Evaluate(&exe_ctx, /*reg_ctx*/ nullptr,
+                                     /*module_sp*/ {}, extractor, dwarf_cu,
+                                     lldb::eRegisterKindLLDB,
+                                     /*initial_value_ptr*/ nullptr,
+                                     /*object_address_ptr*/ nullptr, stack);
   };
 
   // DW_OP_addrx takes a single leb128 operand, the index in the addr table:

@@ -164,7 +164,6 @@ include_directories( ${LLVM_INCLUDE_DIRS} )
 set(LLVM_LINK_COMPONENTS
   BitReader
   BitWriter
-  IRReader
   Core
   IRReader
   Support

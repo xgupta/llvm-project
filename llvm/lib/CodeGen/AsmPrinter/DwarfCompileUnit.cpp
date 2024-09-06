@@ -277,7 +277,7 @@ void DwarfCompileUnit::addLocationAttribute(
       DwarfExpr->addFragmentOffset(Expr);
     }
 
-    // Optimize me
+    // TODO: Optimize me
     SmallVector<DIE*, 4> refs;
     if (Expr->getNumElements()) {
       for(const Metadata* ref : Expr->operands()) {
@@ -595,13 +595,8 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
   // Add Static link if exists.
   addStaticLink(*SPDie, dwarf::DW_AT_static_link, SP->getStaticLinkExpr());
 
-  // Add Static Link recv expression if exists, RC extension
-  // addStaticLink(*SPDie, dwarf::DW_AT_RAINCODE_static_link_recv,
-  //               SP->getStaticLinkRecvExpr());
-
   addStaticLink(*SPDie, dwarf::DW_AT_RAINCODE_frame_base,
                 SP->getRcFrameBaseExpr());
-                // SP->getStaticLinkExpr());
   return *SPDie;
 }
 
@@ -840,8 +835,8 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     }
     return;
   }
-  // If any of the location entries are registers with the value 0, then the
-  // location is undefined.
+  // If any of the location entries are registers with the value 0,
+  // then the location is undefined.
   if (any_of(DVal->getLocEntries(), [](const DbgValueLocEntry &Entry) {
         return Entry.isLocation() && !Entry.getLoc().getReg();
       }))
@@ -1699,7 +1694,7 @@ void DwarfCompileUnit::applyCommonDbgVariableAttributes(const DbgVariable &Var,
   if (!Name.empty())
     addString(VariableDie, dwarf::DW_AT_name, Name);
   const auto *DIVar = Var.getVariable();
-  if (DIVar) { 
+  if (DIVar) {
     if (uint32_t AlignInBytes = DIVar->getAlignInBytes())
       addUInt(VariableDie, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
               AlignInBytes);

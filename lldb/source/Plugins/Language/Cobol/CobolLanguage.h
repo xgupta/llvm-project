@@ -10,10 +10,8 @@
 #ifndef liblldb_CobolLanguage_h_
 #define liblldb_CobolLanguage_h_
 
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 
-// Project includes
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"

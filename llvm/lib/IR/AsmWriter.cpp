@@ -2025,10 +2025,10 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
 
   auto *Count = N->getRawCountNode();
   if (auto *CE = dyn_cast_or_null<ConstantAsMetadata>(Count)) {
-   auto *CV = cast<ConstantInt>(CE->getValue());
-   Printer.printInt("count", CV->getSExtValue(), /* ShouldSkipZero */ false);
-  }
-  else
+    auto *CV = cast<ConstantInt>(CE->getValue());
+    Printer.printInt("count", CV->getSExtValue(),
+                     /* ShouldSkipZero */ false);
+  } else
     Printer.printMetadata("count", N->getRawCountNode(),
                           /*ShouldSkipNull */ true);
 
@@ -2137,6 +2137,7 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
 
   if (N->hasDecimalInfo()) {
     Printer.printString("pic", N->getPictureString());
+
     if (const auto &digits = N->getDigitCount())
       Printer.printInt("digits", *digits);
 

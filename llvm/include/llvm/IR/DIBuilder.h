@@ -1123,15 +1123,8 @@ namespace llvm {
       N->replaceAllUsesWith(Replacement);
       return Replacement;
     }
-    
+
     /// Updates the RcFrameBase of a DISubprogram SP
-    /// 
-    /// 
-    /// 
-    ///
-    /// 
-    /// 
-    /// 
     void updateDISubprogramRaincodeFrameBase(DISubprogram *SP,
                                              llvm::Value *Storage);
   };

@@ -539,7 +539,6 @@ ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
     return form_value.Unsigned();
 
   Value initialValue(0);
-  //Value memberOffset(0);
   std::vector<Value> stack;
   stack.push_back(Value(0));
   const DWARFDataExtractor &debug_info_data = die.GetData();

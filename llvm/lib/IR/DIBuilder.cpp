@@ -336,23 +336,10 @@ DIDerivedType *DIBuilder::createPtrAuthQualifiedType(
 DIDerivedType *DIBuilder::createDynamicType(DIType *BTy,
                                             DIExpression *Location,
                                             DIExpression *Allocated) {
-
-return DIDerivedType::get(
-    VMContext,
-    dwarf::DW_TAG_dynamic_type,
-    MDString::get(VMContext, ""), // Convert the empty string to MDString*
-    nullptr,                      // Assuming the other arguments are correct
-    0, nullptr, BTy,
-    0, 0, 0,                      // Example arguments; replace as needed
-    std::nullopt,                 // Example: DWARFAddressSpace
-    std::nullopt,                 // Example: PtrAuthData
-    DINode::FlagZero             // Correct DIFlags argument
-);
-
-  //return DIDerivedType::get(VMContext, dwarf::DW_TAG_dynamic_type, "", nullptr,
-  //                          0, nullptr, BTy, 0, 0, 0, std::nullopt, DINode::FlagZero,
-  //                          nullptr /*ExtraData*/, nullptr /*Annotations*/,
-  //                          Location, Allocated);
+  return DIDerivedType::get(VMContext, dwarf::DW_TAG_dynamic_type,
+                            MDString::get(VMContext, ""), nullptr, 0, nullptr,
+                            BTy, 0, 0, 0, std::nullopt, std::nullopt,
+                            DINode::FlagZero);
 }
 
 DIDerivedType *

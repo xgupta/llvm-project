@@ -385,6 +385,7 @@ public:
   /// supports ptrauth modifiers, else return an invalid type. Note that this
   /// does not check if this type is a pointer.
   CompilerType AddPtrAuthModifier(uint32_t payload) const;
+
   /// Dynamic type get base type
   CompilerType DynGetBaseType() const;
 

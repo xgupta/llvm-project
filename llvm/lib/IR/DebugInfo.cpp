@@ -1147,8 +1147,8 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction(
     LLVMBool IsLocalToUnit, LLVMBool IsDefinition,
     unsigned ScopeLine, LLVMDIFlags Flags, LLVMBool IsOptimized) {
   return wrap(unwrap(Builder)->createFunction(
-      unwrapDI<DIScope>(Scope), { Name, NameLen },
-      { LinkageName, LinkageNameLen }, unwrapDI<DIFile>(File), LineNo,
+      unwrapDI<DIScope>(Scope), {Name, NameLen},
+      {LinkageName, LinkageNameLen}, unwrapDI<DIFile>(File), LineNo,
       unwrapDI<DISubroutineType>(Ty), ScopeLine, map_from_llvmDIFlags(Flags),
       pack_into_DISPFlags(IsLocalToUnit, IsDefinition, IsOptimized),
       nullptr, nullptr, nullptr));
@@ -1160,11 +1160,11 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction2(
     LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
     LLVMBool IsLocalToUnit, LLVMBool IsDefinition, unsigned ScopeLine,
     LLVMDIFlags Flags, LLVMBool IsOptimized, LLVMBool IsDescList,
-    // LLVMBool IsDescLoc, LLVMMetadataRef StaticLinkExpr) {
-    LLVMBool IsDescLoc, LLVMMetadataRef StaticLinkExpr, LLVMMetadataRef RcFrameBaseExpr) {
+    LLVMBool IsDescLoc, LLVMMetadataRef StaticLinkExpr,
+    LLVMMetadataRef RcFrameBaseExpr) {
   return wrap(unwrap(Builder)->createFunction(
-      unwrapDI<DIScope>(Scope), { Name, NameLen },
-      { LinkageName, LinkageNameLen }, unwrapDI<DIFile>(File), LineNo,
+      unwrapDI<DIScope>(Scope), {Name, NameLen},
+      {LinkageName, LinkageNameLen}, unwrapDI<DIFile>(File), LineNo,
       unwrapDI<DISubroutineType>(Ty), ScopeLine, map_from_llvmDIFlags(Flags),
       pack_into_DISPFlags(IsLocalToUnit, IsDefinition, IsOptimized, IsDescList,
                           IsDescLoc),

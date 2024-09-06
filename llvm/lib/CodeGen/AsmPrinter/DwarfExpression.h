@@ -97,21 +97,13 @@ public:
 
   bool isUnknownLocation() const { return LocationKind == Unknown; }
 
-  bool isMemoryLocation() const {
-    return LocationKind == Memory;
-  }
+  bool isMemoryLocation() const { return LocationKind == Memory; }
 
-  bool isRegisterLocation() const {
-    return LocationKind == Register;
-  }
+  bool isRegisterLocation() const { return LocationKind == Register; }
 
-  bool isImplicitLocation() const {
-    return LocationKind == Implicit;
-  }
+  bool isImplicitLocation() const { return LocationKind == Implicit; }
 
-  bool isEntryValue() const {
-    return LocationFlags & EntryValue;
-  }
+  bool isEntryValue() const { return LocationFlags & EntryValue; }
 
   bool isIndirect() const { return LocationFlags & Indirect; }
 
@@ -300,6 +292,11 @@ public:
   void addExpression(DIExpressionCursor &&Expr,
                      unsigned FragmentOffsetInBits = 0,
                      SmallVectorImpl<DIE*> *DIERefOffset = nullptr);
+
+  /// Emit all remaining operations in the DIExpressionCursor.
+  /// DW_OP_LLVM_arg operations are resolved by calling (\p InsertArg).
+  //
+  /// \return false if any call to (\p InsertArg) returns false.
   bool
   addExpression(DIExpressionCursor &&Expr,
                 llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg,

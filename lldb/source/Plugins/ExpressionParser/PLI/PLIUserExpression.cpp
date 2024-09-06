@@ -64,11 +64,6 @@ static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
     bool child_is_deref_of_parent;
     uint64_t language_flags;
 
-    //CompilerType child_type = comp_type->GetChildCompilerTypeAtIndex(
-    //    nullptr, i, true, true, true, child_name, child_byte_size,
-    //    child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-    //    child_is_base_class, child_is_deref_of_parent, nullptr, language_flags);
-
     llvm::Expected<CompilerType> expected_child_type = comp_type->GetChildCompilerTypeAtIndex(
     nullptr, i, true, true, true, child_name, child_byte_size,
     child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
@@ -646,7 +641,7 @@ PLIUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   SourceLanguage language = target->GetLanguage();
   m_interpreter->set_use_dynamic(options.GetUseDynamic());
   ValueObjectSP result_val_sp = m_interpreter->Evaluate(exe_ctx);
-  Status err = m_interpreter->error();
+  Status err = std::move(m_interpreter->error());
   m_interpreter.reset();
 
   if (!result_val_sp) {

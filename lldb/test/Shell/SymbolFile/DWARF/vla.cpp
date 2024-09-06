@@ -58,7 +58,7 @@ int main() {
   // CHECK:      (lldb) frame var vla10
   // CHECK-NEXT: (int[1][0]) vla10 = ([0] = int[0]
 
-  int n = 0;
+  int n = 3;
   int vlaN[n];
   for (int i = 0; i < n; ++i)
     vlaN[i] = -i;
@@ -66,7 +66,7 @@ int main() {
   // CHECK:      (lldb) frame var vlaN
   // CHECK-NEXT: (int[]) vlaN = ([0] = 0, [1] = -1, [2] = -2)
 
-  int m = 0;
+  int m = 2;
   int vlaNM[n][m];
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < m; ++j)

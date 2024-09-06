@@ -41,12 +41,12 @@ void DwarfExpression::emitConstu(uint64_t Value) {
 }
 
 void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
- assert(DwarfReg >= 0 && "invalid negative dwarf register number");
- assert((isUnknownLocation() || isRegisterLocation()) &&
-        "location description already locked down");
- LocationKind = Register;
- if (DwarfReg < 32) {
-   emitOp(dwarf::DW_OP_reg0 + DwarfReg, Comment);
+  assert(DwarfReg >= 0 && "invalid negative dwarf register number");
+  assert((isUnknownLocation() || isRegisterLocation()) &&
+         "location description already locked down");
+  LocationKind = Register;
+  if (DwarfReg < 32) {
+    emitOp(dwarf::DW_OP_reg0 + DwarfReg, Comment);
   } else {
     emitOp(dwarf::DW_OP_regx, Comment);
     emitUnsigned(DwarfReg);

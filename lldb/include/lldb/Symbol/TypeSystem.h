@@ -418,7 +418,7 @@ public:
                               bool expand_pack);
 
   // Dumping types
- 
+
 #ifndef NDEBUG
   /// Convenience LLVM-style dump method for use in the debugger only.
   LLVM_DUMP_METHOD virtual void

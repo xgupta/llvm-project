@@ -554,10 +554,12 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 
   size_t separator_idx = 0;
   // TODO needs better handling
-  bool LegacyLangauage = (GetLanguage() == eLanguageTypeCobol85) ||
-                         (GetLanguage() == eLanguageTypeCobol74) ||
-                         (GetLanguage() == eLanguageTypePLI) ||
-                         (GetLanguage() == eLanguageTypeFortran90);
+  SourceLanguage language =
+      GetLanguage(); // Assume GetLanguage() returns LanguageType.
+  bool LegacyLangauage = (language == eLanguageTypeCobol85) ||
+                         (language == eLanguageTypeCobol74) ||
+                         (language == eLanguageTypePLI) ||
+                         (language == eLanguageTypeFortran90);
 
   if (LegacyLangauage)
     separator_idx = var_expr.find_first_of(".[(=+~|&^%#@!/?,<>{}");
@@ -718,7 +720,6 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       var_expr = var_expr.drop_front(); // Remove the '-'
       [[fallthrough]];
     case '.': {
-      // FIXME.
       var_expr = var_expr.drop_front(); // Remove the '.' or '>'
       separator_idx = LegacyLangauage ? var_expr.find_first_of(".[")
                                       : var_expr.find_first_of(".-[");
@@ -839,7 +840,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         return ValueObjectSP();
       }
 
-      // index correction of legacy languages.
+      // index correction for legacy languages.
       if (is_sep_mem_select) {
         if (child_index < 1) {
           error = Status::FromErrorString("invalid index.");
@@ -1229,7 +1230,6 @@ bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
 
       if (!m_sc.function->GetStaticLinkExpression().Evaluate(
               &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr)) {
-              // expr_value, &m_static_link_error)) {
         // We should really have an error if evaluate returns, but in case we
         // don't, lets set the error to something at least.
         if (m_static_link_error.Success())
@@ -1247,7 +1247,7 @@ bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
     static_link = m_static_link;
 
   if (error_ptr)
-    *error_ptr = m_static_link_error;
+    *error_ptr = std::move(m_static_link_error);
   return m_static_link_error.Success();
 }
 
@@ -1934,10 +1934,10 @@ lldb::ValueObjectSP StackFrame::FindVariable(ConstString name) {
 
     /*
       This change is in reference to 1156032652.
-      `Block::AppendVariable` traverse the parent block-chain and appends all the in-scope
-      variables to `variable_list`, it may also append file-global variables as the top-most block
-      must be the file itself.
-      I guess that doesn't work for Legacy Languages as the parent block is empty.
+      `Block::AppendVariable` traverse the parent block-chain and appends all
+      the in-scope variables to `variable_list`, it may also append file-global
+      variables as the top-most block must be the file itself. That doesn't work
+      for Legacy Languages as the parent block is empty.
     */
     if (LegacyLangauage) {
       VariableListSP var_list_sp(GetInScopeVariableList(true));

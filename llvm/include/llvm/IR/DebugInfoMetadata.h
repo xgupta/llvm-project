@@ -1114,8 +1114,8 @@ private:
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
           unsigned Line, Metadata *Scope, Metadata *BaseType,
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-                    std::optional<unsigned> DWARFAddressSpace,
-                    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+          std::optional<unsigned> DWARFAddressSpace,
+          std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
           Metadata *ExtraData, Metadata *Annotations, Metadata *Location,
           Metadata *Allocated, StorageType Storage, bool ShouldCreate = true);
 
@@ -1278,41 +1278,7 @@ private:
     this->RuntimeLang = RuntimeLang;
     DIType::mutate(Tag, Line, SizeInBits, AlignInBits, OffsetInBits, Flags);
   }
-/*
-  static DICompositeType *
-  getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, Metadata *File,
-          unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
-          uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
-          DINodeArray Elements, unsigned RuntimeLang, DIType *VTableHolder,
-          DITemplateParameterArray TemplateParams, StringRef Identifier,
-          DIDerivedType *Discriminator, Metadata *DataLocation,
-          Metadata *Associated, Metadata *Allocated,  Metadata *Rank,
-          DINodeArray Annotations, StorageType Storage, bool ShouldCreate = true) {
-    return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
-                   Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
-                   Flags, VendorDIFlagZero, Elements.get(), RuntimeLang,
-                   VTableHolder, TemplateParams.get(),
-                   getCanonicalMDString(Context, Identifier), Discriminator,
-                   DataLocation, Associated, Allocated, Rank, Annotations.get(),
-                   Storage, ShouldCreate);
-  }
 
-  static DICompositeType *
-  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
-          unsigned Line, Metadata *Scope, Metadata *BaseType,
-          uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-          DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
-          Metadata *VTableHolder, Metadata *TemplateParams,
-          MDString *Identifier, Metadata *Discriminator, Metadata *DataLocation,
-          Metadata *Associated, Metadata *Allocated, Metadata *Rank,
-          Metadata *Annotations, StorageType Storage, bool ShouldCreate = true) {
-    return getImpl(Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                   AlignInBits, OffsetInBits, Flags, VendorDIFlagZero, Elements,
-                   RuntimeLang, VTableHolder, TemplateParams, Identifier,
-                   Discriminator, DataLocation, Associated, Allocated, Rank, 
-                   Annotations, Storage, ShouldCreate);
-  }
-*/
   static DICompositeType *getImpl(
       LLVMContext &Context, unsigned Tag, StringRef Name, Metadata *File,
       unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
@@ -1865,7 +1831,6 @@ class DISubprogram : public DILocalScope {
   unsigned Line;
   unsigned ScopeLine;
   unsigned VirtualIndex;
-  // DIExpression *RcFrameBase;
 
   /// In the MS ABI, the implicit 'this' parameter is adjusted in the prologue
   /// of method overrides from secondary bases by this amount. It may be
@@ -2104,9 +2069,7 @@ public:
   DIExpression *getStaticLinkExpr() const {
     return dyn_cast_or_null<DIExpression>(getRawStaticLinkExpr());
   }
-  // DIExpression *getStaticLinkRecvExpr() const {
-  //   return dyn_cast_or_null<DIExpression>(getRawStaticLinkRecvExpr());
-  // }
+
   DIExpression *getRcFrameBaseExpr() const {
     return dyn_cast_or_null<DIExpression>(getRawRcFrameBaseExpr());
   }

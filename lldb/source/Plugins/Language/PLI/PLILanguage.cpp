@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Threading.h"
 

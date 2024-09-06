@@ -840,7 +840,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   if (opcodes.GetByteSize() == 0)
     return llvm::createStringError(
         "no location, value may have been optimized out");
-//  std::vector<Value> stack;
 
   Process *process = nullptr;
   StackFrame *frame = nullptr;
@@ -2352,23 +2351,17 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 }
 
 llvm::Error DWARFExpression::EvaluateCall(
-    ExecutionContext *exe_ctx,
-    RegisterContext *reg_ctx,
-    ModuleSP module_sp,
-    const DWARFUnit *dwarf_cu,
-    dw_offset_t die_ref_offset,
-    const RegisterKind reg_kind,
-    const Value *initial_value_ptr,
-    const Value *object_address_ptr,
-    std::vector<Value> &stack) {
+    ExecutionContext *exe_ctx, RegisterContext *reg_ctx, ModuleSP module_sp,
+    const DWARFUnit *dwarf_cu, dw_offset_t die_ref_offset,
+    const RegisterKind reg_kind, const Value *initial_value_ptr,
+    const Value *object_address_ptr, std::vector<Value> &stack) {
 
   // Retrieve the DWARF DIE for the given offset
   DWARFDIE ref_die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(die_ref_offset);
   if (!ref_die.IsValid()) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
-        "Unable to find DW_OP_call[2|4] reference = %" PRIu32,
-        die_ref_offset);
+        "Unable to find DW_OP_call[2|4] reference = %" PRIu32, die_ref_offset);
   }
 
   // Retrieve the attribute value from the DIE
@@ -2378,16 +2371,17 @@ llvm::Error DWARFExpression::EvaluateCall(
   if (attrib_offset == 0) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
-        "Attribute offset for DW_OP_call[2|4] reference = %" PRIu32 " not found",
+        "Attribute offset for DW_OP_call[2|4] reference = %" PRIu32
+        " not found",
         die_ref_offset);
   }
 
   // Check if the form value is in block form
   if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "DW_OP_call[2|4] to reference = %" PRIu32 " with location list is not supported.",
-        die_ref_offset);
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "DW_OP_call[2|4] to reference = %" PRIu32
+                                   " with location list is not supported.",
+                                   die_ref_offset);
   }
 
   // Extract data for evaluation

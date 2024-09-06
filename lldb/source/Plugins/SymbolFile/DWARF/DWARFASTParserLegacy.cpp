@@ -1,5 +1,4 @@
-//===-- DWARFASTParserLegacy.cpp ---------------------------------*- C++
-//-*-===//
+//===-- DWARFASTParserLegacy.cpp --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -41,8 +40,6 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
-//DWARFASTParserLegacy::DWARFASTParserLegacy(std::weak_ptr<TypeSystemLegacy> ast)
-//    : DWARFASTParser(Kind::DWARFASTParserLegacy), m_ast(ast) {}
 
 DWARFASTParserLegacy::DWARFASTParserLegacy(lldb_private::TypeSystemLegacy &ast)
     : DWARFASTParser(Kind::DWARFASTParserLegacy), m_ast(ast) {}
@@ -271,7 +268,6 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
               uint64_t num_elements = 0;
               for (auto pos = array_info->element_orders.rbegin(); pos != end;
                    ++pos) {
-                // num_elements = *pos;
                 num_elements = pos->value();  // Retrieve the value
                 compiler_type = m_ast.CreateArrayType(
                     type_name_const_str, empty_name, array_element_type,
@@ -290,7 +286,8 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
                     num_elements, isVarString);
                 array_element_type = compiler_type;
                 // if (num_elements)
-                //   array_element_bit_stride *= num_elements;
+                //  array_element_bit_stride *= num_elements;
+                array_element_bit_stride = 2;
               }
             } else
               compiler_type =
@@ -347,7 +344,6 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
         if (type_name_const_str &&
             dwarf->GetUniqueDWARFASTTypeMap().Find(
                 type_name_const_str, die, decl,
-                // byte_size_valid ? byte_size : -1, *unique_ast_entry_ap)) {
                 byte_size_valid ? byte_size : -1, is_forward_declaration)) {
           type_sp = unique_ast_entry_ap->m_type_sp;
           if (type_sp) {
@@ -385,8 +381,7 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
           m_ast.CompleteStructType(compiler_type);
         else if (compiler_type_was_created) {
           // dwarf->GetForwardDeclDIEToCompilerType()[die.GetDIE()] =
-         // dwarf->GetForwardDeclDIEToCompilerType()[die.GetDIE()] =
-              compiler_type.GetOpaqueQualType();
+          //    compiler_type.GetOpaqueQualType();
           dwarf->GetForwardDeclCompilerTypeToDIE().try_emplace(
               compiler_type.GetOpaqueQualType(), *die.GetDIERef());
         }

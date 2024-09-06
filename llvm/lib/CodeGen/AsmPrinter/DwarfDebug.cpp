@@ -197,7 +197,7 @@ void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
 
 void DebugLocDwarfExpression::emitRef(llvm::DIE *Entry, const unsigned ref_size) {
   // Keep duplicate for the time being
-  //BS.EmitULEB128(Idx, Twine(Idx), ULEB128PadSize);
+  // BS.EmitULEB128(Idx, Twine(Idx), ULEB128PadSize);
 }
 
 

@@ -119,20 +119,16 @@ public:
   /// \param[in] reg_set
   ///     The call-frame-info style register kind.
   ///
+  /// \param[in] initial_value_ptr
+  ///     A value to put on top of the interpreter stack before evaluating
+  ///     the expression, if the expression is parametrized.  Can be NULL.
+  ///
   /// \param[in] stack
   ///     interpreter stack for evaluation of dwarf expression. It is shared
   ///     between calls in case of adding/removing entries from stack.
   ///
-  /// \param[in] result
-  ///     A value into which the result of evaluating the expression is
-  ///     to be placed.
-  ///
-  /// \param[in] error_ptr
-  ///     If non-NULL, used to report errors in expression evaluation.
-  ///
-  /// \return
-  ///     True on success; false otherwise.  If error_ptr is non-NULL,
-  ///     details of the failure are provided through it.
+  /// \return An llvm::Expected<Value> that contains the result of the call
+  ///     evaluation on success, or an llvm::Error describing the failure.
   static llvm::Expected<Value>
   Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
                        lldb::ModuleSP module_sp, const DataExtractor &opcodes,

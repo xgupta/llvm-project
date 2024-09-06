@@ -321,9 +321,9 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           // usually the method name without the class or any parameters
           bool is_method = DWARFDIE(&unit, &die).IsMethod();
 
-          if (is_method) {
+          if (is_method)
             set.function_methods.Insert(ConstString(name), ref);
-          } else
+          else
             set.function_basenames.Insert(ConstString(name), ref);
 
           if (!is_method && !mangled_cstr && !is_objc_method)

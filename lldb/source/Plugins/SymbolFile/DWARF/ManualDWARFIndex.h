@@ -179,8 +179,7 @@ private:
     m_set.namespaces.SetNameCaseInsensitive();
   }
 
-  /// The DWARF file which we are indexing. Set to nullptr after the index is
-  /// built.
+  /// The DWARF file which we are indexing.
   SymbolFileDWARF *m_dwarf;
   /// Which dwarf units should we skip while building the index.
   llvm::DenseSet<dw_offset_t> m_units_to_avoid;

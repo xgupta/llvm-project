@@ -79,12 +79,6 @@ ABI Changes in This Version
 
 - Fixed Microsoft name mangling of placeholder, auto and decltype(auto), return types for MSVC 1920+. This change resolves incompatibilities with code compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by earlier versions of Clang unless such code is built with the compiler option -fms-compatibility-version=19.14 to imitate the MSVC 1914 mangling behavior.
 
-- Fixed Microsoft calling convention for returning certain classes with a
-  templated constructor. If a class has a templated constructor, it should
-  be returned indirectly even if it meets all the other requirements for
-  returning a class in a register. This affects some uses of std::pair.
-  (#GH86384).
-
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -101,22 +95,6 @@ Clang Python Bindings Potentially Breaking Changes
 - For a single-line ``SourceRange`` and a ``SourceLocation`` in the same line,
   but after the end of the ``SourceRange``, ``SourceRange.__contains__``
   used to incorrectly return ``True``. (#GH22617), (#GH52827)
-
-Clang Frontend Potentially Breaking Changes
--------------------------------------------
-- Target OS macros extension
-  A new Clang extension (see :ref:`here <target_os_detail>`) is enabled for
-  Darwin (Apple platform) targets. Clang now defines ``TARGET_OS_*`` macros for
-  these targets, which could break existing code bases with improper checks for
-  the ``TARGET_OS_`` macros. For example, existing checks might fail to include
-  the ``TargetConditionals.h`` header from Apple SDKs and therefore leaving the
-  macros undefined and guarded code unexercised.
-
-  Affected code should be checked to see if it's still intended for the specific
-  target and fixed accordingly.
-
-  The extension can be turned off by the option ``-fno-define-target-os-macros``
-  as a workaround.
 
 What's New in Clang |release|?
 ==============================
@@ -217,15 +195,6 @@ New Compiler Flags
   only for thread-local variables, and none (which corresponds to the
   existing ``-fno-c++-static-destructors`` flag) skips all static
   destructors registration.
-
-.. _target_os_detail:
-
-* ``-fdefine-target-os-macros`` and its complement
-  ``-fno-define-target-os-macros``. Enables or disables the Clang extension to
-  provide built-in definitions of a list of ``TARGET_OS_*`` macros based on the
-  target triple.
-
-  The extension is enabled by default for Darwin (Apple platform) targets.
 
 Deprecated Compiler Flags
 -------------------------
@@ -348,13 +317,6 @@ Bug Fixes in This Version
 - Fixed a crash when diagnosing format strings and encountering an empty
   delimited escape sequence (e.g., ``"\o{}"``). #GH102218
 
-- Clang now doesn't produce false-positive warning `-Wconstant-logical-operand`
-  for logical operators in C23.
-  Fixes (`#64356 <https://github.com/llvm/llvm-project/issues/64356>`_).
-- Clang's ``-Wshadow`` no longer warns when an init-capture is named the same as
-  a class field unless the lambda can capture this.
-  Fixes (`#71976 <https://github.com/llvm/llvm-project/issues/71976>`_)
-
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -419,25 +381,6 @@ Bug Fixes to C++ Support
 - Fixed a bug where defaulted comparison operators would remove ``const`` from base classes. (#GH102588)
 - Fix a crash when using ``source_location`` in the trailing return type of a lambda expression. (#GH67134)
 - A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
-
-
-- Fixed a bug where variables referenced by requires-clauses inside
-  nested generic lambdas were not properly injected into the constraint scope.
-  (`#73418 <https://github.com/llvm/llvm-project/issues/73418>`_)
-
-- Fix incorrect code generation caused by the object argument of ``static operator()`` and ``static operator[]`` calls not being evaluated.
-  Fixes (`#67976 <https://github.com/llvm/llvm-project/issues/67976>`_)
-
-- Fix crash when using an immediate-escalated function at global scope.
-  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
-- Correctly immediate-escalate lambda conversion functions.
-  (`#82258 <https://github.com/llvm/llvm-project/issues/82258>`_)
-- Fix a crash when an unresolved overload set is encountered on the RHS of a ``.*`` operator.
-  (`#53815 <https://github.com/llvm/llvm-project/issues/53815>`_)
-
-- Fixed a regression in CTAD that a friend declaration that befriends itself may cause
-  incorrect constraint substitution.
-  (`#86769 <https://github.com/llvm/llvm-project/issues/86769>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -509,16 +452,11 @@ Windows Support
   When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
   allowed as VS2013 and prior allow it.
 
-- Clang now passes relevant LTO options to the linker (LLD) in MinGW mode.
-
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
 RISC-V Support
 ^^^^^^^^^^^^^^
-
-- ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
-- ``-mtls-dialect=desc`` is now supported to enable TLS descriptors (TLSDESC).
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -531,11 +469,6 @@ AIX Support
 
 NetBSD Support
 ^^^^^^^^^^^^^^
-
-SystemZ Support
-^^^^^^^^^^^^^^^
-- Properly support 16 byte atomic int/fp types and ops. Atomic __int128 (and
-  long double) variables are now aligned to 16 bytes by default (like gcc 14).
 
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^

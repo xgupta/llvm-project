@@ -10,12 +10,8 @@
 #ifndef liblldb_PLIUserExpression_h_
 #define liblldb_PLIUserExpression_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Target/ExecutionContext.h"

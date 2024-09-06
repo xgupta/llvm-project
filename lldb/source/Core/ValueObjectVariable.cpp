@@ -114,6 +114,7 @@ ValueObjectVariable::CalculateNumChildren(uint32_t max) {
     auto elements = GetVarStringLength(error);
     *child_count = elements < *child_count ? elements : *child_count;
   }
+
   return *child_count <= max ? *child_count : max;
 }
 
@@ -189,8 +190,8 @@ bool ValueObjectVariable::UpdateValue() {
       //                          nullptr, &obj_addr, allocated)) {
       if (!alloc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
                                nullptr, &obj_addr)) {
-        m_error = Status::FromErrorString("dynamic variable allocated attribute read error");
-        //return m_error.maybe_value();
+        m_error = Status::FromErrorString(
+            "dynamic variable allocated attribute read error");
         return m_error.Success();
       }
       if (allocated.ResolveValue(&exe_ctx).IsZero()) {
@@ -207,8 +208,8 @@ bool ValueObjectVariable::UpdateValue() {
         Value obj_addr(m_value);
         if (!loc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
                                nullptr, &obj_addr)) {
-          m_error = Status::FromErrorString("dynamic variable location read error");
-          //return m_error.maybe_value();
+          m_error =
+              Status::FromErrorString("dynamic variable location read error");
           return m_error.Success();
           }
           CompilerType base_type = comp_type.DynGetBaseType();

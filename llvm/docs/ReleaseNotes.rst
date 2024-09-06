@@ -75,14 +75,6 @@ Changes to the AArch64 Backend
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
 
-* Assembler/disassembler support has been added for 2023 architecture
-  extensions.
-
-* Support has been added for Stack Clash Protection. During function frame
-  creation and dynamic stack allocations, the compiler will issue memory
-  accesses at reguilar intervals so that a guard area at the top of the stack
-  can't be skipped over.
-
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -131,17 +123,6 @@ Changes to the RISC-V Backend
   largely untested.
 * The ``Zvbc32e`` and ``Zvkgs`` extensions are now supported experimentally.
 * Added ``Smctr`` and ``Ssctr`` extensions.
-
-Changes to the SystemZ Backend
-------------------------------
-
-* Properly support 16 byte atomic int/fp types and ops.
-* Support i128 as legal type in VRs.
-* Add an i128 cost model.
-* Support building individual functions with backchain using the
-  __attribute__((target("backchain"))) syntax.
-* Add exception handling for XPLINK.
-* Add support for llvm-objcopy.
 
 Changes to the WebAssembly Backend
 ----------------------------------
