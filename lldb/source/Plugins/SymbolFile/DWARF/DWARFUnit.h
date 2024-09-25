@@ -184,6 +184,8 @@ public:
 
   llvm::VersionTuple GetProducerVersion();
 
+  static lldb::IdentifierCaseType IdentifierCaseFromDWARF(uint64_t val);
+
   uint64_t GetDWARFLanguageType();
 
   bool GetIsOptimized();
