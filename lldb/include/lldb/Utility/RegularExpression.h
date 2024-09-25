@@ -37,7 +37,7 @@ public:
   ///     default is NoFlags.
   explicit RegularExpression(
       llvm::StringRef string,
-      llvm::Regex::RegexFlags flags = llvm::Regex::NoFlags);
+      llvm::Regex::RegexFlags flags = llvm::Regex::NoFlags, bool icase = false);
 
   ~RegularExpression() = default;
 
@@ -93,6 +93,7 @@ private:
   std::string m_regex_text;
   /// The compiled regular expression.
   mutable llvm::Regex m_regex;
+  bool icase = false;
 };
 
 } // namespace lldb_private
