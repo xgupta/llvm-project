@@ -85,6 +85,7 @@ enum LLVMConstants : uint32_t {
   DWARF_VENDOR_SUN,
   DWARF_VENDOR_UPC,
   ///\}
+  DWARF_VENDOR_RAINCODE
 };
 
 /// Constants that define the DWARF format as 32 or 64 bit.
