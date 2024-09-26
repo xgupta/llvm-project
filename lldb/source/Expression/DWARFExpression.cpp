@@ -237,6 +237,7 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
   case DW_OP_call_frame_cfa:       // 0x9c DWARF3
   case DW_OP_stack_value:          // 0x9f DWARF4
   case DW_OP_RC_byte_swap:         // 0xea RAINCODE extension
+  case DW_OP_RC_resolve_file_address: // 0xeb RAINCODE extension
   case DW_OP_GNU_push_tls_address: // 0xe0 GNU extension
     return 0;
 
@@ -1444,6 +1445,38 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       } else {
         if (!stack.back().ResolveValue(exe_ctx).ByteSwap()) {
           return llvm::createStringError("Byte Swap failed.");
+        }
+      }
+      break;
+
+    // OPCODE: DW_OP_RC_resolve_file_address
+    // OPERANDS: none
+    // DESCRIPTION: pops the top stack entry and tries to resolve the file
+    // address to target address for address calculations.
+    case DW_OP_RC_resolve_file_address:
+      if (stack.empty()) {
+        return llvm::createStringError(
+            "Expression stack needs at least 1 item for DW_OP_RC_resolve_file_address.");
+
+      } else {
+        if (stack.back().GetValueType() == Value::ValueType::FileAddress) {
+          auto file_addr =
+              stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+          if (!module_sp) {
+            return llvm::createStringError(
+                "need module to resolve file address for DW_OP_deref");
+          }
+          Address so_addr;
+          if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
+            return llvm::createStringError(
+                "failed to resolve file address in module");
+          }
+          addr_t load_Addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
+          if (load_Addr == LLDB_INVALID_ADDRESS) {
+            return llvm::createStringError("failed to resolve load address");
+          }
+          stack.back().GetScalar() = load_Addr;
+          stack.back().SetValueType(Value::ValueType::LoadAddress);
         }
       }
       break;
