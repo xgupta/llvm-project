@@ -237,6 +237,7 @@ static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
   case DW_OP_form_tls_address:     // 0x9b DWARF3
   case DW_OP_call_frame_cfa:       // 0x9c DWARF3
   case DW_OP_stack_value:          // 0x9f DWARF4
+  case DW_OP_RC_byte_swap:         // 0xea RAINCODE extension
   case DW_OP_GNU_push_tls_address: // 0xe0 GNU extension
     return 0;
 
@@ -1432,6 +1433,21 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (!stack.back().GetScalar().IsValid())
         return llvm::createStringError("DW_OP_plus_uconst failed");
     } break;
+
+    // OPCODE: DW_OP_RC_byte_swap
+    // OPERANDS: none
+    // DESCRIPTION: pops the top stack entry, and pushes its bytes swapped
+    // result
+    case DW_OP_RC_byte_swap:
+      if (stack.empty()) {
+        return llvm::createStringError(
+            "Expression stack needs at least 1 item for DW_OP_RC_byte_swap.");
+      } else {
+        if (!stack.back().ResolveValue(exe_ctx).ByteSwap()) {
+          return llvm::createStringError("Byte Swap failed.");
+        }
+      }
+      break;
 
     // OPCODE: DW_OP_shl
     // OPERANDS: none
