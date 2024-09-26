@@ -501,6 +501,15 @@ bool Scalar::UnaryNegate() {
   return false;
 }
 
+bool Scalar::ByteSwap() {
+  if (m_type == e_int) {
+    m_integer = m_integer.byteSwap();
+    return true;
+  }
+
+  return false;
+}
+
 bool Scalar::OnesComplement() {
   if (m_type == e_int) {
     m_integer = ~m_integer;

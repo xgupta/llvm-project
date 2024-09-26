@@ -565,6 +565,7 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_lit0:
     case dwarf::DW_OP_not:
     case dwarf::DW_OP_dup:
+    case dwarf::DW_OP_RC_byte_swap:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
     case dwarf::DW_OP_eq:
