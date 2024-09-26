@@ -881,6 +881,7 @@ HANDLE_DW_OP(0xfb, GNU_addr_index, 0, GNU)
 HANDLE_DW_OP(0xfc, GNU_const_index, 0, GNU)
 
 HANDLE_DW_OP(0xea, RC_byte_swap, 1, 0, 0, RAINCODE)
+HANDLE_DW_OP(0xeb, RC_resolve_file_address, 1, 0, 0, RAINCODE)
 
 // DW_OP_LLVM_user has two operands:
 //   (1) An unsigned LEB128 "LLVM Vendor Extension Opcode".
