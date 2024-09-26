@@ -238,6 +238,7 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
   case DW_OP_call_frame_cfa:       // 0x9c DWARF3
   case DW_OP_stack_value:          // 0x9f DWARF4
   case DW_OP_RC_byte_swap:         // 0xea RAINCODE extension
+  case DW_OP_RC_resolve_file_address: // 0xeb RAINCODE extension
   case DW_OP_GNU_push_tls_address: // 0xe0 GNU extension
     return 0;
 
@@ -1455,6 +1456,14 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           return llvm::createStringError("Byte Swap failed.");
         }
       }
+      break;
+
+    // OPCODE: DW_OP_RC_resolve_file_address
+    // OPERANDS: none
+    // DESCRIPTION: pops the top stack entry and tries to resolve the file
+    // address to target address for address calculations.
+    case DW_OP_RC_resolve_file_address:
+      // Placeholder, to be removed in llvm20
       break;
 
     // OPCODE: DW_OP_shl
