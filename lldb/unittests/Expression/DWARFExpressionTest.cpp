@@ -366,6 +366,13 @@ TEST(DWARFExpression, DW_OP_implicit_value) {
       llvm::HasValue(GetScalar(8 * bytes, 0x44332211, true)));
 }
 
+TEST(DWARFExpression, DW_OP_RC_byte_swap) {
+
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const4u, 0x44, 0x33, 0x22, 0x11, DW_OP_RC_byte_swap}),
+      llvm::HasValue(0x44332211)); // Expected swapped value
+}
+
 TEST(DWARFExpression, DW_OP_unknown) {
   EXPECT_THAT_EXPECTED(
       Evaluate({0xff}),
