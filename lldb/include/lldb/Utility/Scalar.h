@@ -139,6 +139,11 @@ public:
   // Negates the current value (even for unsigned values). Returns false if the
   // contained value has a void type.
   bool UnaryNegate(); // Returns true on success
+  // Swaps byte in the current value as long as it isn't void/float/double/long
+  // double types. Returns false if the contained value has a void/float/double
+  // /long double type, else the value is byte swapped and true is returned.
+  // usefull to changes the endianity.
+  bool ByteSwap(); // Returns true on success
   // Inverts all bits in the current value as long as it isn't void or a
   // float/double/long double type. Returns false if the contained value has a
   // void/float/double/long double type, else the value is inverted and true is
