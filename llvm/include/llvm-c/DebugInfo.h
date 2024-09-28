@@ -1103,6 +1103,23 @@ unsigned LLVMDITypeGetLine(LLVMMetadataRef DType);
 LLVMDIFlags LLVMDITypeGetFlags(LLVMMetadataRef DType);
 
 /**
+ * Create debugging information entry for an array with header
+ * \param Builder      The DIBuilder.
+ * \param Size         Array size.
+ * \param AlignInBits  Alignment.
+ * \param Ty           Element type.
+ * \param Subscripts   Subscripts.
+ * \param NumSubscripts Number of subscripts.
+ * \param IsVarString  PL/I varying string.
+ * \param Name         Array type name.
+ * \param NameLen      Length of array type name.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateArrayType2(
+    LLVMDIBuilderRef Builder, uint64_t Size, uint32_t AlignInBits,
+    LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts, unsigned NumSubscripts,
+    LLVMBool isVarString, const char *Name, size_t NameLen);
+
+/**
  * Create a descriptor for a value range.
  * \param Builder    The DIBuilder.
  * \param LowerBound Lower bound of the subrange, e.g. 0 for C, 1 for Fortran.

@@ -1331,6 +1331,17 @@ LLVMDIBuilderCreateArrayType(LLVMDIBuilderRef Builder, uint64_t Size,
                                                unwrapDI<DIType>(Ty), Subs));
 }
 
+LLVMMetadataRef LLVMDIBuilderCreateArrayType2(
+    LLVMDIBuilderRef Builder, uint64_t Size, uint32_t AlignInBits,
+    LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts, unsigned NumSubscripts,
+    LLVMBool isVarString, const char *Name, size_t NameLen) {
+  auto Subs =
+      unwrap(Builder)->getOrCreateArray({unwrap(Subscripts), NumSubscripts});
+  return wrap(unwrap(Builder)->createArrayType(
+      Size, AlignInBits, unwrapDI<DIType>(Ty), Subs, nullptr, nullptr, nullptr,
+      nullptr, {Name, NameLen}, isVarString));
+}
+
 LLVMMetadataRef
 LLVMDIBuilderCreateVectorType(LLVMDIBuilderRef Builder, uint64_t Size,
                               uint32_t AlignInBits, LLVMMetadataRef Ty,
