@@ -631,6 +631,9 @@ HANDLE_DW_AT(0x3fee, APPLE_objc_direct, 0, APPLE)
 HANDLE_DW_AT(0x3fef, APPLE_sdk, 0, APPLE)
 HANDLE_DW_AT(0x3ff0, APPLE_origin, 0, APPLE)
 
+// Raincode extension
+HANDLE_DW_AT(0x2f12, RAINCODE_str_header, 0, RAINCODE)
+
 // Attribute form encodings.
 HANDLE_DW_FORM(0x01, addr, 2, DWARF)
 HANDLE_DW_FORM(0x03, block2, 2, DWARF)
