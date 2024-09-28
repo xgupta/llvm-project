@@ -1570,6 +1570,10 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     addBlock(Buffer, dwarf::DW_AT_rank, DwarfExpr.finalize());
   }
 
+  // Emit if vendor specific array
+  if (CTy->isRaincodeStrHeader())
+    addFlag(Buffer, dwarf::DW_AT_RAINCODE_str_header);
+
   // Emit the element type.
   addType(Buffer, CTy->getBaseType());
 
