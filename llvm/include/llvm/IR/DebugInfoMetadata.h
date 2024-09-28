@@ -1177,14 +1177,29 @@ class DICompositeType : public DIType {
 
   unsigned RuntimeLang;
 
+public:
+  enum VendorDIFlags : uint32_t {
+    VendorDIFlagZero = 0,
+    VendorDIFlagStrHeader = 1u,
+    VendorDIFlagLargest = 2u,
+    LLVM_MARK_AS_BITMASK_ENUM(VendorDIFlagLargest)
+  };
+
+  static VendorDIFlags packVendorDIFlags(bool IsRaincodeStrHeader) {
+    return static_cast<VendorDIFlags>(
+        (IsRaincodeStrHeader ? VendorDIFlagStrHeader : VendorDIFlagZero));
+  }
+
+private:
+  VendorDIFlags VDIFlags;
+
   DICompositeType(LLVMContext &C, StorageType Storage, unsigned Tag,
                   unsigned Line, unsigned RuntimeLang, uint64_t SizeInBits,
-                  uint32_t AlignInBits, uint64_t OffsetInBits,
-                  uint32_t NumExtraInhabitants, DIFlags Flags,
-                  ArrayRef<Metadata *> Ops)
+                  uint32_t AlignInBits, uint64_t OffsetInBits, uint32_t NumExtraInhabitants, DIFlags Flags,
+                  VendorDIFlags VFlags, ArrayRef<Metadata *> Ops)
       : DIType(C, DICompositeTypeKind, Storage, Tag, Line, SizeInBits,
                AlignInBits, OffsetInBits, NumExtraInhabitants, Flags, Ops),
-        RuntimeLang(RuntimeLang) {}
+        RuntimeLang(RuntimeLang), VDIFlags(VFlags) {}
   ~DICompositeType() = default;
 
   /// Change fields in place.
@@ -1201,42 +1216,42 @@ class DICompositeType : public DIType {
   static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, Metadata *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
-          uint32_t AlignInBits, uint64_t OffsetInBits, DIType *Specification,
-          uint32_t NumExtraInhabitants, DIFlags Flags, DINodeArray Elements,
-          unsigned RuntimeLang, DIType *VTableHolder,
-          DITemplateParameterArray TemplateParams, StringRef Identifier,
-          DIDerivedType *Discriminator, Metadata *DataLocation,
-          Metadata *Associated, Metadata *Allocated, Metadata *Rank,
-          DINodeArray Annotations, StorageType Storage,
+          uint32_t AlignInBits, uint64_t OffsetInBits,  DIType *Specification,
+          uint32_t NumExtraInhabitants, DIFlags Flags,
+          VendorDIFlags VFlags, DINodeArray Elements, unsigned RuntimeLang,
+          DIType *VTableHolder, DITemplateParameterArray TemplateParams,
+          StringRef Identifier, DIDerivedType *Discriminator,
+          Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
+          Metadata *Rank, DINodeArray Annotations, StorageType Storage,
           bool ShouldCreate = true) {
-    return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
-                   Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
-                   Flags, Elements.get(), RuntimeLang, VTableHolder,
-                   TemplateParams.get(),
-                   getCanonicalMDString(Context, Identifier), Discriminator,
-                   DataLocation, Associated, Allocated, Rank, Annotations.get(),
-                   Specification, NumExtraInhabitants, Storage, ShouldCreate);
+    return getImpl(
+        Context, Tag, getCanonicalMDString(Context, Name), File, Line, Scope,
+        BaseType, SizeInBits, AlignInBits, OffsetInBits, Flags, VFlags,
+        Elements.get(), RuntimeLang, VTableHolder, TemplateParams.get(),
+        getCanonicalMDString(Context, Identifier), Discriminator, DataLocation,
+        Associated, Allocated, Rank, Annotations.get(), Specification, NumExtraInhabitants,
+        Storage, ShouldCreate);
   }
   static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
           unsigned Line, Metadata *Scope, Metadata *BaseType,
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-          DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
-          Metadata *VTableHolder, Metadata *TemplateParams,
-          MDString *Identifier, Metadata *Discriminator, Metadata *DataLocation,
-          Metadata *Associated, Metadata *Allocated, Metadata *Rank,
-          Metadata *Annotations, Metadata *Specification,
-          uint32_t NumExtraInhabitants, StorageType Storage,
-          bool ShouldCreate = true);
+          DIFlags Flags, VendorDIFlags VFlags, Metadata *Elements,
+          unsigned RuntimeLang, Metadata *VTableHolder,
+          Metadata *TemplateParams, MDString *Identifier,
+          Metadata *Discriminator, Metadata *DataLocation, Metadata *Associated,
+          Metadata *Allocated, Metadata *Rank, Metadata *Annotations,  Metadata *Specification,
+          uint32_t NumExtraInhabitants,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDICompositeType cloneImpl() const {
     return getTemporary(
         getContext(), getTag(), getName(), getFile(), getLine(), getScope(),
         getBaseType(), getSizeInBits(), getAlignInBits(), getOffsetInBits(),
-        getFlags(), getElements(), getRuntimeLang(), getVTableHolder(),
-        getTemplateParams(), getIdentifier(), getDiscriminator(),
-        getRawDataLocation(), getRawAssociated(), getRawAllocated(),
-        getRawRank(), getAnnotations(), getSpecification(),
+        getFlags(), getVendorDIFlags(), getElements(), getRuntimeLang(),
+        getVTableHolder(), getTemplateParams(), getIdentifier(),
+        getDiscriminator(), getRawDataLocation(), getRawAssociated(),
+        getRawAllocated(), getRawRank(), getAnnotations(), getSpecification(),
         getNumExtraInhabitants());
   }
 
@@ -1254,9 +1269,9 @@ public:
        DINodeArray Annotations = nullptr, DIType *Specification = nullptr,
        uint32_t NumExtraInhabitants = 0),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-       OffsetInBits, Specification, NumExtraInhabitants, Flags, Elements,
-       RuntimeLang, VTableHolder, TemplateParams, Identifier, Discriminator,
-       DataLocation, Associated, Allocated, Rank, Annotations))
+       OffsetInBits, Specification, NumExtraInhabitants, Flags, VendorDIFlagZero, Elements, RuntimeLang,
+       VTableHolder, TemplateParams, Identifier, Discriminator, DataLocation,
+       Associated, Allocated, Rank, Annotations))
   DEFINE_MDNODE_GET(
       DICompositeType,
       (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
@@ -1269,9 +1284,42 @@ public:
        Metadata *Rank = nullptr, Metadata *Annotations = nullptr,
        Metadata *Specification = nullptr, uint32_t NumExtraInhabitants = 0),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-       OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
-       Identifier, Discriminator, DataLocation, Associated, Allocated, Rank,
-       Annotations, Specification, NumExtraInhabitants))
+       OffsetInBits, Flags, VendorDIFlagZero, Elements, RuntimeLang,
+       VTableHolder, TemplateParams, Identifier, Discriminator, DataLocation,
+       Associated, Allocated, Rank, Annotations, Specification, NumExtraInhabitants))
+
+  DEFINE_MDNODE_GET(
+      DICompositeType,
+      (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
+       DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
+       uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
+       VendorDIFlags VFlags, DINodeArray Elements, unsigned RuntimeLang,
+       DIType *VTableHolder, DITemplateParameterArray TemplateParams = nullptr,
+       StringRef Identifier = "", DIDerivedType *Discriminator = nullptr,
+       Metadata *DataLocation = nullptr, Metadata *Associated = nullptr,
+       Metadata *Allocated = nullptr, Metadata *Rank = nullptr,
+       DINodeArray Annotations = nullptr, DIType *Specification = nullptr,
+       uint32_t NumExtraInhabitants = 0),
+      (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+       OffsetInBits, Specification, NumExtraInhabitants, Flags, VFlags, Elements, RuntimeLang, VTableHolder,
+       TemplateParams, Identifier, Discriminator, DataLocation, Associated,
+       Allocated, Rank, Annotations))
+  DEFINE_MDNODE_GET(
+      DICompositeType,
+      (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
+       Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
+       uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
+       VendorDIFlags VFlags, Metadata *Elements, unsigned RuntimeLang,
+       Metadata *VTableHolder, Metadata *TemplateParams = nullptr,
+       MDString *Identifier = nullptr, Metadata *Discriminator = nullptr,
+       Metadata *DataLocation = nullptr, Metadata *Associated = nullptr,
+       Metadata *Allocated = nullptr, Metadata *Rank = nullptr,
+       Metadata *Annotations = nullptr,
+       Metadata *Specification = nullptr, uint32_t NumExtraInhabitants = 0),
+      (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+       OffsetInBits, Flags, VFlags, Elements, RuntimeLang, VTableHolder,
+       TemplateParams, Identifier, Discriminator, DataLocation, Associated,
+       Allocated, Rank, Annotations, Specification, NumExtraInhabitants))
 
   TempDICompositeType clone() const { return cloneImpl(); }
 
@@ -1377,6 +1425,12 @@ public:
   DIType *getSpecification() const {
     return cast_or_null<DIType>(getRawSpecification());
   }
+
+  VendorDIFlags getVendorDIFlags() const { return VDIFlags; }
+  bool isRaincodeStrHeader() const {
+    return getVendorDIFlags() & VendorDIFlagStrHeader;
+  }
+
   /// Replace operands.
   ///
   /// If this \a isUniqued() and not \a isResolved(), on a uniquing collision
