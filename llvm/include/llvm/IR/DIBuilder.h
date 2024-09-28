@@ -594,7 +594,8 @@ namespace llvm {
         PointerUnion<DIExpression *, DIVariable *> DataLocation = nullptr,
         PointerUnion<DIExpression *, DIVariable *> Associated = nullptr,
         PointerUnion<DIExpression *, DIVariable *> Allocated = nullptr,
-        PointerUnion<DIExpression *, DIVariable *> Rank = nullptr);
+        PointerUnion<DIExpression *, DIVariable *> Rank = nullptr,
+        StringRef ArrayName = "", bool IsStringHeader = false);
 
     /// Create debugging information entry for a vector type.
     /// \param Size         Array size.

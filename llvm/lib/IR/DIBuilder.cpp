@@ -596,11 +596,13 @@ DIBuilder::createArrayType(uint64_t Size, uint32_t AlignInBits, DIType *Ty,
                            PointerUnion<DIExpression *, DIVariable *> DL,
                            PointerUnion<DIExpression *, DIVariable *> AS,
                            PointerUnion<DIExpression *, DIVariable *> AL,
-                           PointerUnion<DIExpression *, DIVariable *> RK) {
+                           PointerUnion<DIExpression *, DIVariable *> RK,
+                           StringRef ArrayName, bool IsStringHeader) {
   auto *R = DICompositeType::get(
-      VMContext, dwarf::DW_TAG_array_type, "", nullptr, 0, nullptr, Ty, Size,
-      AlignInBits, 0, DINode::FlagZero, Subscripts, 0, nullptr, nullptr, "",
-      nullptr,
+      VMContext, dwarf::DW_TAG_array_type, ArrayName, nullptr, 0, nullptr, Ty,
+      Size, AlignInBits, 0, DINode::FlagZero,
+      DICompositeType::packVendorDIFlags(IsStringHeader), Subscripts, 0,
+      nullptr, nullptr, "", nullptr,
       isa<DIExpression *>(DL) ? (Metadata *)cast<DIExpression *>(DL)
                               : (Metadata *)cast<DIVariable *>(DL),
       isa<DIExpression *>(AS) ? (Metadata *)cast<DIExpression *>(AS)

@@ -638,6 +638,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
   uint64_t OffsetInBits;
   uint32_t AlignInBits;
   unsigned Flags;
+  unsigned VFlags;
   Metadata *Elements;
   unsigned RuntimeLang;
   Metadata *VTableHolder;
@@ -653,26 +654,27 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
                 uint32_t AlignInBits, uint64_t OffsetInBits, unsigned Flags,
-                Metadata *Elements, unsigned RuntimeLang,
+                unsigned VFlags, Metadata *Elements, unsigned RuntimeLang,
                 Metadata *VTableHolder, Metadata *TemplateParams,
                 MDString *Identifier, Metadata *Discriminator,
                 Metadata *DataLocation, Metadata *Associated,
                 Metadata *Allocated, Metadata *Rank, Metadata *Annotations)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
-        AlignInBits(AlignInBits), Flags(Flags), Elements(Elements),
-        RuntimeLang(RuntimeLang), VTableHolder(VTableHolder),
-        TemplateParams(TemplateParams), Identifier(Identifier),
-        Discriminator(Discriminator), DataLocation(DataLocation),
-        Associated(Associated), Allocated(Allocated), Rank(Rank),
-        Annotations(Annotations) {}
+        AlignInBits(AlignInBits), Flags(Flags), VFlags(VFlags),
+        Elements(Elements), RuntimeLang(RuntimeLang),
+        VTableHolder(VTableHolder), TemplateParams(TemplateParams),
+        Identifier(Identifier), Discriminator(Discriminator),
+        DataLocation(DataLocation), Associated(Associated),
+        Allocated(Allocated), Rank(Rank), Annotations(Annotations) {}
   MDNodeKeyImpl(const DICompositeType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
         BaseType(N->getRawBaseType()), SizeInBits(N->getSizeInBits()),
         OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
-        Flags(N->getFlags()), Elements(N->getRawElements()),
-        RuntimeLang(N->getRuntimeLang()), VTableHolder(N->getRawVTableHolder()),
+        Flags(N->getFlags()), VFlags(N->getVendorDIFlags()),
+        Elements(N->getRawElements()), RuntimeLang(N->getRuntimeLang()),
+        VTableHolder(N->getRawVTableHolder()),
         TemplateParams(N->getRawTemplateParams()),
         Identifier(N->getRawIdentifier()),
         Discriminator(N->getRawDiscriminator()),
@@ -687,6 +689,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
            SizeInBits == RHS->getSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
            OffsetInBits == RHS->getOffsetInBits() && Flags == RHS->getFlags() &&
+           VFlags == RHS->getVendorDIFlags() &&
            Elements == RHS->getRawElements() &&
            RuntimeLang == RHS->getRuntimeLang() &&
            VTableHolder == RHS->getRawVTableHolder() &&
