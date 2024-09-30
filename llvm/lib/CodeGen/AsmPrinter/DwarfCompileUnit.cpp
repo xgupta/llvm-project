@@ -1650,6 +1650,9 @@ void DwarfCompileUnit::applyCommonDbgVariableAttributes(const DbgVariable &Var,
     if (DIVar->isLocatorDesc())
       addUInt(VariableDie, dwarf::DW_AT_RAINCODE_desc_type,
               dwarf::DW_FORM_data1, dwarf::DW_RAINCODE_DESC_TYPE_desc_list);
+    if (uint32_t LexicalScope = DIVar->getLexicalScope())
+      addUInt(VariableDie, dwarf::DW_AT_RAINCODE_lexical_scope,
+              dwarf::DW_FORM_udata, LexicalScope);
   }
   addAnnotation(VariableDie, DIVar->getAnnotations());
 

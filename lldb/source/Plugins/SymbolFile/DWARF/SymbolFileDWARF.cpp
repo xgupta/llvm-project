@@ -3504,6 +3504,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   bool has_descriptor = false;
   DWARFFormValue const_value_form, location_form;
   Variable::RangeList scope_ranges;
+  uint8_t lexical_scope = 0;
   VariableSP var_sp;
   DWARFDIE spec_die;
 
@@ -3530,6 +3531,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     case DW_AT_RAINCODE_desc_type:
       // TODO handle descriptor list/locator form values
       has_descriptor = true;
+      break;
+    case DW_AT_RAINCODE_lexical_scope:
+      lexical_scope = form_value.Unsigned();
       break;
     case DW_AT_linkage_name:
     case DW_AT_MIPS_linkage_name:
@@ -3750,7 +3754,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   var_sp = std::make_shared<Variable>(
       die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
       scope_ranges, &decl, location_list, is_external, is_artificial,
-      location_is_const_value_data, is_static_member, has_descriptor);
+      location_is_const_value_data, is_static_member, has_descriptor,
+      lexical_scope);
   // Cache var_sp even if NULL (the variable was just a specification or was
   // missing vital information to be able to be displayed in the debugger
   // (missing location due to optimization, etc)) so we don't re-parse this
