@@ -548,6 +548,13 @@ enum ApplePropertyAttributes {
 #include "llvm/BinaryFormat/Dwarf.def"
 };
 
+/// Constants for the DW_RAINCODE_DESC_TYPE attributes.
+enum RaincodeDescTypeAttributes {
+#define HANDLE_DW_RAINCODE_DESC_TYPE(ID, NAME)                                 \
+  DW_RAINCODE_DESC_TYPE_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+};
+
 /// Constants for unit types in DWARF v5.
 enum UnitType : unsigned char {
 #define HANDLE_DW_UT(ID, NAME) DW_UT_##NAME = ID,

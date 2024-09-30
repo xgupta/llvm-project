@@ -1331,6 +1331,13 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   addAccess(SPDie, SP->getFlags());
 
+  if (SP->isDescLocSubProgram())
+    addUInt(SPDie, dwarf::DW_AT_RAINCODE_desc_type, dwarf::DW_FORM_data1,
+            dwarf::DW_RAINCODE_DESC_TYPE_desc_loc);
+  else if (SP->isDescListSubProgram())
+    addUInt(SPDie, dwarf::DW_AT_RAINCODE_desc_type, dwarf::DW_FORM_data1,
+            dwarf::DW_RAINCODE_DESC_TYPE_desc_list);
+
   if (SP->isExplicit())
     addFlag(SPDie, dwarf::DW_AT_explicit);
 
