@@ -1482,6 +1482,10 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
           "invalid reference flags", &N);
 
+  CheckDI(!(N.isDescLocSubProgram() && N.isDescListSubProgram()),
+          "subprogram cannot have both descriptor list and descriptor locator",
+          &N);
+
   auto *Unit = N.getRawUnit();
   if (N.isDefinition()) {
     // Subprogram definitions (not part of the type hierarchy).
