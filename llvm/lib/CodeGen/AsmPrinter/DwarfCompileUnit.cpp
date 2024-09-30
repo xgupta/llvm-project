@@ -581,6 +581,9 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
   // to have concrete versions of our DW_TAG_subprogram nodes.
   DD->addSubprogramNames(*this, CUNode->getNameTableKind(), SP, *SPDie);
 
+  // Add Static link if exists.
+  addStaticLink(*SPDie, dwarf::DW_AT_static_link, SP->getStaticLinkExpr());
+
   return *SPDie;
 }
 
@@ -1567,6 +1570,24 @@ void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
     addComplexAddress(Single->getExpr(), Die, dwarf::DW_AT_location, Location);
   else
     addAddress(Die, dwarf::DW_AT_location, Location);
+}
+
+void DwarfCompileUnit::addStaticLink(DIE &Die, dwarf::Attribute attrib,
+                                     const DIExpression *StaticLink) {
+  if (!StaticLink)
+    return;
+
+  DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+  DIEDwarfExpression SLE(*Asm, *this, *Loc);
+  SLE.setMemoryLocationKind();
+
+  DIExpressionCursor Cursor({});
+  const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
+  const auto FrameReg = TRI.getFrameRegister(*Asm->MF);
+  if (!SLE.addMachineRegExpression(TRI, Cursor, FrameReg))
+    return;
+
+  addBlock(Die, attrib, SLE.finalize());
 }
 
 /// Add an address attribute to a die based on the location provided.
