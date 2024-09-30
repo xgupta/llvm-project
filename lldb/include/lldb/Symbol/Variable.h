@@ -34,7 +34,8 @@ public:
            SymbolContextScope *owner_scope, const RangeList &scope_range,
            Declaration *decl, const DWARFExpressionList &location,
            bool external, bool artificial, bool location_is_constant_data,
-           bool static_member = false, bool has_descriptor = false);
+           bool static_member = false, bool has_descriptor = false,
+           uint8_t lexical_scope = 0);
 
   virtual ~Variable();
 
@@ -142,6 +143,8 @@ protected:
   unsigned m_static_member : 1;
   /// Non-zero if variable has descriptor.
   unsigned m_has_descriptor : 1;
+  /// Lexical scope used in some languages like PL/I
+  unsigned m_lexical_scope : 8;
 
 private:
   Variable(const Variable &rhs) = delete;
