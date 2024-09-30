@@ -1030,7 +1030,8 @@ DISubprogram::DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
 }
 DISubprogram::DISPFlags
 DISubprogram::toSPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized,
-                        unsigned Virtuality, bool IsMainSubprogram) {
+                        unsigned Virtuality, bool IsMainSubprogram,
+                        bool IsDescList, bool IsDescLoc) {
   // We're assuming virtuality is the low-order field.
   static_assert(int(SPFlagVirtual) == int(dwarf::DW_VIRTUALITY_virtual) &&
                     int(SPFlagPureVirtual) ==
