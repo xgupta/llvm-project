@@ -1114,19 +1114,24 @@ template <> struct MDNodeKeyImpl<DILocalVariable> {
   unsigned Line;
   Metadata *Type;
   unsigned Arg;
+  unsigned LexicalScope;
   unsigned Flags;
+  unsigned VarFlags;
   uint32_t AlignInBits;
   Metadata *Annotations;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, Metadata *File, unsigned Line,
-                Metadata *Type, unsigned Arg, unsigned Flags,
-                uint32_t AlignInBits, Metadata *Annotations)
+                Metadata *Type, unsigned Arg, unsigned LexicalScope,
+                unsigned Flags, unsigned VarFlags, uint32_t AlignInBits,
+                Metadata *Annotations)
       : Scope(Scope), Name(Name), File(File), Line(Line), Type(Type), Arg(Arg),
-        Flags(Flags), AlignInBits(AlignInBits), Annotations(Annotations) {}
+        LexicalScope(LexicalScope), Flags(Flags), VarFlags(VarFlags),
+        AlignInBits(AlignInBits), Annotations(Annotations) {}
   MDNodeKeyImpl(const DILocalVariable *N)
       : Scope(N->getRawScope()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Type(N->getRawType()), Arg(N->getArg()),
-        Flags(N->getFlags()), AlignInBits(N->getAlignInBits()),
+        LexicalScope(N->getLexicalScope()), Flags(N->getFlags()),
+        VarFlags(N->getVarFlags()), AlignInBits(N->getAlignInBits()),
         Annotations(N->getRawAnnotations()) {}
 
   bool isKeyOf(const DILocalVariable *RHS) const {
@@ -1134,6 +1139,9 @@ template <> struct MDNodeKeyImpl<DILocalVariable> {
            File == RHS->getRawFile() && Line == RHS->getLine() &&
            Type == RHS->getRawType() && Arg == RHS->getArg() &&
            Flags == RHS->getFlags() && AlignInBits == RHS->getAlignInBits() &&
+           LexicalScope == RHS->getLexicalScope() && Flags == RHS->getFlags() &&
+           VarFlags == RHS->getVarFlags() &&
+           AlignInBits == RHS->getAlignInBits() &&
            Annotations == RHS->getRawAnnotations();
   }
 
