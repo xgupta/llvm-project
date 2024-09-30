@@ -216,6 +216,36 @@ public:
   ///   Returns the corresponding DWARF expression, or NULL.
   DWARFExpressionList *GetFrameBaseExpression(Status *error_ptr);
 
+  /// Return the Canonical Static Link Address for this frame.
+  ///
+  /// For lexical nested funtions, the static link will point to the CFA of
+  /// nestee function.
+  ///
+  /// Live StackFrames will always have a CFA but other types of frames may
+  /// not be able to supply one.
+  ///
+  /// \param [out] value
+  ///   The static link address of the CFA for nestee frame, if available.
+  ///
+  /// \param [out] error_ptr
+  ///   If there is an error determining the CFA address, this may contain a
+  ///   string explaining the failure.
+  ///
+  /// \return
+  ///   Returns true if the CFA value was successfully set in value.  Some
+  ///   Will return false if failed.
+  bool GetStaticLinkValue(Scalar &value, Status *error_ptr);
+
+  /// Get the DWARFExpression corresponding to the Static link Address.
+  ///
+  /// \param [out] error
+  ///   If there is an error determining the CFA address, this may contain a
+  ///   string explaining the failure.
+  ///
+  /// \return
+  ///   Returns the corresponding DWARF expression, or NULL.
+  DWARFExpressionList *GetStaticLinkExpression(Status &error);
+
   /// Get the current lexical scope block for this StackFrame, if possible.
   ///
   /// If debug information is available for this stack frame, return a pointer
@@ -539,6 +569,8 @@ private:
   Flags m_flags;
   Scalar m_frame_base;
   Status m_frame_base_error;
+  Scalar m_static_link;
+  Status m_static_link_error;
   uint16_t m_frame_recognizer_generation = 0;
   /// Does this frame have a CFA?  Different from CFA == LLDB_INVALID_ADDRESS.
   bool m_cfa_is_valid;

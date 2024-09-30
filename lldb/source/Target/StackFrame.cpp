@@ -49,6 +49,7 @@ using namespace lldb_private;
 #define GOT_FRAME_BASE (RESOLVED_FRAME_ID_SYMBOL_SCOPE << 1)
 #define RESOLVED_VARIABLES (GOT_FRAME_BASE << 1)
 #define RESOLVED_GLOBAL_VARIABLES (RESOLVED_VARIABLES << 1)
+#define GOT_STATIC_LINK (RESOLVED_GLOBAL_VARIABLES << 1)
 
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index, addr_t cfa,
@@ -58,7 +59,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
       m_id(pc, cfa, nullptr), m_frame_code_addr(pc), m_sc(), m_flags(),
-      m_frame_base(), m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
+      m_frame_base(), m_frame_base_error(), m_static_link(),
+      m_static_link_error(), m_cfa_is_valid(cfa_is_valid),
       m_stack_frame_kind(kind),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
@@ -85,8 +87,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_concrete_frame_index(unwind_frame_index),
       m_reg_context_sp(reg_context_sp), m_id(pc, cfa, nullptr),
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
-      m_frame_base_error(), m_cfa_is_valid(true),
-      m_stack_frame_kind(StackFrame::Kind::Regular),
+      m_frame_base_error(), m_static_link(), m_static_link_error(),
+      m_cfa_is_valid(true), m_stack_frame_kind(StackFrame::Kind::Regular),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -113,8 +115,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_id(pc_addr.GetLoadAddress(thread_sp->CalculateTarget().get()), cfa,
            nullptr),
       m_frame_code_addr(pc_addr), m_sc(), m_flags(), m_frame_base(),
-      m_frame_base_error(), m_cfa_is_valid(true),
-      m_stack_frame_kind(StackFrame::Kind::Regular),
+      m_frame_base_error(), m_static_link(), m_static_link_error(),
+      m_cfa_is_valid(true), m_stack_frame_kind(StackFrame::Kind::Regular),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -1132,6 +1134,60 @@ DWARFExpressionList *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
   return &m_sc.function->GetFrameBaseExpression();
 }
 
+bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  if (!m_cfa_is_valid) {
+    m_static_link_error = Status::FromErrorString(
+        "No static link available for this historical stack frame.");
+    return false;
+  }
+
+  if (m_flags.IsClear(GOT_STATIC_LINK)) {
+    if (m_sc.function) {
+      m_static_link.Clear();
+      m_static_link_error.Clear();
+
+      m_flags.Set(GOT_STATIC_LINK);
+      ExecutionContext exe_ctx(shared_from_this());
+      Value expr_value;
+      addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
+      if (m_sc.function->GetStaticLinkExpression().IsValid())
+        loclist_base_addr =
+            m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
+                exe_ctx.GetTargetPtr());
+
+      if (!m_sc.function->GetStaticLinkExpression().Evaluate(
+              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr)) {
+        // We should really have an error if evaluate returns, but in case we
+        // don't, lets set the error to something at least.
+        if (m_static_link_error.Success())
+          m_static_link_error = Status::FromErrorString(
+              "Evaluation of the static link expression failed.");
+      } else {
+        m_static_link = expr_value.ResolveValue(&exe_ctx);
+      }
+    } else {
+      m_static_link_error =
+          Status::FromErrorString("No function in symbol context.");
+    }
+  }
+
+  if (m_static_link_error.Success())
+    static_link = m_static_link;
+
+  if (error_ptr)
+    *error_ptr = std::move(m_static_link_error);
+  return m_static_link_error.Success();
+}
+
+DWARFExpressionList *StackFrame::GetStaticLinkExpression(Status &error) {
+  if (!m_sc.function) {
+    error = Status::FromErrorString("No function in symbol context.");
+    return nullptr;
+  }
+  return &m_sc.function->GetStaticLinkExpression();
+}
+
 RegisterContextSP StackFrame::GetRegisterContext() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_reg_context_sp) {
@@ -1878,6 +1934,8 @@ void StackFrame::UpdatePreviousFrameFromCurrentFrame(StackFrame &curr_frame) {
   m_flags.Set(m_sc.GetResolvedMask());
   m_frame_base.Clear();
   m_frame_base_error.Clear();
+  m_static_link.Clear();
+  m_static_link_error.Clear();
 }
 
 bool StackFrame::HasCachedData() const {
