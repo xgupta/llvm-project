@@ -759,16 +759,17 @@ DIGlobalVariable *DIBuilder::createTempGlobalVariableFwdDecl(
 }
 
 static DILocalVariable *createLocalVariable(
-    LLVMContext &VMContext,
-    SmallVectorImpl<TrackingMDNodeRef> &PreservedNodes,
+    LLVMContext &VMContext, SmallVectorImpl<TrackingMDNodeRef> &PreservedNodes,
     DIScope *Context, StringRef Name, unsigned ArgNo, DIFile *File,
     unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags,
+    DILocalVariable::DIVarFlags VarFlags, unsigned LexicalScope,
     uint32_t AlignInBits, DINodeArray Annotations = nullptr) {
   // FIXME: Why doesn't this check for a subprogram or lexical block (AFAICT
   // the only valid scopes)?
   auto *Scope = cast<DILocalScope>(Context);
   auto *Node = DILocalVariable::get(VMContext, Scope, Name, File, LineNo, Ty,
-                                    ArgNo, Flags, AlignInBits, Annotations);
+                                    ArgNo, LexicalScope, Flags, VarFlags,
+                                    AlignInBits, Annotations);
   if (AlwaysPreserve) {
     // The optimizer may remove local variables. If there is an interest
     // to preserve variable info in such situation then stash it in a
@@ -787,7 +788,8 @@ DILocalVariable *DIBuilder::createAutoVariable(DIScope *Scope, StringRef Name,
          "Unexpected scope for a local variable.");
   return createLocalVariable(
       VMContext, getSubprogramNodesTrackingVector(Scope), Scope, Name,
-      /* ArgNo */ 0, File, LineNo, Ty, AlwaysPreserve, Flags, AlignInBits);
+      /* ArgNo */ 0, File, LineNo, Ty, AlwaysPreserve, Flags,
+      DILocalVariable::VarFlagZero, 0, AlignInBits);
 }
 
 DILocalVariable *DIBuilder::createParameterVariable(
@@ -799,7 +801,8 @@ DILocalVariable *DIBuilder::createParameterVariable(
          "Unexpected scope for a local variable.");
   return createLocalVariable(
       VMContext, getSubprogramNodesTrackingVector(Scope), Scope, Name, ArgNo,
-      File, LineNo, Ty, AlwaysPreserve, Flags, /*AlignInBits=*/0, Annotations);
+      File, LineNo, Ty, AlwaysPreserve, Flags, DILocalVariable::VarFlagZero,
+      /* LexScope */ 0, /*AlignInBits=*/0, Annotations);
 }
 
 DILabel *DIBuilder::createLabel(DIScope *Context, StringRef Name, DIFile *File,
