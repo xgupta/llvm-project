@@ -34,7 +34,7 @@ public:
            SymbolContextScope *owner_scope, const RangeList &scope_range,
            Declaration *decl, const DWARFExpressionList &location,
            bool external, bool artificial, bool location_is_constant_data,
-           bool static_member = false);
+           bool static_member = false, bool has_descriptor = false);
 
   virtual ~Variable();
 
@@ -72,6 +72,8 @@ public:
   bool IsArtificial() const { return m_artificial; }
 
   bool IsStaticMember() const { return m_static_member; }
+
+  bool HasDescriptor() const { return m_has_descriptor; }
 
   DWARFExpressionList &LocationExpressionList() { return m_location_list; }
 
@@ -140,6 +142,8 @@ protected:
   unsigned m_loc_is_const_data : 1;
   /// Non-zero if variable is static member of a class or struct.
   unsigned m_static_member : 1;
+  /// Non-zero if variable has descriptor.
+  unsigned m_has_descriptor : 1;
 
 private:
   Variable(const Variable &rhs) = delete;
