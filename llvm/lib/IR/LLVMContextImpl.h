@@ -777,6 +777,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   Metadata *ThrownTypes;
   Metadata *Annotations;
   MDString *TargetFuncName;
+  Metadata *StaticLinkExpr;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *LinkageName,
                 Metadata *File, unsigned Line, Metadata *Type,
@@ -785,14 +786,15 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
                 unsigned SPFlags, Metadata *Unit, Metadata *TemplateParams,
                 Metadata *Declaration, Metadata *RetainedNodes,
                 Metadata *ThrownTypes, Metadata *Annotations,
-                MDString *TargetFuncName)
+                MDString *TargetFuncName, Metadata *StaticLinkExpr)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
         Line(Line), Type(Type), ScopeLine(ScopeLine),
         ContainingType(ContainingType), VirtualIndex(VirtualIndex),
         ThisAdjustment(ThisAdjustment), Flags(Flags), SPFlags(SPFlags),
         Unit(Unit), TemplateParams(TemplateParams), Declaration(Declaration),
         RetainedNodes(RetainedNodes), ThrownTypes(ThrownTypes),
-        Annotations(Annotations), TargetFuncName(TargetFuncName) {}
+        Annotations(Annotations), TargetFuncName(TargetFuncName),
+        StaticLinkExpr(StaticLinkExpr) {}
   MDNodeKeyImpl(const DISubprogram *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
         LinkageName(N->getRawLinkageName()), File(N->getRawFile()),
@@ -806,7 +808,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
         RetainedNodes(N->getRawRetainedNodes()),
         ThrownTypes(N->getRawThrownTypes()),
         Annotations(N->getRawAnnotations()),
-        TargetFuncName(N->getRawTargetFuncName()) {}
+        TargetFuncName(N->getRawTargetFuncName()),
+        StaticLinkExpr(N->getRawStaticLinkExpr()) {}
 
   bool isKeyOf(const DISubprogram *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
@@ -823,7 +826,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            RetainedNodes == RHS->getRawRetainedNodes() &&
            ThrownTypes == RHS->getRawThrownTypes() &&
            Annotations == RHS->getRawAnnotations() &&
-           TargetFuncName == RHS->getRawTargetFuncName();
+           TargetFuncName == RHS->getRawTargetFuncName() &&
+           StaticLinkExpr == RHS->getRawStaticLinkExpr();
   }
 
   bool isDefinition() const { return SPFlags & DISubprogram::SPFlagDefinition; }
