@@ -1647,8 +1647,11 @@ void DwarfCompileUnit::applyCommonDbgVariableAttributes(const DbgVariable &Var,
     if (uint32_t AlignInBytes = DIVar->getAlignInBytes())
       addUInt(VariableDie, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
               AlignInBytes);
-    addAnnotation(VariableDie, DIVar->getAnnotations());
+    if (DIVar->isLocatorDesc())
+      addUInt(VariableDie, dwarf::DW_AT_RAINCODE_desc_type,
+              dwarf::DW_FORM_data1, dwarf::DW_RAINCODE_DESC_TYPE_desc_list);
   }
+  addAnnotation(VariableDie, DIVar->getAnnotations());
 
   addSourceLine(VariableDie, DIVar);
   addType(VariableDie, Var.getType());
