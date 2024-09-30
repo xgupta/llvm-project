@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !(defined HANDLE_DI_FLAG || defined HANDLE_DISP_FLAG)
+#if !(defined HANDLE_DI_FLAG || defined HANDLE_DISP_FLAG ||                    \
+      defined HANDLE_DIVAR_FLAG)
 #error "Missing macro definition of HANDLE_DI*"
 #endif
 
@@ -20,6 +21,10 @@
 
 #ifndef HANDLE_DISP_FLAG
 #define HANDLE_DISP_FLAG(ID, NAME)
+#endif
+
+#ifndef HANDLE_DIVAR_FLAG
+#define HANDLE_DIVAR_FLAG(ID, NAME)
 #endif
 
 // General flags kept in DINode.
@@ -91,13 +96,30 @@ HANDLE_DISP_FLAG((1u << 8), MainSubprogram)
 // for defaulted functions
 HANDLE_DISP_FLAG((1u << 9), Deleted)
 HANDLE_DISP_FLAG((1u << 11), ObjCDirect)
+HANDLE_DISP_FLAG((1u << 12), DescList)
+HANDLE_DISP_FLAG((1u << 13), DescLoc)
 
 #ifdef DISP_FLAG_LARGEST_NEEDED
 // Intended to be used with ADT/BitmaskEnum.h.
 // NOTE: Always must be equal to largest flag, check this when adding new flags.
-HANDLE_DISP_FLAG((1 << 11), Largest)
+HANDLE_DISP_FLAG((1 << 13), Largest)
 #undef DISP_FLAG_LARGEST_NEEDED
+#endif
+
+// Variable-Specific flags kept in DIVariable
+
+// Use this as zero/initialization value.
+HANDLE_DIVAR_FLAG(0, Zero)
+
+HANDLE_DIVAR_FLAG(1u, LocatorDesc)
+
+#ifdef DIVAR_FLAG_LARGEST_NEEDED
+// Intended to be used with ADT/BitmaskEnum.h
+// Note: Always must be equal to largest flag, check this when adding new flags.
+HANDLE_DIVAR_FLAG((1 << 1), Largest)
+#undef DIVAR_FLAG_LARGEST_NEEDED
 #endif
 
 #undef HANDLE_DI_FLAG
 #undef HANDLE_DISP_FLAG
+#undef HANDLE_DIVAR_FLAG
