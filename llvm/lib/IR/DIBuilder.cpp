@@ -796,14 +796,14 @@ static DILocalVariable *createLocalVariable(
     LLVMContext &VMContext, SmallVectorImpl<TrackingMDNodeRef> &PreservedNodes,
     DIScope *Context, StringRef Name, unsigned ArgNo, DIFile *File,
     unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags,
-    DILocalVariable::DIVarFlags VarFlags, uint32_t AlignInBits,
-    DINodeArray Annotations = nullptr) {
+    DILocalVariable::DIVarFlags VarFlags, unsigned LexicalScope,
+    uint32_t AlignInBits, DINodeArray Annotations = nullptr) {
   // FIXME: Why doesn't this check for a subprogram or lexical block (AFAICT
   // the only valid scopes)?
   auto *Scope = cast<DILocalScope>(Context);
-  auto *Node =
-      DILocalVariable::get(VMContext, Scope, Name, File, LineNo, Ty, ArgNo,
-                           Flags, VarFlags, AlignInBits, Annotations);
+  auto *Node = DILocalVariable::get(VMContext, Scope, Name, File, LineNo, Ty,
+                                    ArgNo, LexicalScope, Flags, VarFlags,
+                                    AlignInBits, Annotations);
   if (AlwaysPreserve) {
     // The optimizer may remove local variables. If there is an interest
     // to preserve variable info in such situation then stash it in a
@@ -820,10 +820,21 @@ DILocalVariable *DIBuilder::createAutoVariable(DIScope *Scope, StringRef Name,
                                                uint32_t AlignInBits) {
   assert(Scope && isa<DILocalScope>(Scope) &&
          "Unexpected scope for a local variable.");
+  return createLocalVariable(
+      VMContext, getSubprogramNodesTrackingVector(Scope), Scope, Name,
+      /* ArgNo */ 0, File, LineNo, Ty, AlwaysPreserve, Flags,
+      DILocalVariable::VarFlagZero, 0, AlignInBits);
+}
+
+DILocalVariable *DIBuilder::createAutoVariable2(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
+    unsigned LexicalScope, DIType *Ty, bool AlwaysPreserve,
+    DINode::DIFlags Flags, DILocalVariable::DIVarFlags VarFlags,
+    uint32_t AlignInBits) {
   return createLocalVariable(VMContext, getSubprogramNodesTrackingVector(Scope),
                              Scope, Name,
                              /* ArgNo */ 0, File, LineNo, Ty, AlwaysPreserve,
-                             Flags, DILocalVariable::VarFlagZero, AlignInBits);
+                             Flags, VarFlags, LexicalScope, AlignInBits);
 }
 
 DILocalVariable *DIBuilder::createParameterVariable(
@@ -836,7 +847,7 @@ DILocalVariable *DIBuilder::createParameterVariable(
   return createLocalVariable(
       VMContext, getSubprogramNodesTrackingVector(Scope), Scope, Name, ArgNo,
       File, LineNo, Ty, AlwaysPreserve, Flags, DILocalVariable::VarFlagZero,
-      /*AlignInBits=*/0, Annotations);
+      /* LexScope */ 0, /*AlignInBits=*/0, Annotations);
 }
 
 DILabel *DIBuilder::createLabel(DIScope *Context, StringRef Name, DIFile *File,

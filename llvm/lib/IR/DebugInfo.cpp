@@ -1050,6 +1050,10 @@ pack_into_DISPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized) {
   return DISubprogram::toSPFlags(IsLocalToUnit, IsDefinition, IsOptimized);
 }
 
+static DILocalVariable::DIVarFlags pack_into_DIVarFlags(bool IsLocatorDesc) {
+  return DILocalVariable::toVarFlags(IsLocatorDesc);
+}
+
 unsigned LLVMDebugMetadataVersion() {
   return DEBUG_METADATA_VERSION;
 }
@@ -1774,6 +1778,18 @@ LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
                   unwrap<DIScope>(Scope), {Name, NameLen}, ArgNo, unwrap<DIFile>(File),
                   LineNo, unwrap<DIType>(Ty), AlwaysPreserve,
                   map_from_llvmDIFlags(Flags)));
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateAutoVariable2(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNo,
+    unsigned LexicalScope, LLVMMetadataRef Ty, LLVMBool AlwaysPreserve,
+    LLVMDIFlags Flags, uint32_t AlignInBits, LLVMBool IsLocatorDesc) {
+  return wrap(unwrap(Builder)->createAutoVariable2(
+      unwrap<DIScope>(Scope), {Name, NameLen}, unwrap<DIFile>(File), LineNo,
+      LexicalScope, unwrap<DIType>(Ty), AlwaysPreserve,
+      map_from_llvmDIFlags(Flags), pack_into_DIVarFlags(IsLocatorDesc),
+      AlignInBits));
 }
 
 LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange(LLVMDIBuilderRef Builder,

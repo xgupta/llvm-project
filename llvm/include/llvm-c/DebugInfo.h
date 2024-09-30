@@ -1370,6 +1370,26 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordAtEnd(
  * \param NameLen         Length of variable name.
  * \param File            File where this variable is defined.
  * \param LineNo          Line number.
+ * \param LexicalScope    Lexical scope of var for lang like PL/I.
+ * \param Ty              Metadata describing the type of the variable.
+ * \param AlwaysPreserve  If true, this descriptor will survive optimizations.
+ * \param Flags           Flags.
+ * \param AlignInBits     Variable alignment.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateAutoVariable2(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNo,
+    unsigned LexicalScope, LLVMMetadataRef Ty, LLVMBool AlwaysPreserve,
+    LLVMDIFlags Flags, uint32_t AlignInBits, LLVMBool IsLocatorDesc);
+
+/**
+ * Create a new descriptor for a local auto variable.
+ * \param Builder         The DIBuilder.
+ * \param Scope           The local scope the variable is declared in.
+ * \param Name            Variable name.
+ * \param NameLen         Length of variable name.
+ * \param File            File where this variable is defined.
+ * \param LineNo          Line number.
  * \param Ty              Metadata describing the type of the variable.
  * \param AlwaysPreserve  If true, this descriptor will survive optimizations.
  * \param Flags           Flags.
