@@ -1703,7 +1703,8 @@ public:
   static DISPFlags toSPFlags(bool IsLocalToUnit, bool IsDefinition,
                              bool IsOptimized,
                              unsigned Virtuality = SPFlagNonvirtual,
-                             bool IsMainSubprogram = false);
+                             bool IsMainSubprogram = false,
+                             bool IsDescList = false, bool IsDescLoc = false);
 
 private:
   DIFlags Flags;
@@ -1805,6 +1806,8 @@ public:
   bool isDefinition() const { return getSPFlags() & SPFlagDefinition; }
   bool isOptimized() const { return getSPFlags() & SPFlagOptimized; }
   bool isMainSubprogram() const { return getSPFlags() & SPFlagMainSubprogram; }
+  bool isDescLocSubProgram() const { return getSPFlags() & SPFlagDescLoc; }
+  bool isDescListSubProgram() const { return getSPFlags() & SPFlagDescList; }
 
   bool isArtificial() const { return getFlags() & FlagArtificial; }
   bool isPrivate() const {
@@ -3298,8 +3301,24 @@ class DILocalVariable : public DIVariable {
   friend class LLVMContextImpl;
   friend class MDNode;
 
+public:
+  /// Debug info variable flags.
+  enum DIVarFlags : uint32_t {
+#define HANDLE_DIVAR_FLAG(ID, NAME) VarFlag##NAME = ID,
+#define DIVAR_FLAG_LARGEST_NEEDED
+#include "llvm/IR/DebugInfoFlags.def"
+    LLVM_MARK_AS_BITMASK_ENUM(VarFlagLargest)
+  };
+
+  static DIVarFlags toVarFlags(bool IsLocDesc) {
+    return static_cast<DIVarFlags>(
+        (IsLocDesc ? VarFlagLocatorDesc : VarFlagZero));
+  }
+
+private:
   unsigned Arg : 16;
   DIFlags Flags;
+  DIVarFlags VarFlags;
 
   DILocalVariable(LLVMContext &C, StorageType Storage, unsigned Line,
                   unsigned Arg, DIFlags Flags, uint32_t AlignInBits,
@@ -3359,6 +3378,7 @@ public:
   bool isParameter() const { return Arg; }
   unsigned getArg() const { return Arg; }
   DIFlags getFlags() const { return Flags; }
+  DIVarFlags getVarFlags() const { return VarFlags; }
 
   DINodeArray getAnnotations() const {
     return cast_or_null<MDTuple>(getRawAnnotations());
@@ -3367,6 +3387,8 @@ public:
 
   bool isArtificial() const { return getFlags() & FlagArtificial; }
   bool isObjectPointer() const { return getFlags() & FlagObjectPointer; }
+
+  bool isLocatorDesc() const { return getVarFlags() & VarFlagLocatorDesc; }
 
   /// Check that a location is valid for this variable.
   ///
