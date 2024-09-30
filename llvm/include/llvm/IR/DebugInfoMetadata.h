@@ -3496,34 +3496,36 @@ public:
 
 private:
   unsigned Arg : 16;
+  unsigned LexicalScope : 16;
   DIFlags Flags;
   DIVarFlags VarFlags;
 
   DILocalVariable(LLVMContext &C, StorageType Storage, unsigned Line,
-                  unsigned Arg, DIFlags Flags, uint32_t AlignInBits,
+                  unsigned Arg, unsigned LexScope, DIFlags Flags,
+                  DIVarFlags VarFlags, uint32_t AlignInBits,
                   ArrayRef<Metadata *> Ops)
       : DIVariable(C, DILocalVariableKind, Storage, Line, Ops, AlignInBits),
-        Arg(Arg), Flags(Flags) {
+        Arg(Arg), LexicalScope(LexScope), Flags(Flags), VarFlags(VarFlags) {
     assert(Arg < (1 << 16) && "DILocalVariable: Arg out of range");
   }
   ~DILocalVariable() = default;
 
   static DILocalVariable *getImpl(LLVMContext &Context, DIScope *Scope,
                                   StringRef Name, DIFile *File, unsigned Line,
-                                  DIType *Type, unsigned Arg, DIFlags Flags,
+                                  DIType *Type, unsigned Arg, unsigned LexScope,
+                                  DIFlags Flags, DIVarFlags VarFlags,
                                   uint32_t AlignInBits, DINodeArray Annotations,
                                   StorageType Storage,
                                   bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name), File,
-                   Line, Type, Arg, Flags, AlignInBits, Annotations.get(),
-                   Storage, ShouldCreate);
+                   Line, Type, Arg, LexScope, Flags, VarFlags, AlignInBits,
+                   Annotations.get(), Storage, ShouldCreate);
   }
-  static DILocalVariable *getImpl(LLVMContext &Context, Metadata *Scope,
-                                  MDString *Name, Metadata *File, unsigned Line,
-                                  Metadata *Type, unsigned Arg, DIFlags Flags,
-                                  uint32_t AlignInBits, Metadata *Annotations,
-                                  StorageType Storage,
-                                  bool ShouldCreate = true);
+  static DILocalVariable *
+  getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name, Metadata *File,
+          unsigned Line, Metadata *Type, unsigned Arg, unsigned LexScope,
+          DIFlags Flags, DIVarFlags VarFlags, uint32_t AlignInBits,
+          Metadata *Annotations, StorageType Storage, bool ShouldCreate = true);
 
   TempDILocalVariable cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getFile(),
@@ -3536,14 +3538,42 @@ public:
                     (DILocalScope * Scope, StringRef Name, DIFile *File,
                      unsigned Line, DIType *Type, unsigned Arg, DIFlags Flags,
                      uint32_t AlignInBits, DINodeArray Annotations),
-                    (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits,
-                     Annotations))
+                    (Scope, Name, File, Line, Type, Arg, 0, Flags, VarFlagZero,
+                     AlignInBits, Annotations))
   DEFINE_MDNODE_GET(DILocalVariable,
                     (Metadata * Scope, MDString *Name, Metadata *File,
                      unsigned Line, Metadata *Type, unsigned Arg, DIFlags Flags,
                      uint32_t AlignInBits, Metadata *Annotations),
-                    (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits,
-                     Annotations))
+                    (Scope, Name, File, Line, Type, Arg, 0, Flags, VarFlagZero,
+                     AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DILocalVariable,
+                    (DILocalScope * Scope, StringRef Name, DIFile *File,
+                     unsigned Line, DIType *Type, unsigned Arg, DIFlags Flags,
+                     DIVarFlags VarFlags, uint32_t AlignInBits,
+                     DINodeArray Annotations),
+                    (Scope, Name, File, Line, Type, Arg, 0, Flags, VarFlags,
+                     AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DILocalVariable,
+                    (Metadata * Scope, MDString *Name, Metadata *File,
+                     unsigned Line, Metadata *Type, unsigned Arg, DIFlags Flags,
+                     DIVarFlags VarFlags, uint32_t AlignInBits,
+                     Metadata *Annotations),
+                    (Scope, Name, File, Line, Type, Arg, 0, Flags, VarFlags,
+                     AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DILocalVariable,
+                    (DILocalScope * Scope, StringRef Name, DIFile *File,
+                     unsigned Line, DIType *Type, unsigned Arg,
+                     unsigned LexScope, DIFlags Flags, DIVarFlags VarFlags,
+                     uint32_t AlignInBits, DINodeArray Annotations),
+                    (Scope, Name, File, Line, Type, Arg, LexScope, Flags,
+                     VarFlags, AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DILocalVariable,
+                    (Metadata * Scope, MDString *Name, Metadata *File,
+                     unsigned Line, Metadata *Type, unsigned Arg,
+                     unsigned LexScope, DIFlags Flags, DIVarFlags VarFlags,
+                     uint32_t AlignInBits, Metadata *Annotations),
+                    (Scope, Name, File, Line, Type, Arg, LexScope, Flags,
+                     VarFlags, AlignInBits, Annotations))
 
   TempDILocalVariable clone() const { return cloneImpl(); }
 
@@ -3556,6 +3586,7 @@ public:
 
   bool isParameter() const { return Arg; }
   unsigned getArg() const { return Arg; }
+  unsigned getLexicalScope() const { return LexicalScope; }
   DIFlags getFlags() const { return Flags; }
   DIVarFlags getVarFlags() const { return VarFlags; }
 
