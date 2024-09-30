@@ -765,16 +765,15 @@ namespace llvm {
     /// \param Annotations   Attribute Annotations.
     /// \param TargetFuncName The name of the target function if this is
     ///                       a trampoline.
-    DISubprogram *
-    createFunction(DIScope *Scope, StringRef Name, StringRef LinkageName,
-                   DIFile *File, unsigned LineNo, DISubroutineType *Ty,
-                   unsigned ScopeLine, DINode::DIFlags Flags = DINode::FlagZero,
-                   DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
-                   DITemplateParameterArray TParams = nullptr,
-                   DISubprogram *Decl = nullptr,
-                   DITypeArray ThrownTypes = nullptr,
-                   DINodeArray Annotations = nullptr,
-                   StringRef TargetFuncName = "");
+    DISubprogram *createFunction(
+        DIScope *Scope, StringRef Name, StringRef LinkageName, DIFile *File,
+        unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
+        DINode::DIFlags Flags = DINode::FlagZero,
+        DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
+        DITemplateParameterArray TParams = nullptr,
+        DISubprogram *Decl = nullptr, DITypeArray ThrownTypes = nullptr,
+        DINodeArray Annotations = nullptr, StringRef TargetFuncName = "",
+        DIExpression *StaticLink = nullptr);
 
     /// Identical to createFunction,
     /// except that the resulting DbgNode is meant to be RAUWed.
@@ -805,15 +804,14 @@ namespace llvm {
     /// \param SPFlags       Additional flags specific to subprograms.
     /// \param TParams       Function template parameters.
     /// \param ThrownTypes   Exception types this function may throw.
-    DISubprogram *
-    createMethod(DIScope *Scope, StringRef Name, StringRef LinkageName,
-                 DIFile *File, unsigned LineNo, DISubroutineType *Ty,
-                 unsigned VTableIndex = 0, int ThisAdjustment = 0,
-                 DIType *VTableHolder = nullptr,
-                 DINode::DIFlags Flags = DINode::FlagZero,
-                 DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
-                 DITemplateParameterArray TParams = nullptr,
-                 DITypeArray ThrownTypes = nullptr);
+    DISubprogram *createMethod(
+        DIScope *Scope, StringRef Name, StringRef LinkageName, DIFile *File,
+        unsigned LineNo, DISubroutineType *Ty, unsigned VTableIndex = 0,
+        int ThisAdjustment = 0, DIType *VTableHolder = nullptr,
+        DINode::DIFlags Flags = DINode::FlagZero,
+        DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
+        DITemplateParameterArray TParams = nullptr,
+        DITypeArray ThrownTypes = nullptr, DIExpression *StaticLink = nullptr);
 
     /// Create common block entry for a Fortran common block.
     /// \param Scope       Scope of this common block.

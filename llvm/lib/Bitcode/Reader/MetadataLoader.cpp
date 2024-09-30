@@ -1566,8 +1566,17 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       DWARFAddressSpace = Record[12] - 1;
 
     Metadata *Annotations = nullptr;
-    if (Record.size() > 13 && Record[13])
-      Annotations = getMDOrNull(Record[13]);
+    std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
+
+    // Only look for annotations/ptrauth if both are allocated.
+    // If not, we can't tell which was intended to be embedded, as both ptrauth
+    // and annotations have been expected at Record[13] at various times.
+    if (Record.size() > 14) {
+      if (Record[13])
+        Annotations = getMDOrNull(Record[14]);
+      if (Record[13])
+        PtrAuthData.emplace(Record[14]);
+    }
 
     IsDistinct = Record[0];
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
@@ -1777,7 +1786,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_SUBPROGRAM: {
-    if (Record.size() < 18 || Record.size() > 21)
+    if (Record.size() < 18 || Record.size() > 22)
       return error("Invalid record");
 
     bool HasSPFlags = Record[0] & 4;
@@ -1827,6 +1836,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     bool HasThrownTypes = true;
     bool HasAnnotations = false;
     bool HasTargetFuncName = false;
+    const bool HasStaticLink = Record.size() >= 22;
     unsigned OffsetA = 0;
     unsigned OffsetB = 0;
     if (!HasSPFlags) {
@@ -1867,7 +1877,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
                         : nullptr, // annotations
          HasTargetFuncName ? getMDString(Record[19 + OffsetB])
-                           : nullptr // targetFuncName
+                           : nullptr, // targetFuncName
+         HasStaticLink ? getMDOrNull(Record[20 + OffsetB])
+                       : nullptr // StaticLinkExpr
          ));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;
