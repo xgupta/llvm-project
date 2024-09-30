@@ -519,6 +519,21 @@ public:
   ///     A const compile unit object pointer.
   const DWARFExpressionList &GetFrameBaseExpression() const { return m_frame_base; }
 
+  /// Get accessor for the static link location.
+  ///
+  /// \return
+  ///     A location expression that describes the nestee function frame
+  ///     base.
+  DWARFExpressionList &GetStaticLinkExpression() { return m_static_link; }
+
+  /// Get const accessor for the static link location.
+  ///
+  /// \return
+  ///     A const compile unit object pointer.
+  const DWARFExpressionList &GetStaticLinkExpression() const {
+    return m_static_link;
+  }
+
   ConstString GetName() const;
 
   ConstString GetNameNoArguments() const;
@@ -656,6 +671,10 @@ protected:
   /// The frame base expression for variables that are relative to the frame
   /// pointer.
   DWARFExpressionList m_frame_base;
+
+  /// The static link expression for lexical nested subroutine pointing to the
+  /// nestee frame
+  DWARFExpressionList m_static_link;
 
   Flags m_flags;
 
