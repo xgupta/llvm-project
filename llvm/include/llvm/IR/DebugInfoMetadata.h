@@ -1799,7 +1799,8 @@ public:
   static DISPFlags toSPFlags(bool IsLocalToUnit, bool IsDefinition,
                              bool IsOptimized,
                              unsigned Virtuality = SPFlagNonvirtual,
-                             bool IsMainSubprogram = false);
+                             bool IsMainSubprogram = false,
+                             bool IsDescList = false, bool IsDescLoc = false);
 
 private:
   DIFlags Flags;
@@ -1901,6 +1902,8 @@ public:
   bool isDefinition() const { return getSPFlags() & SPFlagDefinition; }
   bool isOptimized() const { return getSPFlags() & SPFlagOptimized; }
   bool isMainSubprogram() const { return getSPFlags() & SPFlagMainSubprogram; }
+  bool isDescLocSubProgram() const { return getSPFlags() & SPFlagDescLoc; }
+  bool isDescListSubProgram() const { return getSPFlags() & SPFlagDescList; }
 
   bool isArtificial() const { return getFlags() & FlagArtificial; }
   bool isPrivate() const {
@@ -3515,14 +3518,30 @@ class DILocalVariable : public DIVariable {
   friend class LLVMContextImpl;
   friend class MDNode;
 
+public:
+  /// Debug info variable flags.
+  enum DIVarFlags : uint32_t {
+#define HANDLE_DIVAR_FLAG(ID, NAME) VarFlag##NAME = ID,
+#define DIVAR_FLAG_LARGEST_NEEDED
+#include "llvm/IR/DebugInfoFlags.def"
+    LLVM_MARK_AS_BITMASK_ENUM(VarFlagLargest)
+  };
+
+  static DIVarFlags toVarFlags(bool IsLocDesc) {
+    return static_cast<DIVarFlags>(
+        (IsLocDesc ? VarFlagLocatorDesc : VarFlagZero));
+  }
+
+private:
   unsigned Arg : 16;
   DIFlags Flags;
+  DIVarFlags VarFlags;
 
   DILocalVariable(LLVMContext &C, StorageType Storage, unsigned Line,
-                  unsigned Arg, DIFlags Flags, uint32_t AlignInBits,
-                  ArrayRef<Metadata *> Ops)
+                  unsigned Arg, DIFlags Flags, DIVarFlags VarFlags,
+                  uint32_t AlignInBits, ArrayRef<Metadata *> Ops)
       : DIVariable(C, DILocalVariableKind, Storage, Line, Ops, AlignInBits),
-        Arg(Arg), Flags(Flags) {
+        Arg(Arg), Flags(Flags), VarFlags(VarFlags) {
     assert(Arg < (1 << 16) && "DILocalVariable: Arg out of range");
   }
   ~DILocalVariable() = default;
@@ -3530,18 +3549,18 @@ class DILocalVariable : public DIVariable {
   static DILocalVariable *getImpl(LLVMContext &Context, DIScope *Scope,
                                   StringRef Name, DIFile *File, unsigned Line,
                                   DIType *Type, unsigned Arg, DIFlags Flags,
-                                  uint32_t AlignInBits, DINodeArray Annotations,
-                                  StorageType Storage,
+                                  DIVarFlags VarFlags, uint32_t AlignInBits,
+                                  DINodeArray Annotations, StorageType Storage,
                                   bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name), File,
-                   Line, Type, Arg, Flags, AlignInBits, Annotations.get(),
-                   Storage, ShouldCreate);
+                   Line, Type, Arg, Flags, VarFlags, AlignInBits,
+                   Annotations.get(), Storage, ShouldCreate);
   }
   static DILocalVariable *getImpl(LLVMContext &Context, Metadata *Scope,
                                   MDString *Name, Metadata *File, unsigned Line,
                                   Metadata *Type, unsigned Arg, DIFlags Flags,
-                                  uint32_t AlignInBits, Metadata *Annotations,
-                                  StorageType Storage,
+                                  DIVarFlags VarFlags, uint32_t AlignInBits,
+                                  Metadata *Annotations, StorageType Storage,
                                   bool ShouldCreate = true);
 
   TempDILocalVariable cloneImpl() const {
@@ -3555,14 +3574,29 @@ public:
                     (DILocalScope * Scope, StringRef Name, DIFile *File,
                      unsigned Line, DIType *Type, unsigned Arg, DIFlags Flags,
                      uint32_t AlignInBits, DINodeArray Annotations),
-                    (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits,
-                     Annotations))
+                    (Scope, Name, File, Line, Type, Arg, Flags, VarFlagZero,
+                     AlignInBits, Annotations))
   DEFINE_MDNODE_GET(DILocalVariable,
                     (Metadata * Scope, MDString *Name, Metadata *File,
                      unsigned Line, Metadata *Type, unsigned Arg, DIFlags Flags,
                      uint32_t AlignInBits, Metadata *Annotations),
-                    (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits,
-                     Annotations))
+                    (Scope, Name, File, Line, Type, Arg, Flags, VarFlagZero,
+                     AlignInBits, Annotations))
+
+  DEFINE_MDNODE_GET(DILocalVariable,
+                    (DILocalScope * Scope, StringRef Name, DIFile *File,
+                     unsigned Line, DIType *Type, unsigned Arg, DIFlags Flags,
+                     DIVarFlags VarFlags, uint32_t AlignInBits,
+                     DINodeArray Annotations),
+                    (Scope, Name, File, Line, Type, Arg, Flags, VarFlags,
+                     AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DILocalVariable,
+                    (Metadata * Scope, MDString *Name, Metadata *File,
+                     unsigned Line, Metadata *Type, unsigned Arg, DIFlags Flags,
+                     DIVarFlags VarFlags, uint32_t AlignInBits,
+                     Metadata *Annotations),
+                    (Scope, Name, File, Line, Type, Arg, Flags, VarFlags,
+                     AlignInBits, Annotations))
 
   TempDILocalVariable clone() const { return cloneImpl(); }
 
@@ -3576,6 +3610,7 @@ public:
   bool isParameter() const { return Arg; }
   unsigned getArg() const { return Arg; }
   DIFlags getFlags() const { return Flags; }
+  DIVarFlags getVarFlags() const { return VarFlags; }
 
   DINodeArray getAnnotations() const {
     return cast_or_null<MDTuple>(getRawAnnotations());
@@ -3584,6 +3619,8 @@ public:
 
   bool isArtificial() const { return getFlags() & FlagArtificial; }
   bool isObjectPointer() const { return getFlags() & FlagObjectPointer; }
+
+  bool isLocatorDesc() const { return getVarFlags() & VarFlagLocatorDesc; }
 
   /// Check that a location is valid for this variable.
   ///

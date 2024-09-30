@@ -1034,7 +1034,8 @@ DISubprogram::DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
 }
 DISubprogram::DISPFlags
 DISubprogram::toSPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized,
-                        unsigned Virtuality, bool IsMainSubprogram) {
+                        unsigned Virtuality, bool IsMainSubprogram,
+                        bool IsDescList, bool IsDescLoc) {
   // We're assuming virtuality is the low-order field.
   static_assert(int(SPFlagVirtual) == int(dwarf::DW_VIRTUALITY_virtual) &&
                     int(SPFlagPureVirtual) ==
@@ -1308,18 +1309,20 @@ DIGlobalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
 DILocalVariable *
 DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                          Metadata *File, unsigned Line, Metadata *Type,
-                         unsigned Arg, DIFlags Flags, uint32_t AlignInBits,
-                         Metadata *Annotations, StorageType Storage,
-                         bool ShouldCreate) {
+                         unsigned Arg, DIFlags Flags, DIVarFlags VarFlags,
+                         uint32_t AlignInBits, Metadata *Annotations,
+                         StorageType Storage, bool ShouldCreate) {
   // 64K ought to be enough for any frontend.
   assert(Arg <= UINT16_MAX && "Expected argument number to fit in 16-bits");
 
   assert(Scope && "Expected scope");
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DILocalVariable, (Scope, Name, File, Line, Type, Arg,
-                                          Flags, AlignInBits, Annotations));
+  DEFINE_GETIMPL_LOOKUP(DILocalVariable,
+                        (Scope, Name, File, Line, Type, Arg, Flags, VarFlags,
+                         AlignInBits, Annotations));
   Metadata *Ops[] = {Scope, Name, File, Type, Annotations};
-  DEFINE_GETIMPL_STORE(DILocalVariable, (Line, Arg, Flags, AlignInBits), Ops);
+  DEFINE_GETIMPL_STORE(DILocalVariable,
+                       (Line, Arg, Flags, VarFlags, AlignInBits), Ops);
 }
 
 DIVariable::DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
