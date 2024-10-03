@@ -64,9 +64,10 @@ typedef enum {
   LLVMDIFlagNonTrivial = 1 << 26,
   LLVMDIFlagBigEndian = 1 << 27,
   LLVMDIFlagLittleEndian = 1 << 28,
+  LLVMDIFlagBinaryScale = 1 << 30,
   LLVMDIFlagIndirectVirtualBase = (1 << 2) | (1 << 5),
-  LLVMDIFlagAccessibility = LLVMDIFlagPrivate | LLVMDIFlagProtected |
-                            LLVMDIFlagPublic,
+  LLVMDIFlagAccessibility =
+      LLVMDIFlagPrivate | LLVMDIFlagProtected | LLVMDIFlagPublic,
   LLVMDIFlagPtrToMemberRep = LLVMDIFlagSingleInheritance |
                              LLVMDIFlagMultipleInheritance |
                              LLVMDIFlagVirtualInheritance
@@ -153,6 +154,18 @@ typedef enum {
     LLVMDWARFEmissionFull,
     LLVMDWARFEmissionLineTablesOnly
 } LLVMDWARFEmissionKind;
+
+/**
+ * Decimal sign attribute knwon by DWARF
+ */
+typedef enum {
+  LLVMDWARFDSNone = 0,
+  LLVMDWARFDSUnsigned,
+  LLVMDWARFDSLeadingOverpunch,
+  LLVMDWARFDSTrailingOverpunch,
+  LLVMDWARFDSLeadingSeparate,
+  LLVMDWARFDSTrailingSeparate,
+} LLVMDWARFDecimalSign;
 
 /**
  * The kind of metadata nodes.
@@ -724,6 +737,28 @@ LLVMDIBuilderCreateBasicType(LLVMDIBuilderRef Builder, const char *Name,
                              size_t NameLen, uint64_t SizeInBits,
                              LLVMDWARFTypeEncoding Encoding,
                              LLVMDIFlags Flags);
+
+/**
+ * Create debugging information entry for a basic
+ * type.
+ * \param Builder         The DIBuilder.
+ * \param Name            Type name.
+ * \param NameLen         Length of type name.
+ * \param PicStrin        Picture string.
+ * \param PicLen          Length of Picture string.
+ * \param SizeInBits      Size of the type.
+ * \param Encoding        DWARF encoding code
+ * \param digits          digits count, 0 if not applicable
+ * \param sign            decimal sign, LLVMDWARFDSNone if not applicable
+.* \param scale           decimal scale, isScalePresent to false, if not N/A
+ * \param isScalePresent  set to True is scale param is applicable
+ * \param Flags       Flags to encode optional attribute like endianity
+ */
+LLVMMetadataRef LLVMDIBuilderCreateDecimalType(
+    LLVMDIBuilderRef Builder, const char *Name, size_t NameLen,
+    const char *PicString, size_t PicLen, uint64_t SizeInBits,
+    LLVMDWARFTypeEncoding Encoding, uint32_t digits, LLVMDWARFDecimalSign sign,
+    int32_t scale, LLVMBool isScalePresent, LLVMDIFlags Flags);
 
 /**
  * Create debugging information entry for a pointer.
