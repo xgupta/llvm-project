@@ -553,6 +553,8 @@ ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
 
   Value initialValue(0);
   Value memberOffset(0);
+  std::vector<Value> stack;
+  stack.push_back(Value(0));
   const DWARFDataExtractor &debug_info_data = die.GetData();
   uint32_t block_length = form_value.Unsigned();
   uint32_t block_offset =
@@ -562,7 +564,7 @@ ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
           nullptr, // RegisterContext *
           module_sp, DataExtractor(debug_info_data, block_offset, block_length),
           die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr, memberOffset,
-          nullptr)) {
+          nullptr, stack)) {
     return {};
   }
 
@@ -2460,7 +2462,7 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
 
   if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
                                decl_column, call_file, call_line, call_column,
-                               &frame_base)) {
+                               &frame_base, nullptr, nullptr)) {
     Mangled func_name;
     if (mangled)
       func_name.SetValue(ConstString(mangled));

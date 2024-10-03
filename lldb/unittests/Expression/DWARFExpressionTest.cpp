@@ -42,7 +42,23 @@ static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                  &status))
     return status.ToError();
 
-  switch (result.GetValueType()) {
+  std::vector<Value> stack;
+
+  llvm::Expected<Value> result =
+      DWARFExpression::Evaluate(exe_ctx, /*reg_ctx*/ nullptr, module_sp,
+                                extractor, unit, lldb::eRegisterKindLLDB,
+                                /*object_address_ptr*/ nullptr, nullptr, stack);
+  if (!result)
+    return result.takeError();
+
+  result = DWARFExpression::Evaluate(exe_ctx, /*reg_ctx*/ nullptr, module_sp,
+                                     extractor, unit, lldb::eRegisterKindLLDB,
+                                     /*initial_value_ptr*/ nullptr,
+                                     /*object_address_ptr*/ nullptr, stack);
+  if (!result)
+    return result.takeError();
+
+  switch (result->GetValueType()) {
   case Value::ValueType::Scalar:
     return result.GetScalar();
   case Value::ValueType::LoadAddress:
@@ -426,14 +442,12 @@ TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
   uint8_t expr[] = {DW_OP_addr, 0x40, 0x0, 0x0, 0x0};
   DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
                           /*addr_size*/ 4);
-  Value result;
-  Status status;
-  ASSERT_TRUE(DWARFExpression::Evaluate(
+  std::vector<Value> stack;
+  llvm::Expected<Value> result = DWARFExpression::Evaluate(
       &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor,
       /*unit*/ nullptr, lldb::eRegisterKindLLDB,
       /*initial_value_ptr*/ nullptr,
-      /*object_address_ptr*/ nullptr, result, &status))
-      << status.ToError();
+      /*object_address_ptr*/ nullptr, stack);
 
   ASSERT_EQ(result.GetValueType(), Value::ValueType::LoadAddress);
 }
@@ -504,6 +518,7 @@ DWARF:
 
   auto evaluate = [&](DWARFExpression &expr, Status &status, Value &result) {
     DataExtractor extractor;
+    std::vector<Value> stack;
     expr.GetExpressionData(extractor);
     return DWARFExpression::Evaluate(
         &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor, dwarf_cu,
