@@ -1352,6 +1352,27 @@ LLVMDIBuilderCreateBasicType(LLVMDIBuilderRef Builder, const char *Name,
                                                map_from_llvmDIFlags(Flags)));
 }
 
+LLVMMetadataRef LLVMDIBuilderCreateDecimalType(
+    LLVMDIBuilderRef Builder, const char *Name, size_t NameLen,
+    const char *PicString, size_t PicLen, uint64_t SizeInBits,
+    LLVMDWARFTypeEncoding Encoding, uint32_t digits, LLVMDWARFDecimalSign sign,
+    int32_t scale, LLVMBool isScalePresent, LLVMDIFlags Flags) {
+
+  std::optional<uint16_t> DigitCount;
+  std::optional<uint16_t> DecimalSign;
+  std::optional<int16_t> Scale;
+
+  if (digits)
+    DigitCount = digits;
+  if (sign != LLVMDWARFDSNone)
+    DecimalSign = sign;
+  if (isScalePresent)
+    Scale = scale;
+  return wrap(unwrap(Builder)->createBasicType(
+      {Name, NameLen}, {PicString, PicLen}, SizeInBits, Encoding, DigitCount,
+      DecimalSign, Scale, map_from_llvmDIFlags(Flags)));
+}
+
 LLVMMetadataRef LLVMDIBuilderCreatePointerType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef PointeeTy,
     uint64_t SizeInBits, uint32_t AlignInBits, unsigned AddressSpace,

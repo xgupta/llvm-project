@@ -858,6 +858,10 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(versions);
   KEYWORD(memProf);
   KEYWORD(notcold);
+  KEYWORD(pic);
+  KEYWORD(digits);
+  KEYWORD(scale);
+  KEYWORD(sign);
 
 #undef KEYWORD
 
@@ -971,6 +975,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(CC, DwarfCC);
   DWKEYWORD(OP, DwarfOp);
   DWKEYWORD(MACINFO, DwarfMacinfo);
+  DWKEYWORD(DS, DwarfDecimalSign);
 
 #undef DWKEYWORD
 
