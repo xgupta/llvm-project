@@ -773,7 +773,11 @@ namespace llvm {
     /// Create a new descriptor for the specified
     /// variable which has a complex address expression for its address.
     /// \param Addr        An array of complex address operations.
-    DIExpression *createExpression(ArrayRef<uint64_t> Addr = {});
+    /// \param Refs        An array of Metadata ref for call2/call4 operations.
+    DIExpression *createExpression(ArrayRef<uint64_t> Addr = {},
+                                   ArrayRef<Metadata *> Refs = std::nullopt);
+    DIExpression *createExpression(ArrayRef<int64_t> Addr,
+                                   ArrayRef<Metadata *> Refs = std::nullopt);
 
     /// Create an expression for a variable that does not have an address, but
     /// does have a constant value.
