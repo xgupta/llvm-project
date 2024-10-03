@@ -2167,6 +2167,18 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
   Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
+  if (N->hasDecimalInfo()) {
+    Printer.printString("pic", N->getPictureString());
+
+    if (const auto &digits = N->getDigitCount())
+      Printer.printInt("digits", *digits);
+
+    if (const auto &sign = N->getDecimalSign())
+      Printer.printDwarfEnum("sign", *sign, dwarf::DecimalSignString);
+
+    if (const auto &scale = N->getScale())
+      Printer.printInt("scale", *scale, /*ShouldSkipZero*/ false);
+  }
   Printer.printDIFlags("flags", N->getFlags());
   Out << ")";
 }
