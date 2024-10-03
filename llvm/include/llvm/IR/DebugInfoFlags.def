@@ -63,6 +63,7 @@ HANDLE_DI_FLAG((1 << 26), NonTrivial)
 HANDLE_DI_FLAG((1 << 27), BigEndian)
 HANDLE_DI_FLAG((1 << 28), LittleEndian)
 HANDLE_DI_FLAG((1 << 29), AllCallsDescribed)
+HANDLE_DI_FLAG((1 << 30), BinaryScale)
 
 // To avoid needing a dedicated value for IndirectVirtualBase, we use
 // the bitwise or of Virtual and FwdDecl, which does not otherwise
