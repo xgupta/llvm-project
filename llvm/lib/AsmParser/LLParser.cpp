@@ -5591,7 +5591,8 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(thrownTypes, MDField, );                                            \
   OPTIONAL(annotations, MDField, );                                            \
   OPTIONAL(targetFuncName, MDStringField, );                                   \
-  OPTIONAL(staticLink, MDField, );
+  OPTIONAL(staticLink, MDField, );                                             \
+  OPTIONAL(rcFrameBase, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5611,7 +5612,7 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
        type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
        thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
        declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
-       targetFuncName.Val, staticLink.Val));
+       targetFuncName.Val, staticLink.Val, rcFrameBase.Val));
   return false;
 }
 

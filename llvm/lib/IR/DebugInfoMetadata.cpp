@@ -1128,31 +1128,36 @@ DISubprogram *DISubprogram::getImpl(
     int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
     Metadata *TemplateParams, Metadata *Declaration, Metadata *RetainedNodes,
     Metadata *ThrownTypes, Metadata *Annotations, MDString *TargetFuncName,
-    Metadata *StaticLink, StorageType Storage, bool ShouldCreate) {
+    Metadata *StaticLink, Metadata *RcFrameBase, StorageType Storage,
+    bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
   assert(isCanonical(TargetFuncName) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(
-      DISubprogram, (Scope, Name, LinkageName, File, Line, Type, ScopeLine,
-                     ContainingType, VirtualIndex, ThisAdjustment, Flags,
-                     SPFlags, Unit, TemplateParams, Declaration, RetainedNodes,
-                     ThrownTypes, Annotations, TargetFuncName, StaticLink));
+  DEFINE_GETIMPL_LOOKUP(DISubprogram,
+                        (Scope, Name, LinkageName, File, Line, Type, ScopeLine,
+                         ContainingType, VirtualIndex, ThisAdjustment, Flags,
+                         SPFlags, Unit, TemplateParams, Declaration,
+                         RetainedNodes, ThrownTypes, Annotations,
+                         TargetFuncName, StaticLink, RcFrameBase));
   SmallVector<Metadata *, 13> Ops = {
       File,        Scope,       Name,           LinkageName,    Type,
       Unit,        Declaration, RetainedNodes,  ContainingType, TemplateParams,
-      ThrownTypes, Annotations, TargetFuncName, StaticLink};
-  if (!StaticLink) {
+      ThrownTypes, Annotations, TargetFuncName, StaticLink,     RcFrameBase};
+  if (!RcFrameBase) {
     Ops.pop_back();
-    if (!TargetFuncName) {
+    if (!StaticLink) {
       Ops.pop_back();
-      if (!Annotations) {
+      if (!TargetFuncName) {
         Ops.pop_back();
-        if (!ThrownTypes) {
+        if (!Annotations) {
           Ops.pop_back();
-          if (!TemplateParams) {
+          if (!ThrownTypes) {
             Ops.pop_back();
-            if (!ContainingType)
+            if (!TemplateParams) {
               Ops.pop_back();
+              if (!ContainingType)
+                Ops.pop_back();
+            }
           }
         }
       }
