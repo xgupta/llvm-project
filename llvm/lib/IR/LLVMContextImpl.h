@@ -1188,12 +1188,15 @@ template <> struct MDNodeKeyImpl<DILabel> {
 
 template <> struct MDNodeKeyImpl<DIExpression> {
   ArrayRef<uint64_t> Elements;
+  ArrayRef<Metadata *> Refs;
 
-  MDNodeKeyImpl(ArrayRef<uint64_t> Elements) : Elements(Elements) {}
-  MDNodeKeyImpl(const DIExpression *N) : Elements(N->getElements()) {}
+  MDNodeKeyImpl(ArrayRef<uint64_t> Elements, ArrayRef<Metadata *> Refs)
+      : Elements(Elements), Refs(Refs) {}
+  MDNodeKeyImpl(const DIExpression *N)
+      : Elements(N->getElements()), Refs(N->getRefs()) {}
 
   bool isKeyOf(const DIExpression *RHS) const {
-    return Elements == RHS->getElements();
+    return Elements == RHS->getElements() && Refs.equals(RHS->getRefs());
   }
 
   unsigned getHashValue() const {

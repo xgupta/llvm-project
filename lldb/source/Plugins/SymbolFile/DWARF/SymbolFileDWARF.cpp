@@ -1363,7 +1363,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
       std::optional<int> call_column;
       if (die.GetDIENamesAndRanges(name, mangled_name, ranges, decl_file,
                                    decl_line, decl_column, call_file, call_line,
-                                   call_column, nullptr)) {
+                                   call_column, nullptr, nullptr, nullptr)) {
         if (tag == DW_TAG_subprogram) {
           assert(subprogram_low_pc == LLDB_INVALID_ADDRESS);
           subprogram_low_pc = ranges.GetMinRangeBase(0);

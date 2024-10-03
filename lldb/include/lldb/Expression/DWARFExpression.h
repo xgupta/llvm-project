@@ -11,6 +11,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/dwarf.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
@@ -122,23 +123,27 @@ public:
   ///     A value to put on top of the interpreter stack before evaluating
   ///     the expression, if the expression is parametrized.  Can be NULL.
   ///
-  /// \param[in] result
-  ///     A value into which the result of evaluating the expression is
-  ///     to be placed.
+  /// \param[in] stack
+  ///     interpreter stack for evaluation of dwarf expression. It is shared
+  ///     between calls in case of adding/removing entries from stack.
   ///
-  /// \param[in] error_ptr
-  ///     If non-NULL, used to report errors in expression evaluation.
-  ///
-  /// \return
-  ///     True on success; false otherwise.  If error_ptr is non-NULL,
-  ///     details of the failure are provided through it.
-  static bool Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
-                       lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-                       const plugin::dwarf::DWARFUnit *dwarf_cu,
-                       const lldb::RegisterKind reg_set,
-                       const Value *initial_value_ptr,
-                       const Value *object_address_ptr, Value &result,
-                       Status *error_ptr);
+  /// \return An llvm::Expected<Value> that contains the result of the call
+  ///     evaluation on success, or an llvm::Error describing the failure.
+  static llvm::Expected<Value>
+  Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+           lldb::ModuleSP module_sp, const DataExtractor &opcodes,
+           const plugin::dwarf::DWARFUnit *dwarf_cu,
+           const lldb::RegisterKind reg_set, const Value *initial_value_ptr,
+           const Value *object_address_ptr, std::vector<Value> &stack,
+           bool expression_call = false);
+
+  static llvm::Error
+  EvaluateCall(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+               lldb::ModuleSP module_sp,
+               const plugin::dwarf::DWARFUnit *dwarf_cu,
+               dw_offset_t die_ref_offset, const lldb::RegisterKind reg_set,
+               const Value *initial_value_ptr, const Value *object_address_ptr,
+               std::vector<Value> &stack);
 
   static bool ParseDWARFLocationList(const plugin::dwarf::DWARFUnit *dwarf_cu,
                                      const DataExtractor &data,

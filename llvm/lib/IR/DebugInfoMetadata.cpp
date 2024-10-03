@@ -1363,9 +1363,10 @@ DILabel *DILabel::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
 
 DIExpression *DIExpression::getImpl(LLVMContext &Context,
                                     ArrayRef<uint64_t> Elements,
+                                    ArrayRef<Metadata *> Refs,
                                     StorageType Storage, bool ShouldCreate) {
-  DEFINE_GETIMPL_LOOKUP(DIExpression, (Elements));
-  DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (Elements));
+  DEFINE_GETIMPL_LOOKUP(DIExpression, (Elements, Refs));
+  DEFINE_GETIMPL_STORE_N(DIExpression, (Elements), Refs, Refs.size());
 }
 bool DIExpression::isEntryValue() const {
   if (auto singleLocElts = getSingleLocationExpressionElements()) {
@@ -1413,10 +1414,23 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_LLVM_entry_value:
   case dwarf::DW_OP_LLVM_arg:
   case dwarf::DW_OP_regx:
+  case dwarf::DW_OP_call2:
+  case dwarf::DW_OP_call4:
     return 2;
   default:
     return 1;
   }
+}
+
+bool DIExpression::ExprOperand::hasRef() const {
+  switch (getOp()) {
+  default:
+    return false;
+  case dwarf::DW_OP_call4:
+  case dwarf::DW_OP_call2:
+    break;
+  }
+  return true;
 }
 
 bool DIExpression::isValid() const {
@@ -1468,6 +1482,13 @@ bool DIExpression::isValid() const {
       if (FirstOp->getOp() == dwarf::DW_OP_LLVM_arg && FirstOp->getArg(0) == 0)
         ++FirstOp;
       return I->get() == FirstOp->get() && I->getArg(0) == 1;
+    }
+    case dwarf::DW_OP_call2:
+    case dwarf::DW_OP_call4: {
+      // Check if references are there or not.
+      if ((I->getArg(0)) >= getNumOperands())
+        return false;
+      break;
     }
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:

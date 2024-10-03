@@ -2161,15 +2161,27 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
-    uint64_t Version = Record[0] >> 1;
-    auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
+    uint64_t Version = (Record[0] >> 1) & (0xF);
+    uint64_t Ops = (Record[0] >> 6);
+    auto Elts = Ops ? MutableArrayRef<uint64_t>(Record).slice(1, Ops)
+                    : MutableArrayRef<uint64_t>(Record).slice(1);
 
     SmallVector<uint64_t, 6> Buffer;
     if (Error Err = upgradeDIExpression(Version, Elts, Buffer))
       return Err;
 
-    MetadataList.assignValue(GET_OR_DISTINCT(DIExpression, (Context, Elts)),
-                             NextMetadataNo);
+    SmallVector<Metadata *, 4> Refs;
+    /// on old bitcode we will get zero Ops.
+    if (Ops) {
+      Ops++;
+      /// Check presence of refs for OP_call2/call4.
+      while (Ops < Record.size())
+        Refs.push_back(getMDOrNull(Record[Ops++]));
+    }
+
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIExpression, (Context, Elts, Refs)), NextMetadataNo);
+
     NextMetadataNo++;
     break;
   }

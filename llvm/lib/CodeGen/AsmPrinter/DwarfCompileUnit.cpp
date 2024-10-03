@@ -230,7 +230,7 @@ void DwarfCompileUnit::addLocationAttribute(
       continue;
 
     // Nothing to describe without address or constant.
-    if (!Global && (!Expr || !Expr->isConstant()))
+    if (!Global && (!Expr || (!Expr->isConstant() && !Expr->getNumOperands())))
       continue;
 
     if (Global && Global->isThreadLocal() &&
@@ -243,7 +243,7 @@ void DwarfCompileUnit::addLocationAttribute(
       DwarfExpr = std::make_unique<DIEDwarfExpression>(*Asm, *this, *Loc);
     }
 
-    if (Expr) {
+    if (Expr->getFragmentInfo() != std::nullopt) {
       // According to
       // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
       // cuda-gdb requires DW_AT_address_class for all variables to be able to
@@ -260,6 +260,17 @@ void DwarfCompileUnit::addLocationAttribute(
         }
       }
       DwarfExpr->addFragmentOffset(Expr);
+    }
+
+    // TODO: Optimize me
+    SmallVector<DIE *, 4> refs;
+    if (Expr->getNumElements()) {
+      for (const Metadata *ref : Expr->operands()) {
+        if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+          ref = DGV->getVariable();
+        }
+        refs.push_back(getDIE((cast<DINode>(ref))));
+      }
     }
 
     if (Global) {
@@ -349,7 +360,7 @@ void DwarfCompileUnit::addLocationAttribute(
     // to detect in the verifier.
     if (DwarfExpr->isUnknownLocation())
       DwarfExpr->setMemoryLocationKind();
-    DwarfExpr->addExpression(Expr);
+    DwarfExpr->addExpression(Expr, 0, &refs);
   }
   if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
     // According to
@@ -775,12 +786,19 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     } else if (Entry->isInt()) {
       auto *Expr = Single.getExpr();
       if (Expr && Expr->getNumElements()) {
+        SmallVector<DIE *, 4> Refs;
+        for (const Metadata *ref : Expr->operands()) {
+          if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+            ref = DGV->getVariable();
+          }
+          Refs.push_back(getDIE((cast<DINode>(ref))));
+        }
         DIELoc *Loc = new (DIEValueAllocator) DIELoc;
         DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
         // If there is an expression, emit raw unsigned bytes.
         DwarfExpr.addFragmentOffset(Expr);
         DwarfExpr.addUnsignedConstant(Entry->getInt());
-        DwarfExpr.addExpression(Expr);
+        DwarfExpr.addExpression(Expr, 0, &Refs);
         addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
         if (DwarfExpr.TagOffset)
           addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset,
@@ -916,7 +934,15 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
     else
       DwarfExpr.addMachineRegExpression(
           *Asm->MF->getSubtarget().getRegisterInfo(), Cursor, FrameReg);
-    DwarfExpr.addExpression(std::move(Cursor));
+
+    SmallVector<DIE *, 4> Refs;
+    for (const Metadata *ref : Expr->operands()) {
+      if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+        ref = DGV->getVariable();
+      }
+      Refs.push_back(getDIE((cast<DINode>(ref))));
+    }
+    DwarfExpr.addExpression(std::move(Cursor), 0, &Refs);
   }
   if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
     // According to
@@ -1567,6 +1593,15 @@ void DwarfCompileUnit::addStaticLink(DIE &Die, dwarf::Attribute attrib,
   if (!SLE.addMachineRegExpression(TRI, Cursor, FrameReg))
     return;
 
+  if (StaticLink->getNumElements()) {
+    SmallVector<DIE *, 4> refs;
+    for (const Metadata *ref : StaticLink->operands()) {
+      if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref))
+        ref = DGV->getVariable();
+      refs.push_back(getDIE((cast<DINode>(ref))));
+    }
+    SLE.addExpression(StaticLink, 0, &refs);
+  }
   addBlock(Die, attrib, SLE.finalize());
 }
 

@@ -8,6 +8,7 @@
 
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
+#include "lldb/Core/Value.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -205,6 +206,9 @@ bool DWARFExpressionList::Evaluate(ExecutionContext *exe_ctx,
                                    const Value *object_address_ptr,
                                    Value &result, Status *error_ptr) const {
   ModuleSP module_sp = m_module_wp.lock();
+  std::vector<Value> stack;
+  if (initial_value_ptr)
+    stack.push_back(*initial_value_ptr);
   DataExtractor data;
   RegisterKind reg_kind;
   DWARFExpression expr;
@@ -244,5 +248,5 @@ bool DWARFExpressionList::Evaluate(ExecutionContext *exe_ctx,
   reg_kind = expr.GetRegisterKind();
   return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, data,
                                    m_dwarf_cu, reg_kind, initial_value_ptr,
-                                   object_address_ptr, result, error_ptr);
+                                   object_address_ptr, stack);
 }
