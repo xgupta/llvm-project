@@ -746,6 +746,27 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_big);
   else if (BTy->isLittleEndian())
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_little);
+
+  if (BTy->hasDecimalInfo()) {
+    StringRef PictureString = BTy->getPictureString();
+    if (!PictureString.empty())
+      addString(Buffer, dwarf::DW_AT_picture_string, PictureString);
+
+    if (const auto &digits = BTy->getDigitCount())
+      addUInt(Buffer, dwarf::DW_AT_digit_count, std::nullopt, *digits);
+
+    if (const auto &sign = BTy->getDecimalSign())
+      addUInt(Buffer, dwarf::DW_AT_decimal_sign, std::nullopt, *sign);
+
+    if (const auto &scale = BTy->getScale()) {
+      if (BTy->isBinaryScale())
+        addSInt(Buffer, dwarf::DW_AT_binary_scale, dwarf::DW_FORM_sdata,
+                *scale);
+      else
+        addSInt(Buffer, dwarf::DW_AT_decimal_scale, dwarf::DW_FORM_sdata,
+                *scale);
+    }
+  }
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {

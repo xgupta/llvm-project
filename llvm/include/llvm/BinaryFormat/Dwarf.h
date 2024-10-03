@@ -164,11 +164,9 @@ enum TypeKind : uint8_t {
 
 enum DecimalSignEncoding {
   // Decimal sign attribute values
-  DW_DS_unsigned = 0x01,
-  DW_DS_leading_overpunch = 0x02,
-  DW_DS_trailing_overpunch = 0x03,
-  DW_DS_leading_separate = 0x04,
-  DW_DS_trailing_separate = 0x05
+  DW_DS_Invalid = 0,
+#define HANDLE_DW_DS(ID, NAME) DW_DS_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
 };
 
 enum EndianityEncoding {
@@ -1017,6 +1015,7 @@ StringRef RLEString(unsigned RLE);
 ///
 /// @{
 unsigned getTag(StringRef TagString);
+unsigned getDecimalSign(StringRef DSString);
 unsigned getOperationEncoding(StringRef OperationEncodingString);
 unsigned getSubOperationEncoding(unsigned OpEncoding,
                                  StringRef SubOperationEncodingString);
