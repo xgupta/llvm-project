@@ -787,6 +787,27 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
   return frame_sp;
 }
 
+StackFrameSP
+StackFrameList::GetFrameWithFrameBaseAddr(const addr_t frame_base) {
+  StackFrameSP frame_sp;
+
+  uint32_t frame_idx = 0;
+  do {
+    frame_sp = GetFrameAtIndex(frame_idx);
+    if (frame_sp) {
+      Scalar curr_frame_base;
+      Status curr_frame_error;
+      if (frame_sp->GetFrameBaseValue(curr_frame_base)) {
+        lldb::addr_t fb_addr = curr_frame_base.ULongLong(LLDB_INVALID_ADDRESS);
+        if (fb_addr == frame_base)
+          return frame_sp;
+      }
+    }
+    frame_idx++;
+  } while (frame_sp);
+  return frame_sp;
+}
+
 bool StackFrameList::SetFrameAtIndex(uint32_t idx, StackFrameSP &frame_sp) {
   if (idx >= m_frames.size())
     m_frames.resize(idx + 1);
