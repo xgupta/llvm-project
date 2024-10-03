@@ -1129,6 +1129,21 @@ LLVMMetadataRef LLVMDIBuilderCreateExpression(LLVMDIBuilderRef Builder,
                                               uint64_t *Addr, size_t Length);
 
 /**
+ * Create a new descriptor for the specified variable which has a complex
+ * address expression for its address.
+ * \param Builder     The DIBuilder.
+ * \param Addr        An array of complex address operations.
+ * \param Length      Length of the address operation array.
+ * \param Refs        An array of Reference used in call2/call4 offset.
+ * \param RefLength   Length of the refrence array.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateExpressionWithRef(LLVMDIBuilderRef Builder,
+                                                     int64_t *Addr,
+                                                     size_t Length,
+                                                     LLVMMetadataRef *Refs,
+                                                     size_t RefLength);
+
+/**
  * Create a new descriptor for the specified variable that does not have an
  * address, but does have a constant value.
  * \param Builder     The DIBuilder.
