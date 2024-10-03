@@ -277,6 +277,17 @@ void DwarfCompileUnit::addLocationAttribute(
       DwarfExpr->addFragmentOffset(Expr);
     }
 
+    // TODO: Optimize me
+    SmallVector<DIE *, 4> refs;
+    if (Expr->getNumElements()) {
+      for (const Metadata *ref : Expr->operands()) {
+        if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+          ref = DGV->getVariable();
+        }
+        refs.push_back(getDIE((cast<DINode>(ref))));
+      }
+    }
+
     if (Global) {
       const MCSymbol *Sym = Asm->getSymbol(Global);
       // 16-bit platforms like MSP430 and AVR take this path, so sink this
@@ -365,7 +376,7 @@ void DwarfCompileUnit::addLocationAttribute(
     // to detect in the verifier.
     if (DwarfExpr->isUnknownLocation())
       DwarfExpr->setMemoryLocationKind();
-    DwarfExpr->addExpression(Expr);
+    DwarfExpr->addExpression(Expr, 0, &refs);
   }
   if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
     // According to
@@ -791,12 +802,19 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     } else if (Entry->isInt()) {
       auto *Expr = Single.getExpr();
       if (Expr && Expr->getNumElements()) {
+        SmallVector<DIE *, 4> Refs;
+        for (const Metadata *ref : Expr->operands()) {
+          if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+            ref = DGV->getVariable();
+          }
+          Refs.push_back(getDIE((cast<DINode>(ref))));
+        }
         DIELoc *Loc = new (DIEValueAllocator) DIELoc;
         DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
         // If there is an expression, emit raw unsigned bytes.
         DwarfExpr.addFragmentOffset(Expr);
         DwarfExpr.addUnsignedConstant(Entry->getInt());
-        DwarfExpr.addExpression(Expr);
+        DwarfExpr.addExpression(Expr, 0, &Refs);
         addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
         if (DwarfExpr.TagOffset)
           addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset,
@@ -932,7 +950,15 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
     else
       DwarfExpr.addMachineRegExpression(
           *Asm->MF->getSubtarget().getRegisterInfo(), Cursor, FrameReg);
-    DwarfExpr.addExpression(std::move(Cursor));
+
+    SmallVector<DIE *, 4> Refs;
+    for (const Metadata *ref : Expr->operands()) {
+      if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+        ref = DGV->getVariable();
+      }
+      Refs.push_back(getDIE((cast<DINode>(ref))));
+    }
+    DwarfExpr.addExpression(std::move(Cursor), 0, &Refs);
   }
   if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB()) {
     // According to
@@ -1589,6 +1615,15 @@ void DwarfCompileUnit::addStaticLink(DIE &Die, dwarf::Attribute attrib,
   if (!SLE.addMachineRegExpression(TRI, Cursor, FrameReg))
     return;
 
+  if (StaticLink->getNumElements()) {
+    SmallVector<DIE *, 4> refs;
+    for (const Metadata *ref : StaticLink->operands()) {
+      if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref))
+        ref = DGV->getVariable();
+      refs.push_back(getDIE((cast<DINode>(ref))));
+    }
+    SLE.addExpression(StaticLink, 0, &refs);
+  }
   addBlock(Die, attrib, SLE.finalize());
 }
 

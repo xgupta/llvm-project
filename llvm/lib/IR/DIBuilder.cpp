@@ -846,8 +846,16 @@ DILabel *DIBuilder::createLabel(DIScope *Context, StringRef Name, DIFile *File,
   return Node;
 }
 
-DIExpression *DIBuilder::createExpression(ArrayRef<uint64_t> Addr) {
-  return DIExpression::get(VMContext, Addr);
+DIExpression *DIBuilder::createExpression(ArrayRef<uint64_t> Addr,
+                                          ArrayRef<Metadata *> Refs) {
+  return DIExpression::get(VMContext, Addr, Refs);
+}
+
+DIExpression *DIBuilder::createExpression(ArrayRef<int64_t> Signed,
+                                          ArrayRef<Metadata *> Refs) {
+  // TODO: Remove the callers of this signed version and delete.
+  SmallVector<uint64_t, 8> Addr(Signed.begin(), Signed.end());
+  return createExpression(Addr, Refs);
 }
 
 template <class... Ts>

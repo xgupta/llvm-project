@@ -133,6 +133,9 @@ protected:
 
   virtual void emitData1(uint8_t Value) = 0;
 
+  /// Emit a refrence value in local CU
+  virtual void emitRef(llvm::DIE *Entry, const unsigned ref_size) = 0;
+
   virtual void emitBaseTypeRef(uint64_t Idx) = 0;
 
   /// Start emitting data to the temporary buffer. The data stored in the
@@ -280,7 +283,12 @@ public:
 
   /// Emit all remaining operations in the DIExpressionCursor. The
   /// cursor must not contain any DW_OP_LLVM_arg operations.
-  void addExpression(DIExpressionCursor &&Expr);
+  /// \param FragmentOffsetInBits     If this is one fragment out of multiple
+  ///                                 locations, this is the offset of the
+  ///                                 fragment inside the entire variable.
+  void addExpression(DIExpressionCursor &&Expr,
+                     unsigned FragmentOffsetInBits = 0,
+                     SmallVectorImpl<DIE *> *DIERefOffset = nullptr);
 
   /// Emit all remaining operations in the DIExpressionCursor.
   /// DW_OP_LLVM_arg operations are resolved by calling (\p InsertArg).
@@ -288,7 +296,8 @@ public:
   /// \return false if any call to (\p InsertArg) returns false.
   bool addExpression(
       DIExpressionCursor &&Expr,
-      llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg);
+      llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg,
+      SmallVectorImpl<DIE *> *DIERefOffset = nullptr);
 
   /// If applicable, emit an empty DW_OP_piece / DW_OP_bit_piece to advance to
   /// the fragment described by \c Expr.
@@ -324,6 +333,7 @@ class DebugLocDwarfExpression final : public DwarfExpression {
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
   void emitData1(uint8_t Value) override;
+  void emitRef(DIE *Entry, const unsigned RefByteSize) override;
   void emitBaseTypeRef(uint64_t Idx) override;
 
   void enableTemporaryBuffer() override;
@@ -354,6 +364,7 @@ class DIEDwarfExpression final : public DwarfExpression {
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
   void emitData1(uint8_t Value) override;
+  void emitRef(DIE *Entry, const unsigned RefByteSize) override;
   void emitBaseTypeRef(uint64_t Idx) override;
 
   void enableTemporaryBuffer() override;
