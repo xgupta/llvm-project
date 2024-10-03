@@ -243,6 +243,24 @@ namespace llvm {
                                    DIExpression *StringLengthExp,
                                    DIExpression *StrLocationExp = nullptr);
 
+    /// Create debugging information entry for a basic type with packed decimal
+    /// type.
+    /// \param Name        Type name.
+    /// \param Pic         Picture String
+    /// \param SizeInBits  Size of the type.
+    /// \param Encoding    DWARF encoding code, e.g., dwarf::DW_ATE_edited_type.
+    /// \param DigitCount  digit count
+    /// \param DecimalSign decimal sign
+    /// \param scale       scale
+    /// \param Flags       Optional DWARF attributes, e.g., DIFlagsBinaryScale
+    DIBasicType *
+    createBasicType(StringRef Name, StringRef Pic, uint64_t SizeInBits,
+                    unsigned Encoding,
+                    std::optional<uint16_t> DigitCount = std::nullopt,
+                    std::optional<uint16_t> DecimalSign = std::nullopt,
+                    std::optional<int16_t> Scale = std::nullopt,
+                    DINode::DIFlags Flags = DINode::FlagZero);
+
     /// Create debugging information entry for a qualified
     /// type, e.g. 'const int'.
     /// \param Tag         Tag identifing type, e.g. dwarf::TAG_volatile_type

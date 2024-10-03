@@ -294,6 +294,27 @@ DIStringType *DIBuilder::createStringType(StringRef Name,
                            StringLengthExp, StrLocationExp, 0, 0, 0);
 }
 
+DIBasicType *DIBuilder::createBasicType(StringRef Name, StringRef Pic,
+                                        uint64_t SizeInBits, unsigned Encoding,
+                                        std::optional<uint16_t> DigitCount,
+                                        std::optional<uint16_t> DecimalSign,
+                                        std::optional<int16_t> Scale,
+                                        DINode::DIFlags Flags) {
+  assert(!Name.empty() && "Unable to create type without name");
+  assert((!Pic.empty() || DigitCount != std::nullopt ||
+          DecimalSign != std::nullopt || Scale != std::nullopt) &&
+         "Unable to create decimal info with empty attributes");
+
+  MDString *PicString = nullptr;
+  if (!Pic.empty())
+    PicString = MDString::get(VMContext, Pic);
+
+  return DIBasicType::get(
+      VMContext, dwarf::DW_TAG_base_type, Name, PicString, SizeInBits, 0,
+      Encoding, Flags,
+      DIBasicType::DecimalInfo{DigitCount, DecimalSign, Scale});
+}
+
 DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, FromTy, 0,
                             0, 0, std::nullopt, DINode::FlagZero);

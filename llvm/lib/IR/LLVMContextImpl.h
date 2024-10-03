@@ -460,25 +460,34 @@ template <> struct MDNodeKeyImpl<DIEnumerator> {
 template <> struct MDNodeKeyImpl<DIBasicType> {
   unsigned Tag;
   MDString *Name;
+  MDString *PictureString;
   uint64_t SizeInBits;
   uint32_t AlignInBits;
   unsigned Encoding;
   unsigned Flags;
 
-  MDNodeKeyImpl(unsigned Tag, MDString *Name, uint64_t SizeInBits,
-                uint32_t AlignInBits, unsigned Encoding, unsigned Flags)
-      : Tag(Tag), Name(Name), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
-        Encoding(Encoding), Flags(Flags) {}
+  std::optional<DIBasicType::DecimalInfo> DecimalAttrInfo;
+
+  MDNodeKeyImpl(unsigned Tag, MDString *Name, MDString *PictureString,
+                uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+                unsigned Flags,
+                std::optional<DIBasicType::DecimalInfo> DecimalAttrInfo)
+      : Tag(Tag), Name(Name), PictureString(PictureString),
+        SizeInBits(SizeInBits), AlignInBits(AlignInBits), Encoding(Encoding),
+        Flags(Flags), DecimalAttrInfo(DecimalAttrInfo) {}
   MDNodeKeyImpl(const DIBasicType *N)
-      : Tag(N->getTag()), Name(N->getRawName()), SizeInBits(N->getSizeInBits()),
+      : Tag(N->getTag()), Name(N->getRawName()),
+        PictureString(N->getRawPictureString()), SizeInBits(N->getSizeInBits()),
         AlignInBits(N->getAlignInBits()), Encoding(N->getEncoding()),
-        Flags(N->getFlags()) {}
+        Flags(N->getFlags()), DecimalAttrInfo(N->getDecimalInfo()) {}
 
   bool isKeyOf(const DIBasicType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
+           PictureString == RHS->getRawPictureString() &&
            SizeInBits == RHS->getSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
-           Encoding == RHS->getEncoding() && Flags == RHS->getFlags();
+           Encoding == RHS->getEncoding() && Flags == RHS->getFlags() &&
+           DecimalAttrInfo == RHS->getDecimalInfo();
   }
 
   unsigned getHashValue() const {

@@ -1519,7 +1519,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 7)
+    if (Record.size() < 6 || Record.size() > 12)
       return error("Invalid record");
 
     IsDistinct = Record[0];
@@ -1527,11 +1527,28 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                                 ? static_cast<DINode::DIFlags>(Record[6])
                                 : DINode::FlagZero;
 
-    MetadataList.assignValue(
-        GET_OR_DISTINCT(DIBasicType,
-                        (Context, Record[1], getMDString(Record[2]), Record[3],
-                         Record[4], Record[5], Flags)),
-        NextMetadataNo);
+    if (Record.size() > 7) {
+      DIBasicType::DecimalInfo DAInfo;
+      if (Record[8])
+        DAInfo.DigitCount = Record[8];
+      if (Record[9])
+        DAInfo.DecimalSign = Record[9];
+      if (Record[10])
+        DAInfo.Scale = Record[11];
+
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(DIBasicType,
+                          (Context, Record[1], getMDString(Record[2]),
+                           Record[7] ? getMDString(Record[7]) : nullptr,
+                           Record[3], Record[4], Record[5], Flags, DAInfo)),
+          NextMetadataNo);
+    } else {
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(DIBasicType,
+                          (Context, Record[1], getMDString(Record[2]),
+                           Record[3], Record[4], Record[5], Flags)),
+          NextMetadataNo);
+    }
     NextMetadataNo++;
     break;
   }
