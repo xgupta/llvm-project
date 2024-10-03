@@ -1,8 +1,8 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder %s
 
-; CHECK: !named = !{!0, !0, !1, !2, !3, !4, !5, !6, !7, !8, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41, !42, !43, !44, !45, !46, !47}
-!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41, !42, !43, !44, !45, !46, !47, !48, !49, !50}
+; CHECK: !named = !{!0, !0, !1, !2, !3, !4, !5, !6, !7, !8, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41, !42, !43, !44, !45, !46, !47, !48, !49, !50, !51, !52, !53, !54}
+!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41, !42, !43, !44, !45, !46, !47, !48, !49, !50, !51, !52, !53, !54, !55, !56, !57}
 
 ; CHECK:      !0 = !DISubrange(count: 3, lowerBound: 0)
 ; CHECK-NEXT: !1 = !DISubrange(count: 3, lowerBound: 4)
@@ -122,3 +122,17 @@
 
 ; CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "SpecificationType", file: !10, size: 64, identifier: "SpecificationType", specification: !46)
 !50 = !DICompositeType(tag: DW_TAG_structure_type, name: "SpecificationType", file: !12, size: 64, identifier: "SpecificationType", specification: !49)
+
+; CHECK-NEXT !49 = !DIBasicType(name: "ext2", size: 16, align: 1, encoding: DW_ATE_packed_decimal, pic: "999PP", digits: 3, sign: DW_DS_unsigned, scale: 2)
+; CHECK-NEXT !50 = !DIBasicType(name: "ext3", size: 72, align: 1, encoding: DW_ATE_edited, pic: "+z,zz9.99", digits: 6, scale: -2)
+; CHECK-NEXT !51 = !DIBasicType(name: "ext4", size: 64, align: 1, encoding: DW_ATE_edited, pic: "ABBA(5)")
+; CHECK-NEXT !52 = !DIBasicType(name: "ext5", size: 32, align: 1, encoding: DW_ATE_signed_fixed, pic: "S999V999", digits: 5, scale: -2)
+; CHECK-NEXT !53 = !DIBasicType(name: "ext6", size: 40, align: 1, encoding: DW_ATE_packed_decimal, pic: "S9(3)V99", digits: 5, scale: -2)
+; CHECK-NEXT !54 = !DIBasicType(name: "ext7", size: 40, align: 1, encoding: DW_ATE_packed_decimal, pic: "S9(3)V99", digits: 5, scale: -2, flags: DIFlagBinaryScale)
+!51 = !DIBasicType(name: "ext1", size: 48, align: 1, encoding: DW_ATE_numeric_string, pic: "S999V999", digits: 6, sign: DW_DS_trailing_overpunch, scale: -3)
+!52 = !DIBasicType(name: "ext2", size: 16, align: 1, encoding: DW_ATE_packed_decimal, pic: "999PP", digits: 3, sign: DW_DS_unsigned, scale: 2)
+!53 = !DIBasicType(name: "ext3", size: 72, align: 1, encoding: DW_ATE_edited, pic: "+z,zz9.99", digits: 6, scale: -2)
+!54 = !DIBasicType(name: "ext4", size: 64, align: 1, encoding: DW_ATE_edited, pic: "ABBA(5)")
+!55 = !DIBasicType(name: "ext5", size: 32, align: 1, encoding: DW_ATE_signed_fixed, pic: "S999V999", digits: 5, scale: -2)
+!56 = !DIBasicType(name: "ext6", size: 40, align: 1, encoding: DW_ATE_packed_decimal, pic: "S9(3)V99", digits: 5, scale: -2)
+!57 = !DIBasicType(name: "ext7", size: 40, align: 1, encoding: DW_ATE_packed_decimal, pic: "S9(3)V99", digits: 5, scale: -2, flags: DIFlagBinaryScale)

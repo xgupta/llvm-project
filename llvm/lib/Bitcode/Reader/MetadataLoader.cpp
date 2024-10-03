@@ -1525,7 +1525,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 8)
+    if (Record.size() < 6 || Record.size() > 13)
       return error("Invalid record");
 
     IsDistinct = Record[0];
@@ -1534,11 +1534,30 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                                 : DINode::FlagZero;
     uint32_t NumExtraInhabitants = (Record.size() > 7) ? Record[7] : 0;
 
-    MetadataList.assignValue(
-        GET_OR_DISTINCT(DIBasicType,
-                        (Context, Record[1], getMDString(Record[2]), Record[3],
-                         Record[4], Record[5], NumExtraInhabitants, Flags)),
-        NextMetadataNo);
+    if (Record.size() > 8) {
+      DIBasicType::DecimalInfo DAInfo;
+      if (Record[9])
+        DAInfo.DigitCount = Record[9];
+      if (Record[10])
+        DAInfo.DecimalSign = Record[10];
+      if (Record[11])
+        DAInfo.Scale = Record[12];
+
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(DIBasicType,
+                          (Context, Record[1], getMDString(Record[2]),
+                           Record[8] ? getMDString(Record[8]) : nullptr,
+                           Record[3], Record[4], Record[5], NumExtraInhabitants,
+                           Flags, DAInfo)),
+          NextMetadataNo);
+    } else {
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(DIBasicType,
+                          (Context, Record[1], getMDString(Record[2]),
+                           Record[3], Record[4], Record[5], NumExtraInhabitants,
+                           Flags)),
+          NextMetadataNo);
+    }
     NextMetadataNo++;
     break;
   }
