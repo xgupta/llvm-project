@@ -2801,35 +2801,53 @@ public:
 /// This is (almost) a DWARF expression that modifies the location of a
 /// variable, or the location of a single piece of a variable, or (when using
 /// DW_OP_stack_value) is the constant variable value.
+/// When DW_OP_call2/call4 used, the index in refs metadata array is used for
+/// offset.
 ///
 /// TODO: Co-allocate the expression elements.
 /// TODO: Separate from MDNode, or otherwise drop Distinct and Temporary
 /// storage types.
+/// TODO: Seperate reference and make them unique.
 class DIExpression : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
   std::vector<uint64_t> Elements;
+  std::vector<Metadata *> Refs;
 
-  DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements)
-      : MDNode(C, DIExpressionKind, Storage, {}),
-        Elements(Elements.begin(), Elements.end()) {}
+  DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements,
+               ArrayRef<Metadata *> Refs)
+      : MDNode(C, DIExpressionKind, Storage, Refs, {}),
+        Elements(Elements.begin(), Elements.end()),
+        Refs(Refs.begin(), Refs.end()) {}
   ~DIExpression() = default;
 
   static DIExpression *getImpl(LLVMContext &Context,
-                               ArrayRef<uint64_t> Elements, StorageType Storage,
+                               ArrayRef<uint64_t> Elements,
+                               ArrayRef<Metadata *> Refs, StorageType Storage,
                                bool ShouldCreate = true);
 
+  static DIExpression *getImpl(LLVMContext &Context,
+                               ArrayRef<uint64_t> Elements, StorageType Storage,
+                               bool ShouldCreate = true) {
+    return getImpl(Context, Elements, {}, Storage, ShouldCreate);
+  }
+
   TempDIExpression cloneImpl() const {
-    return getTemporary(getContext(), getElements());
+    return getTemporary(getContext(), getElements(), getRefs());
   }
 
 public:
   DEFINE_MDNODE_GET(DIExpression, (ArrayRef<uint64_t> Elements), (Elements))
+  DEFINE_MDNODE_GET(DIExpression,
+                    (ArrayRef<uint64_t> Elements, ArrayRef<Metadata *> Refs),
+                    (Elements, Refs))
 
   TempDIExpression clone() const { return cloneImpl(); }
 
   ArrayRef<uint64_t> getElements() const { return Elements; }
+
+  ArrayRef<Metadata *> getRefs() const { return Refs; }
 
   unsigned getNumElements() const { return Elements.size(); }
 
@@ -2885,6 +2903,9 @@ public:
     ///
     /// Return the number of elements in the operand (1 + args).
     unsigned getSize() const;
+
+    /// Check if op has metadata reference
+    bool hasRef() const;
 
     /// Append the elements of this operand to \p V.
     void appendToVector(SmallVectorImpl<uint64_t> &V) const {

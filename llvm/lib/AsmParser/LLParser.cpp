@@ -5854,12 +5854,27 @@ bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
     return true;
 
   SmallVector<uint64_t, 8> Elements;
+  SmallVector<Metadata *, 4> Refs;
+
   if (Lex.getKind() != lltok::rparen)
     do {
       if (Lex.getKind() == lltok::DwarfOp) {
         if (unsigned Op = dwarf::getOperationEncoding(Lex.getStrVal())) {
           Lex.Lex();
           Elements.push_back(Op);
+          if ((Op == dwarf::DW_OP_call2) || (Op == dwarf::DW_OP_call4)) {
+            MDField offset;
+            Lex.Lex();
+            parseMDField("offset", offset);
+            if (!offset.Seen) {
+              return tokError(Twine("expected ref for DWARF op '") +
+                              dwarf::OperationEncodingString(Op) + "'");
+            }
+            const auto it = llvm::find(Refs, offset.Val);
+            Elements.push_back(it - Refs.begin());
+            if (it == Refs.end())
+              Refs.push_back(offset.Val);
+          }
           continue;
         }
         return tokError(Twine("invalid DWARF op '") + Lex.getStrVal() + "'");
@@ -5888,7 +5903,7 @@ bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
+  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements, Refs));
   return false;
 }
 
