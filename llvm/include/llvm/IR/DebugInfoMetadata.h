@@ -792,6 +792,9 @@ public:
   bool isBigEndian() const { return getFlags() & FlagBigEndian; }
   bool isLittleEndian() const { return getFlags() & FlagLittleEndian; }
   bool getExportSymbols() const { return getFlags() & FlagExportSymbols; }
+  bool isBinaryScale() const {
+    return (getFlags() & FlagBinaryScale) == FlagBinaryScale;
+  }
 
   static bool classof(const Metadata *MD) {
     switch (MD->getMetadataID()) {
@@ -815,14 +818,33 @@ class DIBasicType : public DIType {
   friend class LLVMContextImpl;
   friend class MDNode;
 
+public:
+  /// Basic Type decimal info, used to record optional dwarf decimal
+  /// attributes such as picture_string, digit_counts, decimal_sign,
+  /// decimal_scale all or some can be absent and optional depending on
+  /// encoding type.
+  struct DecimalInfo {
+    std::optional<uint16_t> DigitCount;
+    std::optional<uint16_t> DecimalSign;
+    std::optional<int16_t> Scale;
+
+    bool operator==(const DecimalInfo &RHS) const {
+      return DigitCount == RHS.DigitCount && DecimalSign == RHS.DecimalSign &&
+             Scale == RHS.Scale;
+    }
+  };
+
+private:
   unsigned Encoding;
+  std::optional<DecimalInfo> DecimalAttrInfo;
 
   DIBasicType(LLVMContext &C, StorageType Storage, unsigned Tag,
               uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
-              DIFlags Flags, ArrayRef<Metadata *> Ops)
+              DIFlags Flags, std::optional<DecimalInfo> DecimalAttrInfo,
+              ArrayRef<Metadata *> Ops)
       : DIType(C, DIBasicTypeKind, Storage, Tag, 0, SizeInBits, AlignInBits, 0,
                Flags, Ops),
-        Encoding(Encoding) {}
+        Encoding(Encoding), DecimalAttrInfo(DecimalAttrInfo) {}
   ~DIBasicType() = default;
 
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
@@ -830,19 +852,43 @@ class DIBasicType : public DIType {
                               uint32_t AlignInBits, unsigned Encoding,
                               DIFlags Flags, StorageType Storage,
                               bool ShouldCreate = true) {
-    return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
-                   SizeInBits, AlignInBits, Encoding, Flags, Storage,
-                   ShouldCreate);
+    return getImpl(Context, Tag, getCanonicalMDString(Context, Name), nullptr,
+                   SizeInBits, AlignInBits, Encoding, Flags, std::nullopt,
+                   Storage, ShouldCreate);
   }
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               MDString *Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              DIFlags Flags, StorageType Storage,
-                              bool ShouldCreate = true);
+                              DIFlags Flags,
+                              std::optional<DecimalInfo> DecimalAttrInfo,
+                              StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, Tag, Name, nullptr, SizeInBits, AlignInBits,
+                   Encoding, Flags, DecimalAttrInfo, Storage, ShouldCreate);
+  }
+
+  static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
+                              StringRef Name, MDString *PictureString,
+                              uint64_t SizeInBits, uint32_t AlignInBits,
+                              unsigned Encoding, DIFlags Flags,
+                              std::optional<DecimalInfo> DecimalAttrInfo,
+                              StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
+                   PictureString, SizeInBits, AlignInBits, Encoding, Flags,
+                   DecimalAttrInfo, Storage, ShouldCreate);
+  }
+
+  static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
+                              MDString *Name, MDString *PictureString,
+                              uint64_t SizeInBits, uint32_t AlignInBits,
+                              unsigned Encoding, DIFlags Flags,
+                              std::optional<DecimalInfo> DecimalAttrInfo,
+                              StorageType Storage, bool ShouldCreate = true);
 
   TempDIBasicType cloneImpl() const {
-    return getTemporary(getContext(), getTag(), getName(), getSizeInBits(),
-                        getAlignInBits(), getEncoding(), getFlags());
+    return getTemporary(getContext(), getTag(), getName(),
+                        getRawPictureString(), getSizeInBits(),
+                        getAlignInBits(), getEncoding(), getFlags(),
+                        getDecimalInfo());
   }
 
 public:
@@ -853,7 +899,7 @@ public:
                     (Tag, Name, SizeInBits, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, FlagZero))
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero, std::nullopt))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
@@ -861,7 +907,22 @@ public:
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
+                      (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
+                     std::nullopt))
+  DEFINE_MDNODE_GET(DIBasicType,
+                    (unsigned Tag, StringRef Name, MDString *PictureString,
+                     uint64_t SizeInBits, uint32_t AlignInBits,
+                     unsigned Encoding, DIFlags Flags,
+                     std::optional<DecimalInfo> ExtInfo),
+                    (Tag, Name, PictureString, SizeInBits, AlignInBits,
+                     Encoding, Flags, ExtInfo))
+  DEFINE_MDNODE_GET(DIBasicType,
+                    (unsigned Tag, MDString *Name, MDString *PictureString,
+                     uint64_t SizeInBits, uint32_t AlignInBits,
+                     unsigned Encoding, DIFlags Flags,
+                     std::optional<DecimalInfo> ExtInfo),
+                    (Tag, Name, PictureString, SizeInBits, AlignInBits,
+                     Encoding, Flags, ExtInfo))
 
   TempDIBasicType clone() const { return cloneImpl(); }
 
@@ -872,6 +933,23 @@ public:
   /// Return the signedness of this type, or std::nullopt if this type is
   /// neither signed nor unsigned.
   std::optional<Signedness> getSignedness() const;
+
+  bool hasDecimalInfo() const { return DecimalAttrInfo.has_value(); }
+  std::optional<DecimalInfo> getDecimalInfo() const { return DecimalAttrInfo; }
+  StringRef getPictureString() const { return getStringOperand(3); }
+  MDString *getRawPictureString() const { return getOperandAs<MDString>(3); }
+
+  std::optional<uint16_t> getDigitCount() const {
+    return DecimalAttrInfo.value().DigitCount;
+  }
+
+  std::optional<uint16_t> getDecimalSign() const {
+    return DecimalAttrInfo.value().DecimalSign;
+  }
+
+  std::optional<int16_t> getScale() const {
+    return DecimalAttrInfo.value().Scale;
+  }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIBasicTypeKind;

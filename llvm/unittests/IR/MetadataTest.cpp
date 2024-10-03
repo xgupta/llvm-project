@@ -1825,6 +1825,57 @@ TEST_F(DIBasicTypeTest, getUnspecified) {
   EXPECT_EQ(DINode::FlagZero, N->getFlags());
 }
 
+TEST_F(DIBasicTypeTest, getOptionalDecimalInfo) {
+  auto *N = DIBasicType::get(
+      Context, dwarf::DW_TAG_base_type, "ext1",
+      MDString::get(Context, "S999V99"), 40, 1, dwarf::DW_ATE_numeric_string,
+      DINode::FlagZero,
+      DIBasicType::DecimalInfo{5, dwarf::DW_DS_trailing_overpunch, -2});
+
+  EXPECT_EQ(dwarf::DW_TAG_base_type, N->getTag());
+  EXPECT_EQ("ext1", N->getName());
+  EXPECT_EQ(40u, N->getSizeInBits());
+  EXPECT_EQ(1u, N->getAlignInBits());
+  EXPECT_EQ(dwarf::DW_ATE_numeric_string, N->getEncoding());
+  EXPECT_EQ(DINode::FlagZero, N->getFlags());
+  EXPECT_EQ("S999V99", N->getPictureString());
+  EXPECT_EQ(dwarf::DW_DS_trailing_overpunch, N->getDecimalSign().value());
+  EXPECT_EQ(-2, N->getScale().value());
+  EXPECT_EQ(5, N->getDigitCount().value());
+
+  EXPECT_EQ(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "ext1",
+                                MDString::get(Context, "S999V99"), 40, 1,
+                                dwarf::DW_ATE_numeric_string, DINode::FlagZero,
+                                DIBasicType::DecimalInfo{
+                                    5, dwarf::DW_DS_trailing_overpunch, -2}));
+
+  /// Generally this fails verifier as we are trying to create extended encoding
+  /// without any extended info.
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "ext1",
+                                MDString::get(Context, "S999999"), 40, 1,
+                                dwarf::DW_ATE_numeric_string, DINode::FlagZero,
+                                DIBasicType::DecimalInfo{
+                                    5, dwarf::DW_DS_trailing_overpunch, -2}));
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "ext1",
+                                MDString::get(Context, "S999V99"), 40, 1,
+                                dwarf::DW_ATE_numeric_string, DINode::FlagZero,
+                                DIBasicType::DecimalInfo{
+                                    4, dwarf::DW_DS_trailing_overpunch, -2}));
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "ext1",
+                                MDString::get(Context, "S999V99"), 40, 1,
+                                dwarf::DW_ATE_numeric_string, DINode::FlagZero,
+                                DIBasicType::DecimalInfo{
+                                    5, dwarf::DW_DS_leading_overpunch, -2}));
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "ext1",
+                                MDString::get(Context, "S999V99"), 40, 1,
+                                dwarf::DW_ATE_numeric_string, DINode::FlagZero,
+                                DIBasicType::DecimalInfo{
+                                    5, dwarf::DW_DS_trailing_overpunch, -1}));
+
+  TempDIBasicType Temp = N->clone();
+  EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
+}
+
 typedef MetadataTest DITypeTest;
 
 TEST_F(DITypeTest, clone) {

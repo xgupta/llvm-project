@@ -451,6 +451,10 @@ enum Kind {
   // GV's where the clang++ frontend (when ASan is used) notes that this is
   // dynamically initialized, and thus needs ODR detection.
   kw_sanitize_address_dyninit,
+  kw_pic,
+  kw_digits,
+  kw_scale,
+  kw_sign,
 
   // Unsigned Valued tokens (UIntVal).
   LabelID,    // 42:
@@ -478,6 +482,8 @@ enum Kind {
   DISPFlag,         // DISPFlagFoo
   DwarfMacinfo,     // DW_MACINFO_foo
   ChecksumKind,     // CSK_foo
+  DbgRecordType,    // dbg_foo
+  DwarfDecimalSign, // DW_DS_foo
 
   // Type valued tokens (TyVal).
   Type,

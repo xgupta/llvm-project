@@ -328,6 +328,11 @@ DINode::DIFlags DINode::splitFlags(DIFlags Flags,
     SplitFlags.push_back(FlagIndirectVirtualBase);
   }
 
+  if ((Flags & FlagBinaryScale) == FlagBinaryScale) {
+    Flags &= ~FlagBinaryScale;
+    SplitFlags.push_back(FlagBinaryScale);
+  }
+  
 #define HANDLE_DI_FLAG(ID, NAME)                                               \
   if (DIFlags Bit = Flags & Flag##NAME) {                                      \
     SplitFlags.push_back(Bit);                                                 \
@@ -656,17 +661,20 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
   DEFINE_GETIMPL_STORE(DIEnumerator, (Value, IsUnsigned), Ops);
 }
 
-DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
-                                  MDString *Name, uint64_t SizeInBits,
-                                  uint32_t AlignInBits, unsigned Encoding,
-                                  DIFlags Flags, StorageType Storage,
-                                  bool ShouldCreate) {
+DIBasicType *
+DIBasicType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+                     MDString *PictureString, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
+                     std::optional<DIBasicType::DecimalInfo> DAInfo,
+                     StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIBasicType,
-                        (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags));
-  Metadata *Ops[] = {nullptr, nullptr, Name};
+  DEFINE_GETIMPL_LOOKUP(DIBasicType, (Tag, Name, PictureString, SizeInBits,
+                                      AlignInBits, Encoding, Flags, DAInfo));
+  Metadata *Ops[] = {nullptr, nullptr, Name, PictureString};
   DEFINE_GETIMPL_STORE(DIBasicType,
-                       (Tag, SizeInBits, AlignInBits, Encoding, Flags), Ops);
+
+                       (Tag, SizeInBits, AlignInBits, Encoding, Flags, DAInfo),
+                       Ops);
 }
 
 std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {

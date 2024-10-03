@@ -24,7 +24,7 @@
     (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                   \
     defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
     defined HANDLE_DW_RAINCODE_DESC_TYPE || defined HANDLE_DWARF_SECTION ||    \
-    defined HANDLE_DW_IDX || defined HANDLE_DW_END ||  \
+    defined HANDLE_DW_IDX || defined HANDLE_DW_END || defined HANDLE_DW_DS ||  \
     defined HANDLE_DW_SECT)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
@@ -145,6 +145,10 @@
 
 #ifndef HANDLE_DW_SECT
 #define HANDLE_DW_SECT(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_DS
+#define HANDLE_DW_DS(ID, NAME)
 #endif
 
 HANDLE_DW_TAG(0x0000, null, 2, DWARF, DW_KIND_NONE)
@@ -1007,6 +1011,13 @@ HANDLE_DW_ATE(0x86, HP_imaginary_float128, 2, HP)
 // Conflicting:
 // HANDLE_DW_ATE(0x86, SUN_imaginary_float, 2, SUN)
 
+// DWARF decimal sign
+HANDLE_DW_DS(0x01, unsigned)
+HANDLE_DW_DS(0x02, leading_overpunch)
+HANDLE_DW_DS(0x03, trailing_overpunch)
+HANDLE_DW_DS(0x04, leading_separate)
+HANDLE_DW_DS(0x05, trailing_separate)
+
 // DWARF attribute endianity
 HANDLE_DW_END(0x00, default)
 HANDLE_DW_END(0x01, big)
@@ -1303,3 +1314,4 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_IDX
 #undef HANDLE_DW_END
 #undef HANDLE_DW_SECT
+#undef HANDLE_DW_DS
