@@ -1724,15 +1724,16 @@ private:
           DITemplateParameterArray TemplateParams, DISubprogram *Declaration,
           DINodeArray RetainedNodes, DITypeArray ThrownTypes,
           DINodeArray Annotations, StringRef TargetFuncName,
-          DIExpression *StaticLinkExpr, StorageType Storage,
-          bool ShouldCreate = true) {
+          DIExpression *StaticLinkExpr, DIExpression *RcFrameBaseExpr,
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
                    ScopeLine, ContainingType, VirtualIndex, ThisAdjustment,
                    Flags, SPFlags, Unit, TemplateParams.get(), Declaration,
                    RetainedNodes.get(), ThrownTypes.get(), Annotations.get(),
                    getCanonicalMDString(Context, TargetFuncName),
-                   dyn_cast_or_null<Metadata>(StaticLinkExpr), Storage,
+                   dyn_cast_or_null<Metadata>(StaticLinkExpr),
+                   dyn_cast_or_null<Metadata>(RcFrameBaseExpr), Storage,
                    ShouldCreate);
   }
   static DISubprogram *
@@ -1743,16 +1744,17 @@ private:
           Metadata *TemplateParams, Metadata *Declaration,
           Metadata *RetainedNodes, Metadata *ThrownTypes, Metadata *Annotations,
           MDString *TargetFuncName, Metadata *StaticLinkExpr,
-          StorageType Storage, bool ShouldCreate = true);
+          Metadata *RcFrameBaseExpr, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDISubprogram cloneImpl() const {
-    return getTemporary(getContext(), getScope(), getName(), getLinkageName(),
-                        getFile(), getLine(), getType(), getScopeLine(),
-                        getContainingType(), getVirtualIndex(),
-                        getThisAdjustment(), getFlags(), getSPFlags(),
-                        getUnit(), getTemplateParams(), getDeclaration(),
-                        getRetainedNodes(), getThrownTypes(), getAnnotations(),
-                        getTargetFuncName(), getStaticLinkExpr());
+    return getTemporary(
+        getContext(), getScope(), getName(), getLinkageName(), getFile(),
+        getLine(), getType(), getScopeLine(), getContainingType(),
+        getVirtualIndex(), getThisAdjustment(), getFlags(), getSPFlags(),
+        getUnit(), getTemplateParams(), getDeclaration(), getRetainedNodes(),
+        getThrownTypes(), getAnnotations(), getTargetFuncName(),
+        getStaticLinkExpr(), getRcFrameBaseExpr());
   }
 
 public:
@@ -1765,11 +1767,12 @@ public:
        DITemplateParameterArray TemplateParams = nullptr,
        DISubprogram *Declaration = nullptr, DINodeArray RetainedNodes = nullptr,
        DITypeArray ThrownTypes = nullptr, DINodeArray Annotations = nullptr,
-       StringRef TargetFuncName = "", DIExpression *StaticLink = nullptr),
+       StringRef TargetFuncName = "", DIExpression *StaticLink = nullptr,
+       DIExpression *RcFrameBase = nullptr),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
        VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
        Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName,
-       StaticLink))
+       StaticLink, RcFrameBase))
 
   DEFINE_MDNODE_GET(
       DISubprogram,
@@ -1780,11 +1783,11 @@ public:
        Metadata *TemplateParams = nullptr, Metadata *Declaration = nullptr,
        Metadata *RetainedNodes = nullptr, Metadata *ThrownTypes = nullptr,
        Metadata *Annotations = nullptr, MDString *TargetFuncName = nullptr,
-       Metadata *StaticLink = nullptr),
+       Metadata *StaticLink = nullptr, Metadata *RcFrameBase = nullptr),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
        VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
        Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName,
-       StaticLink))
+       StaticLink, RcFrameBase))
 
   TempDISubprogram clone() const { return cloneImpl(); }
 
@@ -1907,6 +1910,10 @@ public:
     return dyn_cast_or_null<DIExpression>(getRawStaticLinkExpr());
   }
 
+  DIExpression *getRcFrameBaseExpr() const {
+    return dyn_cast_or_null<DIExpression>(getRawRcFrameBaseExpr());
+  }
+
   Metadata *getRawScope() const { return getOperand(1); }
   MDString *getRawName() const { return getOperandAs<MDString>(2); }
   MDString *getRawLinkageName() const { return getOperandAs<MDString>(3); }
@@ -1932,11 +1939,20 @@ public:
   Metadata *getRawStaticLinkExpr() const {
     return getNumOperands() > 13 ? getOperandAs<Metadata>(13) : nullptr;
   }
+  Metadata *getRawRcFrameBaseExpr() const {
+    return getNumOperands() > 14 ? getOperandAs<Metadata>(14) : nullptr;
+  }
   void replaceRawLinkageName(MDString *LinkageName) {
     replaceOperandWith(3, LinkageName);
   }
   void replaceRetainedNodes(DINodeArray N) {
     replaceOperandWith(7, N.get());
+  }
+
+  void replaceRawRcFrameBaseExpr(Metadata *RcFrameBaseExpr) {
+    if (getNumOperands() > 14) {
+      setOperand(14, RcFrameBaseExpr);
+    }
   }
 
   /// Check if this subprogram describes the given function.

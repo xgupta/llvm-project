@@ -1720,6 +1720,13 @@ LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
                   map_from_llvmDIFlags(Flags)));
 }
 
+void LLVMDIBuilderUpdateDISubprogramRaincodeFrameBase(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Subprogram,
+    LLVMValueRef Storage) {
+  unwrap(Builder)->updateDISubprogramRaincodeFrameBase(
+      unwrap<DISubprogram>(Subprogram), unwrap(Storage));
+}
+
 LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange(LLVMDIBuilderRef Builder,
                                                  int64_t Lo, int64_t Count) {
   return wrap(unwrap(Builder)->getOrCreateSubrange(Lo, Count));

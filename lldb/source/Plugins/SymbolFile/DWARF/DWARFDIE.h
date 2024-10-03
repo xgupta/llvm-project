@@ -103,7 +103,8 @@ public:
       std::optional<int> &decl_column, std::optional<int> &call_file,
       std::optional<int> &call_line, std::optional<int> &call_column,
       DWARFExpressionList *frame_base,
-      lldb_private::DWARFExpressionList *static_link) const;
+      lldb_private::DWARFExpressionList *static_link,
+      lldb_private::DWARFExpressionList *rc_frame_base) const;
 
   /// The range of all the children of this DIE.
   llvm::iterator_range<child_iterator> children() const;

@@ -773,7 +773,8 @@ namespace llvm {
         DITemplateParameterArray TParams = nullptr,
         DISubprogram *Decl = nullptr, DITypeArray ThrownTypes = nullptr,
         DINodeArray Annotations = nullptr, StringRef TargetFuncName = "",
-        DIExpression *StaticLink = nullptr);
+        DIExpression *StaticLink = nullptr,
+        DIExpression *RcFrameBase = nullptr);
 
     /// Identical to createFunction,
     /// except that the resulting DbgNode is meant to be RAUWed.
@@ -1023,6 +1024,10 @@ namespace llvm {
       N->replaceAllUsesWith(Replacement);
       return Replacement;
     }
+
+    /// Updates the RcFrameBase of a DISubprogram SP
+    void updateDISubprogramRaincodeFrameBase(DISubprogram *SP,
+                                             llvm::Value *Storage);
   };
 
   // Create wrappers for C Binding types (see CBindingWrapping.h).

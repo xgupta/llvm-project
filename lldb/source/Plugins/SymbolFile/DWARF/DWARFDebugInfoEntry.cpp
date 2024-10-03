@@ -124,7 +124,8 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
     std::optional<int> &decl_line, std::optional<int> &decl_column,
     std::optional<int> &call_file, std::optional<int> &call_line,
     std::optional<int> &call_column, DWARFExpressionList *frame_base,
-    DWARFExpressionList *static_link) const {
+    DWARFExpressionList *static_link,
+    DWARFExpressionList *rc_frame_base) const {
   dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
   dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
   std::vector<DWARFDIE> dies;
@@ -279,6 +280,18 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
                 } else
                   set_frame_base_loclist_addr = true;
               }
+            }
+          }
+          break;
+
+        case DW_AT_RAINCODE_frame_base:
+          if (rc_frame_base) {
+            if (form_value.BlockData()) {
+              uint32_t block_offset =
+                  form_value.BlockData() - data.GetDataStart();
+              uint32_t block_length = form_value.Unsigned();
+              *rc_frame_base = DWARFExpressionList(
+                  module, DataExtractor(data, block_offset, block_length), cu);
             }
           }
           break;
