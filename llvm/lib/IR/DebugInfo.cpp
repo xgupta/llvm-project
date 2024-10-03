@@ -1612,6 +1612,15 @@ LLVMMetadataRef LLVMDIBuilderCreateExpression(LLVMDIBuilderRef Builder,
       unwrap(Builder)->createExpression(ArrayRef<uint64_t>(Addr, Length)));
 }
 
+LLVMMetadataRef LLVMDIBuilderCreateExpressionWithRef(LLVMDIBuilderRef Builder,
+                                                     int64_t *Addr,
+                                                     size_t Length,
+                                                     LLVMMetadataRef *Ref,
+                                                     size_t RefLength) {
+  return wrap(unwrap(Builder)->createExpression(ArrayRef<int64_t>(Addr, Length),
+                                                {unwrap(Ref), RefLength}));
+}
+
 LLVMMetadataRef
 LLVMDIBuilderCreateConstantValueExpression(LLVMDIBuilderRef Builder,
                                            uint64_t Value) {

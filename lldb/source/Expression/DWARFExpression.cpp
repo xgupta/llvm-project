@@ -826,12 +826,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
     const DWARFUnit *dwarf_cu, const lldb::RegisterKind reg_kind,
-    const Value *initial_value_ptr, const Value *object_address_ptr) {
+    const Value *initial_value_ptr, const Value *object_address_ptr,
+    std::vector<Value> &stack, bool expression_call) {
 
   if (opcodes.GetByteSize() == 0)
     return llvm::createStringError(
         "no location, value may have been optimized out");
-  std::vector<Value> stack;
 
   Process *process = nullptr;
   StackFrame *frame = nullptr;
@@ -2092,8 +2092,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // may be used as parameters by the called expression and values left on
     // the stack by the called expression may be used as return values by prior
     // agreement between the calling and called expressions.
-    case DW_OP_call2:
-      return llvm::createStringError("unimplemented opcode DW_OP_call2");
+    case DW_OP_call2: {
+      dw_offset_t die_ref_offset =
+          opcodes.GetU16(&offset) + dwarf_cu->GetOffset();
+      EvaluateCall(exe_ctx, reg_ctx, module_sp, dwarf_cu, die_ref_offset,
+                   reg_kind, initial_value_ptr, object_address_ptr, stack);
+    } break;
+
     // OPCODE: DW_OP_call4
     // OPERANDS: 1
     //      uint32_t compile unit relative offset of a DIE
@@ -2113,8 +2118,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // may be used as parameters by the called expression and values left on
     // the stack by the called expression may be used as return values by prior
     // agreement between the calling and called expressions.
-    case DW_OP_call4:
-      return llvm::createStringError("unimplemented opcode DW_OP_call4");
+    case DW_OP_call4: {
+      dw_offset_t die_ref_offset =
+          opcodes.GetU32(&offset) + dwarf_cu->GetOffset();
+      EvaluateCall(exe_ctx, reg_ctx, module_sp, dwarf_cu, die_ref_offset,
+                   reg_kind, initial_value_ptr, object_address_ptr, stack);
+    } break;
 
     // OPCODE: DW_OP_stack_value
     // OPERANDS: None
@@ -2334,6 +2343,61 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     }
   }
   return stack.back();
+}
+
+llvm::Error DWARFExpression::EvaluateCall(
+    ExecutionContext *exe_ctx, RegisterContext *reg_ctx, ModuleSP module_sp,
+    const DWARFUnit *dwarf_cu, dw_offset_t die_ref_offset,
+    const RegisterKind reg_kind, const Value *initial_value_ptr,
+    const Value *object_address_ptr, std::vector<Value> &stack) {
+
+  // Retrieve the DWARF DIE for the given offset
+  DWARFDIE ref_die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(die_ref_offset);
+  if (!ref_die.IsValid()) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Unable to find DW_OP_call[2|4] reference = %" PRIu32, die_ref_offset);
+  }
+
+  // Retrieve the attribute value from the DIE
+  DWARFFormValue form_value;
+  const dw_offset_t attrib_offset =
+      ref_die.GetDIE()->GetAttributeValue(dwarf_cu, DW_AT_location, form_value);
+  if (attrib_offset == 0) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Attribute offset for DW_OP_call[2|4] reference = %" PRIu32
+        " not found",
+        die_ref_offset);
+  }
+
+  // Check if the form value is in block form
+  if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "DW_OP_call[2|4] to reference = %" PRIu32
+                                   " with location list is not supported.",
+                                   die_ref_offset);
+  }
+
+  // Extract data for evaluation
+  const DWARFDataExtractor &ref_debug_info_data = ref_die.GetData();
+  uint32_t location_offset =
+      form_value.BlockData() - ref_debug_info_data.GetDataStart();
+  uint32_t location_length = form_value.Unsigned();
+
+  // Evaluate the expression
+  auto result_or_error = Evaluate(
+      exe_ctx, reg_ctx, module_sp,
+      DataExtractor(ref_debug_info_data, location_offset, location_length),
+      dwarf_cu, reg_kind, initial_value_ptr, object_address_ptr, stack, true);
+
+  if (!result_or_error) {
+    // Propagate any error from the Evaluate function
+    return result_or_error.takeError();
+  }
+
+  // If successful, return success
+  return llvm::Error::success();
 }
 
 bool DWARFExpression::ParseDWARFLocationList(
