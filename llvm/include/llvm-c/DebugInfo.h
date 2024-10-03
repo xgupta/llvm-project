@@ -1377,6 +1377,9 @@ LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
     size_t NameLen, unsigned ArgNo, LLVMMetadataRef File, unsigned LineNo,
     LLVMMetadataRef Ty, LLVMBool AlwaysPreserve, LLVMDIFlags Flags);
 
+void LLVMDIBuilderUpdateDISubprogramRaincodeFrameBase(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Subprogram, LLVMValueRef Storage);
+
 /**
  * Get the metadata of the subprogram attached to a function.
  *

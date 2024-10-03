@@ -584,6 +584,8 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
   // Add Static link if exists.
   addStaticLink(*SPDie, dwarf::DW_AT_static_link, SP->getStaticLinkExpr());
 
+  addStaticLink(*SPDie, dwarf::DW_AT_RAINCODE_frame_base,
+                SP->getRcFrameBaseExpr());
   return *SPDie;
 }
 
