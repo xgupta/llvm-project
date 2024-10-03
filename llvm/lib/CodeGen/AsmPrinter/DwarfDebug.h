@@ -924,6 +924,11 @@ public:
                                 const DbgValueLoc &Value,
                                 DwarfExpression &DwarfExpr);
 
+  static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
+                                const DbgValueLoc &Value,
+                                DwarfExpression &DwarfExpr,
+                                DwarfCompileUnit *TheCU);
+
   /// If the \p File has an MD5 checksum, return it as an MD5Result
   /// allocated in the MCContext.
   std::optional<MD5::MD5Result> getMD5AsBytes(const DIFile *File) const;

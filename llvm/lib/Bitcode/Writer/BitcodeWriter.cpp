@@ -1899,6 +1899,7 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
                                              SmallVectorImpl<uint64_t> &Record,
                                              unsigned Abbrev) {
   Record.push_back(N->isDistinct());
+
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
@@ -2265,8 +2266,12 @@ void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
                                             unsigned Abbrev) {
   Record.reserve(N->getElements().size() + 1);
   const uint64_t Version = 3 << 1;
-  Record.push_back((uint64_t)N->isDistinct() | Version);
+  const uint64_t NumEle = (N->getNumElements()) << 6;
+  Record.push_back((uint64_t)N->isDistinct() | Version | NumEle);
   Record.append(N->elements_begin(), N->elements_end());
+  for (const Metadata *Ref : N->operands()) {
+    Record.push_back(VE.getMetadataOrNullID(Ref));
+  }
 
   Stream.EmitRecord(bitc::METADATA_EXPRESSION, Record, Abbrev);
   Record.clear();
