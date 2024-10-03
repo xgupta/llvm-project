@@ -1133,7 +1133,7 @@ DWARFExpressionList *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
 bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_cfa_is_valid) {
-    m_static_link_error = Status::FromErrorString(
+    m_static_link_error.SetErrorString(
         "No static link available for this historical stack frame.");
     return false;
   }

@@ -519,6 +519,21 @@ public:
   ///     A const compile unit object pointer.
   const DWARFExpressionList &GetFrameBaseExpression() const { return m_frame_base; }
 
+  /// Get accessor for the RC frame base location.
+  ///
+  /// \return
+  ///     A location expression that describes the function frame
+  ///     base.
+  DWARFExpressionList &GetRCFrameBaseExpression() { return m_rc_frame_base; }
+
+  /// Get const accessor for the RC frame base location.
+  ///
+  /// \return
+  ///     A const compile unit object pointer.
+  const DWARFExpressionList &GetRCFrameBaseExpression() const {
+    return m_rc_frame_base;
+  }
+
   /// Get accessor for the static link location.
   ///
   /// \return
@@ -671,6 +686,10 @@ protected:
   /// The frame base expression for variables that are relative to the frame
   /// pointer.
   DWARFExpressionList m_frame_base;
+
+  /// The raincode frame base expression for variables that are relative to the
+  /// frame pointer.
+  DWARFExpressionList m_rc_frame_base;
 
   /// The static link expression for lexical nested subroutine pointing to the
   /// nestee frame
