@@ -8,7 +8,9 @@
 #--- commands
 target var a -fx
 # CHECK-LABEL: target var a
-# CHECK: (A) a = (i = 0xbaadf00d)
+# CHECK: (A) a = {
+# CHECK-NEXT: i = 0xbaadf00d
+# CHECK-NEXT: }
 
 #--- asm
         .data
