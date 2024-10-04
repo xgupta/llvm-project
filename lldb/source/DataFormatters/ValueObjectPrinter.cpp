@@ -359,12 +359,14 @@ void ValueObjectPrinter::GetValueSummaryError(std::string &value,
   lldb::Format format = m_options.m_format;
   // if I am printing synthetized elements, apply the format to those elements
   // only
+  bool skip_summary = false;
   if (m_options.m_pointer_as_array)
-    m_valobj->GetValueAsCString(lldb::eFormatDefault, value);
-  else if (format != eFormatDefault && format != m_valobj->GetFormat())
-    m_valobj->GetValueAsCString(format, value);
-  else {
-    const char *val_cstr = m_valobj->GetValueAsCString();
+    valobj.GetValueAsCString(lldb::eFormatDefault, value);
+  else if (format != eFormatDefault && format != valobj.GetFormat()) {
+    valobj.GetValueAsCString(format, value);
+    skip_summary = true;
+  } else {
+    const char *val_cstr = valobj.GetValueAsCString();
     if (val_cstr)
       value.assign(val_cstr);
   }
@@ -389,7 +391,7 @@ void ValueObjectPrinter::GetValueSummaryError(std::string &value,
     }
   } else if (IsUninitialized()) {
     summary.assign("<uninitialized>");
-  } else if (m_options.m_omit_summary_depth == 0) {
+  } else if (!skip_summary && (m_options.m_omit_summary_depth == 0)) {
     TypeSummaryImpl *entry = GetSummaryFormatter();
     if (entry) {
       m_valobj->GetSummaryAsCString(entry, summary,
@@ -803,7 +805,8 @@ void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
        !m_options.m_allow_oneliner_mode || m_options.m_flat_output ||
        (m_options.m_pointer_as_array) || m_options.m_show_location)
           ? false
-          : DataVisualization::ShouldPrintAsOneLiner(*m_valobj);
+          : ((m_options.m_format == eFormatDefault) &&
+             DataVisualization::ShouldPrintAsOneLiner(valobj));
   if (print_children && IsInstancePointer()) {
     uint64_t instance_ptr_value = m_valobj->GetValueAsUnsigned(0);
     if (m_printed_instance_pointers->count(instance_ptr_value)) {
