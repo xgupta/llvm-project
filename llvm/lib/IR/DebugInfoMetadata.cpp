@@ -749,13 +749,15 @@ DIDerivedType *DIDerivedType::getImpl(
     uint32_t AlignInBits, uint64_t OffsetInBits,
     std::optional<unsigned> DWARFAddressSpace,
     std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData,
-    Metadata *Annotations, StorageType Storage, bool ShouldCreate) {
+    Metadata *Annotations, Metadata *location, Metadata *Allocated,
+    StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIDerivedType,
-                        (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                         AlignInBits, OffsetInBits, DWARFAddressSpace,
-                         PtrAuthData, Flags, ExtraData, Annotations));
-  Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations};
+  DEFINE_GETIMPL_LOOKUP(
+      DIDerivedType, (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+                      AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
+                      Flags, ExtraData, Annotations, location, Allocated));
+  Metadata *Ops[] = {File,      Scope,       Name,     BaseType,
+                     ExtraData, Annotations, location, Allocated};
   DEFINE_GETIMPL_STORE(DIDerivedType,
                        (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
                         DWARFAddressSpace, PtrAuthData, Flags),
