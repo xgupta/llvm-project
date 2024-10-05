@@ -59,6 +59,8 @@ public:
 
   uint32_t GetPluginVersion();
 
+  plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
+
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Module *module, Target *target);
 
@@ -544,6 +546,7 @@ private:
   typedef std::map<lldb::BasicType, std::unique_ptr<LegacyType>> BasicTypeMap;
   typedef std::map<ConstString, std::unique_ptr<LegacyType>> MutatedTypeMap;
   int m_pointer_byte_size;
+  std::unique_ptr<plugin::dwarf::DWARFASTParser> m_dwarf_ast_parser_ap;
   lldb::TargetWP m_target_wp;
   std::unique_ptr<TypeMap> m_types;
   std::unique_ptr<BasicTypeMap> m_basic_types;
