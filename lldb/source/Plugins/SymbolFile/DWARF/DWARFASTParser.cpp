@@ -41,6 +41,8 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
     uint64_t lower_bound = 0;
     uint64_t upper_bound = 0;
     bool upper_bound_valid = false;
+    bool is_dynamic = false;
+    DWARFExpressionList num_elements_exp;
     for (size_t i = 0; i < attributes.Size(); ++i) {
       const dw_attr_t attr = attributes.AttributeAtIndex(i);
       DWARFFormValue form_value;
@@ -64,6 +66,17 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
                   }
                 }
               }
+          } else if (form_value.BlockData()) {
+            const DWARFDataExtractor &data = die.GetData();
+            uint32_t block_offset =
+                form_value.BlockData() - data.GetDataStart();
+            uint32_t block_length = form_value.Unsigned();
+            auto cu = die.GetCU();
+            auto module = die.GetModule();
+            is_dynamic = true;
+            num_elements_exp = DWARFExpressionList(
+                module, DataExtractor(data, block_offset, block_length), cu);
+            break;
           } else
             num_elements = form_value.Unsigned();
           break;
@@ -96,7 +109,10 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
         num_elements = upper_bound - lower_bound + 1;
     }
 
-    array_info.element_orders.push_back(num_elements);
+    if (!is_dynamic)
+      array_info.element_orders.push_back(num_elements);
+    else
+      array_info.element_orders_exp.push_back(num_elements_exp);
   }
   return array_info;
 }
