@@ -1203,6 +1203,44 @@ bool StackFrame::HasDebugInformation() {
   return m_sc.line_entry.IsValid();
 }
 
+ValueObjectSP StackFrame::GetValueObjectForFrameAggregateVariable(
+    ConstString name, ValueObjectSP &valobj_sp, DynamicValueType use_dynamic,
+    bool look_in_array) {
+
+  if (!valobj_sp)
+    return valobj_sp;
+
+  bool is_complete;
+  if (valobj_sp->GetCompilerType().IsArrayType(nullptr, nullptr,
+                                               &is_complete)) {
+    if (!look_in_array || !valobj_sp->GetCompilerType().IsAggregateType())
+      return nullptr;
+  }
+
+  ValueObjectSP result = valobj_sp->GetChildMemberWithName(name, true);
+  if (result)
+    return result;
+
+  uint32_t num_children = valobj_sp->GetNumChildren().get();
+  // for (size_t index = 0; index < valobj_sp->GetNumChildren(); ++index) {
+  for (uint32_t index = 0; index < num_children; ++index) {
+
+    ValueObjectSP child = valobj_sp->GetChildAtIndex(index, true);
+    if (!child)
+      continue;
+
+    CompilerType child_type = child->GetCompilerType();
+    if (!child_type.IsAggregateType())
+      continue;
+
+    result = GetValueObjectForFrameAggregateVariable(name, child, use_dynamic,
+                                                     look_in_array);
+    if (result)
+      break;
+  }
+  return result;
+}
+
 ValueObjectSP
 StackFrame::GetValueObjectForFrameVariable(const VariableSP &variable_sp,
                                            DynamicValueType use_dynamic) {
@@ -1238,6 +1276,31 @@ StackFrame::GetValueObjectForFrameVariable(const VariableSP &variable_sp,
     ValueObjectSP dynamic_sp = valobj_sp->GetDynamicValue(use_dynamic);
     if (dynamic_sp)
       return dynamic_sp;
+  }
+  return valobj_sp;
+}
+
+ValueObjectSP StackFrame::TrackGlobalVariable(const VariableSP &variable_sp,
+                                              DynamicValueType use_dynamic) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  if (IsHistorical())
+    return ValueObjectSP();
+
+  // Check to make sure we aren't already tracking this variable?
+  ValueObjectSP valobj_sp(
+      GetValueObjectForFrameVariable(variable_sp, use_dynamic));
+  if (!valobj_sp) {
+    // We aren't already tracking this global
+    VariableList *var_list = GetVariableList(true, nullptr);
+    // If this frame has no variables, create a new list
+    if (var_list == nullptr)
+      m_variable_list_sp = std::make_shared<VariableList>();
+
+    // Add the global/static variable to this frame
+    m_variable_list_sp->AddVariable(variable_sp);
+
+    // Now make a value object for it so we can track its changes
+    valobj_sp = GetValueObjectForFrameVariable(variable_sp, use_dynamic);
   }
   return valobj_sp;
 }
