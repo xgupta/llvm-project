@@ -198,6 +198,9 @@ let Definition = "target" in {
   def CharacterSet: Property<"charset", "String">,
     DefaultStringValue<"ASCII">,
     Desc<"Set Target character set.">;
+  def HideInvalidLegacyFrames: Property<"hide-invalid-legacy-frames", "Boolean">,
+    DefaultTrue,
+    Desc<"hides invalid legacy frames while printing.">;
 }
 
 let Definition = "process_experimental" in {
