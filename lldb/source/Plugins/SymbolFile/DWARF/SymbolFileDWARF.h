@@ -82,6 +82,7 @@ public:
   friend class DWARFCompileUnit;
   friend class DWARFDIE;
   friend class DWARFASTParser;
+  friend class DWARFASTParserLegacy;
 
   // Static Functions
   static void Initialize();
@@ -365,6 +366,15 @@ public:
   /// Returns the DWARFIndex for this symbol, if it exists.
   DWARFIndex *getIndex() { return m_index.get(); }
 
+  /// If this symbol file is linked to by a debug map (see
+  /// SymbolFileDWARFDebugMap), and \p file_addr is a file address relative to
+  /// an object file, adjust \p file_addr so that it is relative to the main
+  /// binary. Returns the adjusted address, or \p file_addr if no adjustment is
+  /// needed, on success and LLDB_INVALID_ADDRESS otherwise.
+  lldb::addr_t FixupAddress(lldb::addr_t file_addr);
+
+  bool FixupAddress(Address &addr);
+
 protected:
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
   const SymbolFileDWARF &operator=(const SymbolFileDWARF &) = delete;
@@ -463,15 +473,6 @@ protected:
   /// parameters (DW_TAG_call_site_parameter).
   std::vector<std::unique_ptr<CallEdge>>
   CollectCallEdges(lldb::ModuleSP module, DWARFDIE function_die);
-
-  /// If this symbol file is linked to by a debug map (see
-  /// SymbolFileDWARFDebugMap), and \p file_addr is a file address relative to
-  /// an object file, adjust \p file_addr so that it is relative to the main
-  /// binary. Returns the adjusted address, or \p file_addr if no adjustment is
-  /// needed, on success and LLDB_INVALID_ADDRESS otherwise.
-  lldb::addr_t FixupAddress(lldb::addr_t file_addr);
-
-  bool FixupAddress(Address &addr);
 
   typedef llvm::SetVector<Type *> TypeSet;
 
