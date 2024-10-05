@@ -1046,8 +1046,11 @@ static LLVMDIFlags map_to_llvmDIFlags(DINode::DIFlags Flags) {
 }
 
 static DISubprogram::DISPFlags
-pack_into_DISPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized) {
-  return DISubprogram::toSPFlags(IsLocalToUnit, IsDefinition, IsOptimized);
+pack_into_DISPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized,
+                    bool IsDiscList = false, bool IsDiscLoc = false) {
+  return DISubprogram::toSPFlags(IsLocalToUnit, IsDefinition, IsOptimized,
+                                 DISubprogram::DISPFlags::SPFlagNonvirtual,
+                                 false, IsDiscList, IsDiscLoc);
 }
 
 static DILocalVariable::DIVarFlags pack_into_DIVarFlags(bool IsLocatorDesc) {
@@ -1149,7 +1152,6 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction(
       pack_into_DISPFlags(IsLocalToUnit, IsDefinition, IsOptimized), nullptr,
       nullptr, nullptr));
 }
-
 
 LLVMMetadataRef LLVMDIBuilderCreateLexicalBlock(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope,
@@ -1834,6 +1836,21 @@ LLVMMetadataRef LLVMDIBuilderCreateAutoVariable2(
 LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange(LLVMDIBuilderRef Builder,
                                                  int64_t Lo, int64_t Count) {
   return wrap(unwrap(Builder)->getOrCreateSubrange(Lo, Count));
+}
+
+LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange2(LLVMDIBuilderRef Builder,
+                                                  int64_t Lo,
+                                                  LLVMMetadataRef Count) {
+  return wrap(unwrap(Builder)->getOrCreateSubrange(Lo, unwrap(Count)));
+}
+
+LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange3(LLVMDIBuilderRef Builder,
+                                                  LLVMMetadataRef Count,
+                                                  LLVMMetadataRef LB,
+                                                  LLVMMetadataRef UB,
+                                                  LLVMMetadataRef Stride) {
+  return wrap(unwrap(Builder)->getOrCreateSubrange(unwrap(Count), unwrap(LB),
+                                                   unwrap(UB), unwrap(Stride)));
 }
 
 LLVMMetadataRef LLVMDIBuilderGetOrCreateArray(LLVMDIBuilderRef Builder,
