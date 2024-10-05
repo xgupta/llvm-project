@@ -1800,7 +1800,6 @@ lldb::ValueObjectSP StackFrame::FindVariable(ConstString name) {
             &variable_list)) {
       var_sp = variable_list.FindVariable(name);
     }
-
     if (var_sp)
       value_sp = GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
   }
