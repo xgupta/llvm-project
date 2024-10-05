@@ -144,6 +144,8 @@ public:
 
   bool IsConst() const;
 
+  bool IsCStringType(uint32_t &length) const;
+
   bool IsDefined() const;
 
   bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
@@ -413,6 +415,11 @@ public:
   std::optional<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
   lldb::Encoding GetEncoding(uint64_t &count) const;
+
+  bool EncodeDataToType(ExecutionContext &exe_scope,
+                        lldb::opaque_compiler_type_t src_type,
+                        const DataExtractor &src_data,
+                        DataExtractor &dest_data);
 
   lldb::Format GetFormat() const;
 
