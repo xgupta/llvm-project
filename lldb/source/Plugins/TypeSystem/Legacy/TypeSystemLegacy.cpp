@@ -21,6 +21,8 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Log.h"
 
+#include "Plugins/SymbolFile/DWARF/DWARFASTParserLegacy.h"
+
 #include <mutex>
 #include <string>
 #include <vector>
@@ -1957,6 +1959,15 @@ void TypeSystemLegacy::Terminate() {
 }
 
 void TypeSystemLegacy::Finalize() {}
+
+lldb_private::plugin::dwarf::DWARFASTParser *
+TypeSystemLegacy::GetDWARFParser() {
+  if (!m_dwarf_ast_parser_ap)
+    m_dwarf_ast_parser_ap.reset(new DWARFASTParserLegacy(
+        *std::static_pointer_cast<TypeSystemLegacy>(weak_from_this().lock())));
+
+  return m_dwarf_ast_parser_ap.get();
+}
 
 //----------------------------------------------------------------------
 // Dumping types
