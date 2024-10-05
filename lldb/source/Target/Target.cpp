@@ -4370,6 +4370,12 @@ llvm::StringRef TargetProperties::GetArg0() const {
       idx, g_target_properties[idx].default_cstr_value);
 }
 
+llvm::StringRef TargetProperties::GetTargetCharset() const {
+  const uint32_t idx = ePropertyCharacterSet;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_target_properties[idx].default_cstr_value);
+}
+
 void TargetProperties::SetArg0(llvm::StringRef arg) {
   const uint32_t idx = ePropertyArg0;
   SetPropertyAtIndex(idx, arg);

@@ -275,6 +275,9 @@ public:
 
   virtual CompilerType GetAtomicType(lldb::opaque_compiler_type_t type);
 
+  virtual CompilerType MutateBaseTypeSize(lldb::opaque_compiler_type_t type,
+                                          uint64_t sizeInBits);
+
   virtual CompilerType AddConstModifier(lldb::opaque_compiler_type_t type);
 
   virtual CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type);
@@ -298,6 +301,14 @@ public:
 
   virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                                      uint64_t &count) = 0;
+
+  virtual bool EncodeDataToType(
+      ExecutionContext &exe_scope, lldb::opaque_compiler_type_t src_type,
+      const DataExtractor &src_data, lldb::opaque_compiler_type_t dest_type,
+      DataExtractor &dest_data,
+      const lldb::LanguageType lang = lldb::eLanguageTypeUnknown) {
+    return false;
+  }
 
   virtual lldb::Format GetFormat(lldb::opaque_compiler_type_t type) = 0;
 
@@ -421,6 +432,9 @@ public:
                                         CompilerType *pointee_type) = 0;
 
   virtual unsigned GetTypeQualifiers(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual bool IsCStringType(lldb::opaque_compiler_type_t type,
+                             uint32_t &length) = 0;
 
   virtual std::optional<size_t>
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,

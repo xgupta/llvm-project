@@ -42,6 +42,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -57,6 +58,7 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
+#include <regex>
 #include <tuple>
 
 #include <cassert>
@@ -442,6 +444,10 @@ ValueObjectSP ValueObject::GetChildMemberWithName(llvm::StringRef name,
 
 size_t ValueObject::GetNumChildren(uint32_t max) {
   UpdateValueIfNeeded();
+
+  static const bool isVarString = GetTypeInfo() & eTypeIsVarString;
+  if (isVarString)
+    return CalculateNumChildren(max);
 
   if (max < UINT32_MAX) {
     if (m_flags.m_children_count_valid) {
@@ -949,7 +955,18 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
   return {total_bytes_read, was_capped};
 }
 
-const char *ValueObject::GetObjectDescription() {
+uint16_t ValueObject::GetVarStringLength(Status &error) {
+  const Flags type_flags(GetTypeInfo());
+  if (!type_flags.Test(eTypeIsVarString))
+    return UINT16_MAX;
+  lldb::WritableDataBufferSP buffer_sp;
+  ReadPointedString(buffer_sp, error, true);
+  offset_t offset = 0;
+  DataExtractor data(buffer_sp, lldb::eByteOrderBig, 8);
+  return data.GetU16(&offset);
+}
+
+llvm::Expected<std::string> ValueObject::GetObjectDescription() {
   if (!UpdateValueIfNeeded(true))
     return nullptr;
 
@@ -1427,6 +1444,81 @@ addr_t ValueObject::GetPointerValue(AddressType *address_type) {
   return address;
 }
 
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromCString(
+    const char *value_str, const ExecutionContext &exe_ctx,
+    CompilerType comp_type, Status &error) {
+  std::string str(value_str);
+  llvm::StringRef value_string(str);
+  size_t data_length = 0;
+  int64_t iValue;
+  double dValue;
+  bool isArray = false;
+  size_t array_length = 0;
+  const void *data_ptr = nullptr;
+  BasicType base_type;
+  // Regular expressions for integer, string, and float
+  std::regex intRegex(
+      "[-+]?\\d+"); // Matches integers with optional negative sign
+  std::regex floatRegex(
+      "[-+]?\\d*\\.?\\d+([eE][-+]?\\d+)?"); // Matches floating-point numbers,
+                                            // including scientific notation
+                                            // with optional sign
+
+  if (std::regex_match(str, intRegex)) {
+    if (value_string.front() == '+')
+      value_string = value_string.drop_front(1);
+    if (value_string.getAsInteger(0, iValue)) {
+      error = Status::FromErrorStringWithFormat("integer conversion error %s",
+                                                value_string.str().c_str());
+      return nullptr;
+    }
+    data_length = sizeof(iValue);
+    data_ptr = &iValue;
+    base_type = eBasicTypeInt;
+  } else if (std::regex_match(str, floatRegex)) {
+    if (value_string.getAsDouble(dValue)) {
+      error = Status::FromErrorStringWithFormat("double conversion error %s",
+                                                value_string.str().c_str());
+      return nullptr;
+    }
+    data_length = sizeof(dValue);
+    data_ptr = &dValue;
+    base_type = eBasicTypeDouble;
+  } else {
+    if (value_string.front() != '"' || value_string.back() != '"') {
+      error = Status::FromErrorStringWithFormat(
+          "string %s must be enclosed in quotes", value_string.str().c_str());
+      return nullptr;
+    }
+    value_string = value_string.drop_front();
+    value_string = value_string.drop_back();
+    isArray = true;
+    data_ptr = value_string.data();
+    array_length = value_string.size();
+    data_length = array_length;
+    base_type = eBasicTypeChar;
+  }
+
+  auto type = comp_type.GetBasicTypeFromAST(base_type);
+  TargetSP target = exe_ctx.GetTargetSP();
+  if (!target)
+    return nullptr;
+
+  ByteOrder byte_order = endian::InlHostByteOrder();
+  uint8_t addr_size = target->GetArchitecture().GetAddressByteSize();
+
+  DataBufferSP buffer(new DataBufferHeap(data_length, 0));
+  DataEncoder enc(buffer->GetBytes(), data_length, byte_order, addr_size);
+  enc.PutData(0, data_ptr, data_length);
+  DataExtractor data(enc.GetDataBuffer(), byte_order, addr_size);
+
+  if (isArray) {
+    type = type.GetArrayType(array_length);
+  }
+  return ValueObject::CreateValueObjectFromData(llvm::StringRef(), data,
+                                                exe_ctx, type);
+}
+
 bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   error.Clear();
   // Make sure our value is up to date first so that our location and location
@@ -1442,6 +1534,31 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   const size_t byte_size = GetByteSize().value_or(0);
 
   Value::ValueType value_type = m_value.GetValueType();
+
+  ExecutionContext exe_ctx(GetExecutionContextRef());
+  TargetSP target = exe_ctx.GetTargetSP();
+  if (!target)
+    return false;
+
+  const uint8_t addr_size = target->GetArchitecture().GetAddressByteSize();
+  auto comp_type = GetCompilerType();
+  auto rhsVal =
+      CreateValueObjectFromCString(value_str, exe_ctx, comp_type, error);
+  if (error.Fail()) {
+    return false;
+  }
+  DataExtractor data0;
+  rhsVal->GetData(data0, error);
+  DataBufferSP buffer_dest(new DataBufferHeap(byte_size, 0));
+  DataExtractor dest_data(buffer_dest, ByteOrder::eByteOrderInvalid, addr_size);
+  const auto src_type = rhsVal->GetCompilerType().GetOpaqueQualType();
+
+  bool encodedata_to_type =
+      GetCompilerType().EncodeDataToType(exe_ctx, src_type, data0, dest_data);
+  if (encodedata_to_type) {
+    SetData(dest_data, error);
+    return true;
+  }
 
   if (value_type == Value::ValueType::Scalar) {
     // If the value is already a scalar, then let the scalar change itself:

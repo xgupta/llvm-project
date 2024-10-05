@@ -685,6 +685,23 @@ LLVMDIBuilderCreateArrayType(LLVMDIBuilderRef Builder, uint64_t Size,
                              unsigned NumSubscripts);
 
 /**
+ * Create debugging information entry for an array with header
+ * \param Builder      The DIBuilder.
+ * \param Size         Array size.
+ * \param AlignInBits  Alignment.
+ * \param Ty           Element type.
+ * \param Subscripts   Subscripts.
+ * \param NumSubscripts Number of subscripts.
+ * \param IsVarString  PL/I varying string.
+ * \param Name         Array type name.
+ * \param NameLen      Length of array type name.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateArrayType2(
+    LLVMDIBuilderRef Builder, uint64_t Size, uint32_t AlignInBits,
+    LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts, unsigned NumSubscripts,
+    LLVMBool isVarString, const char *Name, size_t NameLen);
+
+/**
  * Create debugging information entry for a vector type.
  * \param Builder      The DIBuilder.
  * \param Size         Vector size.
@@ -1144,6 +1161,30 @@ LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange(LLVMDIBuilderRef Builder,
                                                  int64_t Count);
 
 /**
+ * Create a descriptor for a value range.
+ * \param Builder    The DIBuilder.
+ * \param LowerBound Lower bound of the subrange, e.g. 0 for C, 1 for Fortran.
+ * \param Count      DI Node of Count of elements in the subrange.
+ */
+LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange2(LLVMDIBuilderRef Builder,
+                                                  int64_t LowerBound,
+                                                  LLVMMetadataRef Count);
+
+/**
+ * Create a descriptor for a value range.
+ * \param Builder    The DIBuilder.
+ * \param Count      DI Node of Count of elements in the subrange.
+ * \param LB         DI Node of Lower Bound of the subrange.
+ * \param UB         DI Node of Upper Bound of the subrange.
+ * \param Stride     DI Node of Stride of the subrange.
+ */
+LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange3(LLVMDIBuilderRef Builder,
+                                                  LLVMMetadataRef Count,
+                                                  LLVMMetadataRef LB,
+                                                  LLVMMetadataRef UB,
+                                                  LLVMMetadataRef Stride);
+
+/**
  * Create an array of DI Nodes.
  * \param Builder        The DIBuilder.
  * \param Data           The DI Node elements.
@@ -1372,6 +1413,26 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(LLVMDIBuilderRef Builder,
                                               LLVMMetadataRef Expr,
                                               LLVMMetadataRef DebugLoc,
                                               LLVMBasicBlockRef Block);
+
+/**
+ * Create a new descriptor for a local auto variable.
+ * \param Builder         The DIBuilder.
+ * \param Scope           The local scope the variable is declared in.
+ * \param Name            Variable name.
+ * \param NameLen         Length of variable name.
+ * \param File            File where this variable is defined.
+ * \param LineNo          Line number.
+ * \param LexicalScope    Lexical scope of var for lang like PL/I.
+ * \param Ty              Metadata describing the type of the variable.
+ * \param AlwaysPreserve  If true, this descriptor will survive optimizations.
+ * \param Flags           Flags.
+ * \param AlignInBits     Variable alignment.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateAutoVariable2(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNo,
+    unsigned LexicalScope, LLVMMetadataRef Ty, LLVMBool AlwaysPreserve,
+    LLVMDIFlags Flags, uint32_t AlignInBits, LLVMBool IsLocatorDesc);
 
 /**
  * Create a new descriptor for a local auto variable.
