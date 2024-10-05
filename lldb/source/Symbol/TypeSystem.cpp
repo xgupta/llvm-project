@@ -89,6 +89,11 @@ CompilerType TypeSystem::GetAtomicType(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
+CompilerType TypeSystem::MutateBaseTypeSize(lldb::opaque_compiler_type_t type,
+                                            uint64_t sizeInBits) {
+  return CompilerType();
+}
+
 CompilerType TypeSystem::AddConstModifier(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }

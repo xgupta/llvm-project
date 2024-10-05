@@ -1029,8 +1029,15 @@ static LLVMDIFlags map_to_llvmDIFlags(DINode::DIFlags Flags) {
 }
 
 static DISubprogram::DISPFlags
-pack_into_DISPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized) {
-  return DISubprogram::toSPFlags(IsLocalToUnit, IsDefinition, IsOptimized);
+pack_into_DISPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized,
+                    bool IsDiscList = false, bool IsDiscLoc = false) {
+  return DISubprogram::toSPFlags(IsLocalToUnit, IsDefinition, IsOptimized,
+                                 DISubprogram::DISPFlags::SPFlagNonvirtual,
+                                 false, IsDiscList, IsDiscLoc);
+}
+
+static DILocalVariable::DIVarFlags pack_into_DIVarFlags(bool IsLocatorDesc) {
+  return DILocalVariable::toVarFlags(IsLocatorDesc);
 }
 
 unsigned LLVMDebugMetadataVersion() {
@@ -1128,7 +1135,6 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction(
       pack_into_DISPFlags(IsLocalToUnit, IsDefinition, IsOptimized), nullptr,
       nullptr, nullptr));
 }
-
 
 LLVMMetadataRef LLVMDIBuilderCreateLexicalBlock(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope,
@@ -1312,6 +1318,17 @@ LLVMDIBuilderCreateArrayType(LLVMDIBuilderRef Builder, uint64_t Size,
                                                  NumSubscripts});
   return wrap(unwrap(Builder)->createArrayType(Size, AlignInBits,
                                                unwrapDI<DIType>(Ty), Subs));
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateArrayType2(
+    LLVMDIBuilderRef Builder, uint64_t Size, uint32_t AlignInBits,
+    LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts, unsigned NumSubscripts,
+    LLVMBool isVarString, const char *Name, size_t NameLen) {
+  auto Subs =
+      unwrap(Builder)->getOrCreateArray({unwrap(Subscripts), NumSubscripts});
+  return wrap(unwrap(Builder)->createArrayType(
+      Size, AlignInBits, unwrapDI<DIType>(Ty), Subs, nullptr, nullptr, nullptr,
+      nullptr, {Name, NameLen}, isVarString));
 }
 
 LLVMMetadataRef
@@ -1786,9 +1803,36 @@ LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
                   map_from_llvmDIFlags(Flags)));
 }
 
+LLVMMetadataRef LLVMDIBuilderCreateAutoVariable2(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNo,
+    unsigned LexicalScope, LLVMMetadataRef Ty, LLVMBool AlwaysPreserve,
+    LLVMDIFlags Flags, uint32_t AlignInBits, LLVMBool IsLocatorDesc) {
+  return wrap(unwrap(Builder)->createAutoVariable2(
+      unwrap<DIScope>(Scope), {Name, NameLen}, unwrap<DIFile>(File), LineNo,
+      LexicalScope, unwrap<DIType>(Ty), AlwaysPreserve,
+      map_from_llvmDIFlags(Flags), pack_into_DIVarFlags(IsLocatorDesc),
+      AlignInBits));
+}
+
 LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange(LLVMDIBuilderRef Builder,
                                                  int64_t Lo, int64_t Count) {
   return wrap(unwrap(Builder)->getOrCreateSubrange(Lo, Count));
+}
+
+LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange2(LLVMDIBuilderRef Builder,
+                                                  int64_t Lo,
+                                                  LLVMMetadataRef Count) {
+  return wrap(unwrap(Builder)->getOrCreateSubrange(Lo, unwrap(Count)));
+}
+
+LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange3(LLVMDIBuilderRef Builder,
+                                                  LLVMMetadataRef Count,
+                                                  LLVMMetadataRef LB,
+                                                  LLVMMetadataRef UB,
+                                                  LLVMMetadataRef Stride) {
+  return wrap(unwrap(Builder)->getOrCreateSubrange(unwrap(Count), unwrap(LB),
+                                                   unwrap(UB), unwrap(Stride)));
 }
 
 LLVMMetadataRef LLVMDIBuilderGetOrCreateArray(LLVMDIBuilderRef Builder,

@@ -744,6 +744,11 @@ public:
                                                           CompilerType type,
                                                           llvm::StringRef name);
 
+  static lldb::ValueObjectSP
+  CreateValueObjectFromCString(const char *value_str,
+                               const ExecutionContext &exe_ctx,
+                               CompilerType comp_type, Status &error);
+
   lldb::ValueObjectSP Persist();
 
   /// Returns true if this is a char* or a char[] if it is a char* and
@@ -753,6 +758,8 @@ public:
   std::pair<size_t, bool>
   ReadPointedString(lldb::WritableDataBufferSP &buffer_sp, Status &error,
                     bool honor_array);
+
+  uint16_t GetVarStringLength(Status &error);
 
   virtual size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                                 uint32_t item_count = 1);
