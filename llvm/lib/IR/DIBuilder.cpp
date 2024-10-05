@@ -848,6 +848,17 @@ DILocalVariable *DIBuilder::createAutoVariable(DIScope *Scope, StringRef Name,
       DILocalVariable::VarFlagZero, 0, AlignInBits);
 }
 
+DILocalVariable *DIBuilder::createAutoVariable2(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
+    unsigned LexicalScope, DIType *Ty, bool AlwaysPreserve,
+    DINode::DIFlags Flags, DILocalVariable::DIVarFlags VarFlags,
+    uint32_t AlignInBits) {
+  return createLocalVariable(VMContext, getSubprogramNodesTrackingVector(Scope),
+                             Scope, Name,
+                             /* ArgNo */ 0, File, LineNo, Ty, AlwaysPreserve,
+                             Flags, VarFlags, LexicalScope, AlignInBits);
+}
+
 DILocalVariable *DIBuilder::createParameterVariable(
     DIScope *Scope, StringRef Name, unsigned ArgNo, DIFile *File,
     unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags,
