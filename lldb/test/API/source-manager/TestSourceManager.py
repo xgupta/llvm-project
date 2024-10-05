@@ -38,6 +38,9 @@ class SourceManagerTestCase(TestBase):
         self.file = self.getBuildArtifact("main-copy.c")
         self.line = line_number("main.c", "// Set break point at this line.")
 
+        # Set hide-invalid-legacy-frames to false.
+        self.runCmd("settings set target.hide-invalid-legacy-frames false")
+
     def modify_content(self):
         # Read the main.c file content.
         with io.open(self.file, "r", newline="\n") as f:
