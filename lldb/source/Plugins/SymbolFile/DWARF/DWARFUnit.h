@@ -216,6 +216,8 @@ public:
 
   static lldb::IdentifierCaseType IdentifierCaseFromDWARF(uint64_t val);
 
+  lldb::LanguageType GetLanguageType();
+  
   uint64_t GetDWARFLanguageType();
 
   bool GetIsOptimized();
