@@ -4376,6 +4376,12 @@ llvm::StringRef TargetProperties::GetTargetCharset() const {
       idx, g_target_properties[idx].default_cstr_value);
 }
 
+bool TargetProperties::GetHideInvalidLegacyFrames() const {
+  const uint32_t idx = ePropertyHideInvalidLegacyFrames;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
+}
+
 void TargetProperties::SetArg0(llvm::StringRef arg) {
   const uint32_t idx = ePropertyArg0;
   SetPropertyAtIndex(idx, arg);
