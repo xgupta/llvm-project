@@ -107,6 +107,14 @@ ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   auto child_count = type.GetNumChildren(omit_empty_base_classes, &exe_ctx);
   if (!child_count)
     return child_count;
+
+  const Flags type_flags(GetTypeInfo());
+  if (type_flags.Test(lldb::eTypeIsVarString)) {
+    Status error;
+    auto elements = GetVarStringLength(error);
+    *child_count = elements < *child_count ? elements : *child_count;
+  }
+
   return *child_count <= max ? *child_count : max;
 }
 
