@@ -662,6 +662,33 @@ public:
   CreateValueObjectFromData(llvm::StringRef name, const DataExtractor &data,
                             const ExecutionContext &exe_ctx, CompilerType type);
 
+  /// Create a value object containing the given APInt value.
+  static lldb::ValueObjectSP CreateValueObjectFromAPInt(lldb::TargetSP target,
+                                                        const llvm::APInt &v,
+                                                        CompilerType type,
+                                                        llvm::StringRef name);
+
+  /// Create a value object containing the given APFloat value.
+  static lldb::ValueObjectSP
+  CreateValueObjectFromAPFloat(lldb::TargetSP target, const llvm::APFloat &v,
+                               CompilerType type, llvm::StringRef name);
+
+  /// Create a value object containing the given boolean value.
+  static lldb::ValueObjectSP CreateValueObjectFromBool(lldb::TargetSP target,
+                                                       bool value,
+                                                       llvm::StringRef name);
+
+  /// Create a nullptr value object with the specified type (must be a
+  /// nullptr type).
+  static lldb::ValueObjectSP CreateValueObjectFromNullptr(lldb::TargetSP target,
+                                                          CompilerType type,
+                                                          llvm::StringRef name);
+
+  static lldb::ValueObjectSP
+  CreateValueObjectFromCString(const char *value_str,
+                               const ExecutionContext &exe_ctx,
+                               CompilerType comp_type, Status &error);
+
   lldb::ValueObjectSP Persist();
 
   /// Returns true if this is a char* or a char[] if it is a char* and
@@ -671,6 +698,8 @@ public:
   std::pair<size_t, bool>
   ReadPointedString(lldb::WritableDataBufferSP &buffer_sp, Status &error,
                     bool honor_array);
+
+  uint16_t GetVarStringLength(Status &error);
 
   virtual size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                                 uint32_t item_count = 1);

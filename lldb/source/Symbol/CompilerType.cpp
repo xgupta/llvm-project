@@ -108,6 +108,34 @@ bool CompilerType::IsConst() const {
   return false;
 }
 
+unsigned CompilerType::GetPtrAuthKey() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthKey(m_type);
+  return 0;
+}
+
+unsigned CompilerType::GetPtrAuthDiscriminator() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthDiscriminator(m_type);
+  return 0;
+}
+
+bool CompilerType::GetPtrAuthAddressDiversity() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthAddressDiversity(m_type);
+  return false;
+}
+
+bool CompilerType::IsCStringType(uint32_t &length) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsCStringType(m_type, length);
+  return false;
+}
+
 bool CompilerType::IsFunctionType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -796,6 +824,16 @@ lldb::Encoding CompilerType::GetEncoding(uint64_t &count) const {
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetEncoding(m_type, count);
   return lldb::eEncodingInvalid;
+}
+
+bool CompilerType::EncodeDataToType(ExecutionContext &exe_ctx,
+                                    opaque_compiler_type_t src_type,
+                                    const DataExtractor &src_data,
+                                    DataExtractor &dest_data) {
+  if (!IsValid())
+    return false;
+  return GetTypeSystem()->EncodeDataToType(exe_ctx, src_type, src_data,
+                                           m_type /*dest_type*/, dest_data);
 }
 
 lldb::Format CompilerType::GetFormat() const {

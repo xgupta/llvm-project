@@ -736,6 +736,21 @@ namespace llvm {
                        DINode::DIFlags Flags = DINode::FlagZero,
                        uint32_t AlignInBits = 0);
 
+    /// Create a new descriptor for an auto variable.  This is a local variable
+    /// that is not a subprogram parameter.
+    ///
+    /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
+    /// leads to a \a DISubprogram.
+    ///
+    /// If \c AlwaysPreserve, this variable will be referenced from its
+    /// containing subprogram, and will survive some optimizations.
+    DILocalVariable *createAutoVariable2(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
+        unsigned LexicalScope, DIType *Ty, bool AlwaysPreserve = false,
+        DINode::DIFlags Flags = DINode::FlagZero,
+        DILocalVariable::DIVarFlags VarFlags = DILocalVariable::VarFlagZero,
+        uint32_t AlignInBits = 0);
+
     /// Create a new descriptor for an label.
     ///
     /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
