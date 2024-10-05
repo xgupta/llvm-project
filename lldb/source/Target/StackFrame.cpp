@@ -2003,6 +2003,16 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
   const FormatEntity::Entry *frame_format = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
   if (target) {
+    bool skip_invalid_line_frames = target->GetHideInvalidLegacyFrames();
+
+    if (m_sc.function &&
+        (m_sc.function->GetLanguage() == lldb::eLanguageTypeCobol85 ||
+         m_sc.function->GetLanguage() == lldb::eLanguageTypePLI)) {
+      // Only hide invalid frames for legacy languages if the setting is enabled
+      if (skip_invalid_line_frames && m_sc.line_entry.line == 0)
+        return;
+    }
+
     if (show_unique) {
       frame_format = target->GetDebugger().GetFrameFormatUnique();
     } else {
