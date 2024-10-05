@@ -392,6 +392,36 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction(
     unsigned ScopeLine, LLVMDIFlags Flags, LLVMBool IsOptimized);
 
 /**
+ * Create a new descriptor for the specified subprogram.
+ * \param Builder         The \c DIBuilder.
+ * \param Scope           Function scope.
+ * \param Name            Function name.
+ * \param NameLen         Length of enumeration name.
+ * \param LinkageName     Mangled function name.
+ * \param LinkageNameLen  Length of linkage name.
+ * \param File            File where this variable is defined.
+ * \param LineNo          Line number.
+ * \param Ty              Function type.
+ * \param IsLocalToUnit   True if this function is not externally visible.
+ * \param IsDefinition    True if this is a function definition.
+ * \param ScopeLine       Set to the beginning of the scope this starts
+ * \param Flags           E.g.: \c LLVMDIFlagLValueReference. These flags are
+ *                        used to emit dwarf attributes.
+ * \param IsOptimized     True if optimization is ON.
+ * \param IsDiscList      True if descriptor of parameters passed by list.
+ * \param IsDiscLoc       True if descriptor of parameters passed by locator.
+ * \param StaticLinkExpr  DIExpression for static link.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateFunction2(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, const char *LinkageName, size_t LinkageNameLen,
+    LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
+    LLVMBool IsLocalToUnit, LLVMBool IsDefinition, unsigned ScopeLine,
+    LLVMDIFlags Flags, LLVMBool IsOptimized, LLVMBool IsDiscList,
+    LLVMBool IsDiscLoc, LLVMMetadataRef StaticLinkExpr,
+    LLVMMetadataRef RcFrameBaseExpr);
+
+/**
  * Create a descriptor for a lexical block with the specified parent context.
  * \param Builder      The \c DIBuilder.
  * \param Scope        Parent lexical block.
@@ -695,6 +725,23 @@ LLVMDIBuilderCreateArrayType(LLVMDIBuilderRef Builder, uint64_t Size,
                              uint32_t AlignInBits, LLVMMetadataRef Ty,
                              LLVMMetadataRef *Subscripts,
                              unsigned NumSubscripts);
+
+/**
+ * Create debugging information entry for an array with header
+ * \param Builder      The DIBuilder.
+ * \param Size         Array size.
+ * \param AlignInBits  Alignment.
+ * \param Ty           Element type.
+ * \param Subscripts   Subscripts.
+ * \param NumSubscripts Number of subscripts.
+ * \param IsVarString  PL/I varying string.
+ * \param Name         Array type name.
+ * \param NameLen      Length of array type name.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateArrayType2(
+    LLVMDIBuilderRef Builder, uint64_t Size, uint32_t AlignInBits,
+    LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts, unsigned NumSubscripts,
+    LLVMBool isVarString, const char *Name, size_t NameLen);
 
 /**
  * Create debugging information entry for a vector type.
@@ -1156,6 +1203,30 @@ LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange(LLVMDIBuilderRef Builder,
                                                  int64_t Count);
 
 /**
+ * Create a descriptor for a value range.
+ * \param Builder    The DIBuilder.
+ * \param LowerBound Lower bound of the subrange, e.g. 0 for C, 1 for Fortran.
+ * \param Count      DI Node of Count of elements in the subrange.
+ */
+LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange2(LLVMDIBuilderRef Builder,
+                                                  int64_t LowerBound,
+                                                  LLVMMetadataRef Count);
+
+/**
+ * Create a descriptor for a value range.
+ * \param Builder    The DIBuilder.
+ * \param Count      DI Node of Count of elements in the subrange.
+ * \param LB         DI Node of Lower Bound of the subrange.
+ * \param UB         DI Node of Upper Bound of the subrange.
+ * \param Stride     DI Node of Stride of the subrange.
+ */
+LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange3(LLVMDIBuilderRef Builder,
+                                                  LLVMMetadataRef Count,
+                                                  LLVMMetadataRef LB,
+                                                  LLVMMetadataRef UB,
+                                                  LLVMMetadataRef Stride);
+
+/**
  * Create an array of DI Nodes.
  * \param Builder        The DIBuilder.
  * \param Data           The DI Node elements.
@@ -1402,6 +1473,46 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block);
+
+/**
+ * Create a new descriptor for a local auto variable.
+ * \param Builder         The DIBuilder.
+ * \param Scope           The local scope the variable is declared in.
+ * \param Name            Variable name.
+ * \param NameLen         Length of variable name.
+ * \param File            File where this variable is defined.
+ * \param LineNo          Line number.
+ * \param LexicalScope    Lexical scope of var for lang like PL/I.
+ * \param Ty              Metadata describing the type of the variable.
+ * \param AlwaysPreserve  If true, this descriptor will survive optimizations.
+ * \param Flags           Flags.
+ * \param AlignInBits     Variable alignment.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateAutoVariable2(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNo,
+    unsigned LexicalScope, LLVMMetadataRef Ty, LLVMBool AlwaysPreserve,
+    LLVMDIFlags Flags, uint32_t AlignInBits, LLVMBool IsLocatorDesc);
+
+/**
+ * Create a new descriptor for a function parameter variable.
+ * \param Builder         The DIBuilder.
+ * \param Scope           The local scope the variable is declared in.
+ * \param Name            Variable name.
+ * \param NameLen         Length of variable name.
+ * \param ArgNo           Unique argument number for this variable; starts at 1.
+ * \param LexicalScope    Lexical scope of param for lang like PL/I
+ * \param File            File where this variable is defined.
+ * \param LineNo          Line number.
+ * \param Ty              Metadata describing the type of the variable.
+ * \param AlwaysPreserve  If true, this descriptor will survive optimizations.
+ * \param Flags           Flags.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateParameterVariable2(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, unsigned ArgNo, unsigned LexicalScope, LLVMMetadataRef File,
+    unsigned LineNo, LLVMMetadataRef Ty, LLVMBool AlwaysPreserve,
+    LLVMDIFlags Flags, LLVMBool IsLocatorDesc);
 
 /**
  * Create a new descriptor for a local auto variable.
