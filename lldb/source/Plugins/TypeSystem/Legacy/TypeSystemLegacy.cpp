@@ -16,6 +16,7 @@
 #include "lldb/Target/Target.h"
 
 #include "Plugins/ExpressionParser/Cobol/CobolUserExpression.h"
+#include "Plugins/ExpressionParser/PLI/PLIUserExpression.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserLegacy.h"
 
 #include "lldb/Core/DumpDataExtractor.h"
@@ -2208,6 +2209,9 @@ UserExpression *TypeSystemLegacy::GetUserExpression(
     case eLanguageTypeCobol85:
       return new CobolUserExpression(*target, expr, prefix, language,
                                      desired_type, options);
+    case eLanguageTypePLI:
+      return new PLIUserExpression(*target, expr, prefix, language,
+                                   desired_type, options);
     }
   }
 
