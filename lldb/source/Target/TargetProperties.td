@@ -217,6 +217,9 @@ let Definition = "target" in {
          "launched. If you change this setting, the new value will only apply to "
          "subsequent launches. Commands that take an explicit working directory "
          "will override this setting.">;
+  def CharacterSet: Property<"charset", "String">,
+    DefaultStringValue<"ASCII">,
+    Desc<"Set Target character set.">;
 }
 
 let Definition = "process_experimental" in {
