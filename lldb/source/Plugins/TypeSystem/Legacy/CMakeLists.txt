@@ -7,6 +7,7 @@ add_lldb_library(lldbPluginTypeSystemLegacy PLUGIN
     lldbTarget
     lldbUtility
     lldbPluginExpressionParserCobol
+    lldbPluginExpressionParserPLI
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
     lldbPluginObjCRuntime
