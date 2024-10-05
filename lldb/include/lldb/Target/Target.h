@@ -264,6 +264,8 @@ public:
 
   llvm::StringRef GetTargetCharset() const;
 
+  bool GetHideInvalidLegacyFrames() const;
+
   bool GetRequireHardwareBreakpoints() const;
 
   bool GetAutoInstallMainExecutable() const;
