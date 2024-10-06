@@ -127,6 +127,31 @@ size_t TypeSystem::GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
   return 0;
 }
 
+CompilerType
+TypeSystem::DynGetBaseType(lldb::opaque_compiler_type_t type) const {
+  return CompilerType();
+}
+
+DWARFExpressionList
+TypeSystem::DynGetLocation(lldb::opaque_compiler_type_t type) const {
+  return DWARFExpressionList();
+}
+
+DWARFExpressionList
+TypeSystem::DynGetAllocated(lldb::opaque_compiler_type_t type) const {
+  return DWARFExpressionList();
+}
+
+DWARFExpressionList
+TypeSystem::DynArrGetCountExp(lldb::opaque_compiler_type_t type) const {
+  return DWARFExpressionList();
+}
+
+bool TypeSystem::DynArrUpdateLength(lldb::opaque_compiler_type_t type,
+                                    uint64_t length) {
+  return false;
+}
+
 TemplateArgumentKind
 TypeSystem::GetTemplateArgumentKind(opaque_compiler_type_t type, size_t idx,
                                     bool expand_pack) {

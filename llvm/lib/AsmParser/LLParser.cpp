@@ -5161,6 +5161,8 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(offset, MDUnsignedField, (0, UINT64_MAX));                          \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(extraData, MDField, );                                              \
+  OPTIONAL(location, MDField, );                                               \
+  OPTIONAL(allocated, MDField, );                                              \
   OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));      \
   OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
@@ -5170,11 +5172,11 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   if (dwarfAddressSpace.Val != UINT32_MAX)
     DWARFAddressSpace = dwarfAddressSpace.Val;
 
-  Result = GET_OR_DISTINCT(DIDerivedType,
-                           (Context, tag.Val, name.Val, file.Val, line.Val,
-                            scope.Val, baseType.Val, size.Val, align.Val,
-                            offset.Val, DWARFAddressSpace, flags.Val,
-                            extraData.Val, annotations.Val));
+  Result = GET_OR_DISTINCT(
+      DIDerivedType,
+      (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
+       size.Val, align.Val, offset.Val, DWARFAddressSpace, PtrAuthData,
+       flags.Val, extraData.Val, annotations.Val, location.Val, allocated.Val));
   return false;
 }
 
