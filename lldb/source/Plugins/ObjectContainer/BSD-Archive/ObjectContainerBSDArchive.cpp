@@ -414,12 +414,12 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
               child_data_sp->GetByteSize() != object->file_size)
             return ObjectFileSP();
           lldb::offset_t data_offset = 0;
-          return ObjectFile::FindPlugin(
+          return lldb_private::ObjectFile::FindPlugin(
               module_sp, &child, m_offset + object->file_offset,
               object->file_size, child_data_sp, data_offset);
         }
         lldb::offset_t data_offset = object->file_offset;
-        return ObjectFile::FindPlugin(
+        return lldb_private::ObjectFile::FindPlugin(
             module_sp, file, m_offset + object->file_offset, object->file_size,
             m_archive_sp->GetData().GetSharedDataBuffer(), data_offset);
       }
@@ -468,8 +468,8 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
             continue;
           FileSpec child = GetChildFileSpecificationsFromThin(
               object->ar_name.GetStringRef(), file);
-          if (ObjectFile::GetModuleSpecifications(child, 0, object->file_size,
-                                                  specs)) {
+          if (lldb_private::ObjectFile::GetModuleSpecifications(
+                  child, 0, object->file_size, specs)) {
             ModuleSpec &spec =
                 specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
@@ -484,7 +484,7 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
         const lldb::offset_t object_file_offset =
             file_offset + object->file_offset;
         if (object->file_offset < file_size && file_size > object_file_offset) {
-          if (ObjectFile::GetModuleSpecifications(
+          if (lldb_private::ObjectFile::GetModuleSpecifications(
                   file, object_file_offset, file_size - object_file_offset,
                   specs)) {
             ModuleSpec &spec =
