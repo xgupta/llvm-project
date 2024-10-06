@@ -267,6 +267,14 @@ namespace llvm {
     /// \param FromTy      Base Type.
     DIDerivedType *createQualifiedType(unsigned Tag, DIType *FromTy);
 
+    /// Create debugging information entry for a dynamic type
+    /// type, e.g. used in pl1 for decriptors.
+    /// \param BTy         Base type.
+    /// \param Location    Expression list to get to raw data.
+    /// \param Allocated   Expression list to deduct allocation status.
+    DIDerivedType *createDynamicType(DIType *BTy, DIExpression *Location,
+                                     DIExpression *Allocated);
+
     /// Create debugging information entry for a pointer.
     /// \param PointeeTy         Type pointed by this pointer.
     /// \param SizeInBits        Size.

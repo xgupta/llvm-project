@@ -9,6 +9,9 @@
 #ifndef LLDB_SYMBOL_COMPILERTYPE_H
 #define LLDB_SYMBOL_COMPILERTYPE_H
 
+#include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Expression/DWARFExpressionList.h"
+
 #include <functional>
 #include <optional>
 #include <string>
@@ -369,6 +372,21 @@ public:
 
   /// Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) const;
+
+  /// Dynamic type get base type
+  CompilerType DynGetBaseType() const;
+
+  /// Dynamic type get location expression
+  DWARFExpressionList DynGetLocation() const;
+
+  /// Dynamic type get allocated expression
+  DWARFExpressionList DynGetAllocated() const;
+
+  /// Dynamic array type get count expression
+  DWARFExpressionList DynArrGetCountExp() const;
+
+  /// Dynamic array type update length
+  bool DynArrUpdateLength(uint64_t length);
   /// \}
 
   /// Exploring the type.

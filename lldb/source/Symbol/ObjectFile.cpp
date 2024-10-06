@@ -650,7 +650,7 @@ ObjectFile::GetLoadableData(Target &target) {
   return loadables;
 }
 
-std::unique_ptr<CallFrameInfo> ObjectFile::CreateCallFrameInfo() {
+std::unique_ptr<lldb_private::CallFrameInfo> ObjectFile::CreateCallFrameInfo() {
   return {};
 }
 

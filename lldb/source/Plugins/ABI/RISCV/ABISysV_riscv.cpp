@@ -44,7 +44,7 @@ using namespace lldb_private;
 LLDB_PLUGIN_DEFINE_ADV(ABISysV_riscv, ABIRISCV)
 
 namespace {
-namespace dwarf {
+namespace dwarf_local {
 enum regnums {
   zero,
   ra,
@@ -120,8 +120,8 @@ static const std::array<RegisterInfo, 33> g_register_infos = {
 } // namespace
 
 const RegisterInfo *ABISysV_riscv::GetRegisterInfoArray(uint32_t &count) {
-  count = dwarf::g_register_infos.size();
-  return dwarf::g_register_infos.data();
+  count = dwarf_local::g_register_infos.size();
+  return dwarf_local::g_register_infos.data();
 }
 
 //------------------------------------------------------------------

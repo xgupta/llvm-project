@@ -1185,7 +1185,9 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
               (N.getTag() == dwarf::DW_TAG_variable && N.isStaticMember()) ||
               N.getTag() == dwarf::DW_TAG_inheritance ||
               N.getTag() == dwarf::DW_TAG_friend ||
-              N.getTag() == dwarf::DW_TAG_set_type,
+              N.getTag() == dwarf::DW_TAG_dynamic_type ||
+              N.getTag() == dwarf::DW_TAG_set_type ||
+              N.getTag() == dwarf::DW_TAG_template_alias,
           "invalid tag", &N);
   if (N.getTag() == dwarf::DW_TAG_ptr_to_member_type) {
     CheckDI(isType(N.getRawExtraData()), "invalid pointer to member type", &N,
@@ -1207,6 +1209,13 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
     }
   }
 
+  if (N.getTag() == dwarf::DW_TAG_dynamic_type) {
+    CheckDI(N.getLocation(), "missing data location attribute in dynamic type",
+            &N);
+    CheckDI(cast<DIExpression>(N.getLocation())->isValid(),
+            "invalid data location expression in dynamic type", &N);
+  }
+  
   CheckDI(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());
   CheckDI(isType(N.getRawBaseType()), "invalid base type", &N,
           N.getRawBaseType());
