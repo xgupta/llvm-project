@@ -767,6 +767,41 @@ CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
       return type_system_sp->GetBasicTypeFromAST(basic_type);
   return CompilerType();
 }
+
+CompilerType CompilerType::DynGetBaseType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->DynGetBaseType(m_type);
+  return CompilerType();
+}
+
+DWARFExpressionList CompilerType::DynGetLocation() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->DynGetLocation(m_type);
+  return DWARFExpressionList();
+}
+
+DWARFExpressionList CompilerType::DynGetAllocated() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->DynGetAllocated(m_type);
+  return DWARFExpressionList();
+}
+
+DWARFExpressionList CompilerType::DynArrGetCountExp() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->DynArrGetCountExp(m_type);
+  return DWARFExpressionList();
+}
+
+bool CompilerType::DynArrUpdateLength(uint64_t length) {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->DynArrUpdateLength(m_type, length);
+  return false;
+}
 // Exploring the type
 
 std::optional<uint64_t>
