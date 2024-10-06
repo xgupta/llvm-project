@@ -333,6 +333,16 @@ DIDerivedType *DIBuilder::createPtrAuthQualifiedType(
                             DINode::FlagZero);
 }
 
+
+DIDerivedType *DIBuilder::createDynamicType(DIType *BTy, DIExpression *Location,
+                                            DIExpression *Allocated) {
+  return DIDerivedType::get(VMContext, dwarf::DW_TAG_dynamic_type,
+                            "", nullptr, 0, nullptr,
+                            BTy, 0, 0, 0, std::nullopt, std::nullopt,
+                            DINode::FlagZero, nullptr /*ExtraData*/, nullptr /*Annotations*/,
+                            Location, Allocated);
+}
+
 DIDerivedType *
 DIBuilder::createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
                              uint32_t AlignInBits,
