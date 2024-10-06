@@ -9,6 +9,9 @@
 #ifndef LLDB_SYMBOL_COMPILERTYPE_H
 #define LLDB_SYMBOL_COMPILERTYPE_H
 
+#include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Expression/DWARFExpressionList.h"
+
 #include <functional>
 #include <optional>
 #include <string>
@@ -383,6 +386,21 @@ public:
   /// supports ptrauth modifiers, else return an invalid type. Note that this
   /// does not check if this type is a pointer.
   CompilerType AddPtrAuthModifier(uint32_t payload) const;
+
+  /// Dynamic type get base type
+  CompilerType DynGetBaseType() const;
+
+  /// Dynamic type get location expression
+  DWARFExpressionList DynGetLocation() const;
+
+  /// Dynamic type get allocated expression
+  DWARFExpressionList DynGetAllocated() const;
+
+  /// Dynamic array type get count expression
+  DWARFExpressionList DynArrGetCountExp() const;
+
+  /// Dynamic array type update length
+  bool DynArrUpdateLength(uint64_t length);
   /// \}
 
   /// Exploring the type.

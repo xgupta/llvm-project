@@ -1580,7 +1580,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_DERIVED_TYPE: {
-    if (Record.size() < 12 || Record.size() > 15)
+    if (Record.size() < 12 || Record.size() > 17)
       return error("Invalid record");
 
     // DWARF address space is encoded as N->getDWARFAddressSpace() + 1. 0 means
@@ -1602,16 +1602,21 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         PtrAuthData.emplace(Record[14]);
     }
 
-    IsDistinct = Record[0];
+    IsDistinct = Record[0] & 0x1;
+    const unsigned Version = Record[0] & ~(0x1);
+    Metadata *Location =
+        Version == (2 << 1) ? getMDOrNull(Record[13]) : nullptr;
+    Metadata *Allocated =
+        Version == (2 << 1) ? getMDOrNull(Record[14]) : nullptr;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DIDerivedType,
-                        (Context, Record[1], getMDString(Record[2]),
-                         getMDOrNull(Record[3]), Record[4],
-                         getDITypeRefOrNull(Record[5]),
-                         getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-                         Record[9], DWARFAddressSpace, PtrAuthData, Flags,
-                         getDITypeRefOrNull(Record[11]), Annotations)),
+        GET_OR_DISTINCT(
+            DIDerivedType,
+            (Context, Record[1], getMDString(Record[2]), getMDOrNull(Record[3]),
+             Record[4], getDITypeRefOrNull(Record[5]),
+             getDITypeRefOrNull(Record[6]), Record[7], Record[8], Record[9],
+             DWARFAddressSpace, PtrAuthData, Flags,
+             getDITypeRefOrNull(Record[11]), Annotations, Location, Allocated)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
