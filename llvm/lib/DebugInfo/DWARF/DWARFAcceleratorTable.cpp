@@ -964,7 +964,7 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
   if (Hdr.BucketCount == 0) {
     // No Hash Table, We need to search through all names in the Name Index.
     for (const NameTableEntry &NTE : *CurrentIndex) {
-      if (NTE.sameNameAs(Key))
+      if (StringRef(NTE.getString()).equals_insensitive(Key))
         return NTE.getEntryOffset();
     }
     return std::nullopt;
@@ -988,6 +988,7 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
       continue;
 
     NameTableEntry NTE = CurrentIndex->getNameTableEntry(Index);
+    // TODO: Update it for case-insensitive matching.
     if (NTE.sameNameAs(Key))
       return NTE.getEntryOffset();
   }
