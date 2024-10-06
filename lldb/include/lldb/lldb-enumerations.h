@@ -1143,7 +1143,8 @@ FLAGS_ENUM(TypeFlags){eTypeHasChildren = (1u << 0),
                       eTypeIsComplex = (1u << 20),
                       eTypeIsSigned = (1u << 21),
                       eTypeInstanceIsPointer = (1u << 22),
-                      eTypeIsVarString = (1u << 23)};
+                      eTypeIsVarString = (1u << 23),
+                      eTypeIsDynamic = (1u << 24)};
 
 FLAGS_ENUM(CommandFlags){
     /// eCommandRequiresTarget
