@@ -798,6 +798,19 @@ llvm::VersionTuple DWARFUnit::GetProducerVersion() {
   return m_producer_version;
 }
 
+IdentifierCaseType DWARFUnit::IdentifierCaseFromDWARF(uint64_t val) {
+  switch (val) {
+  case DW_ID_up_case:
+    return eUpperCase;
+  case DW_ID_down_case:
+    return eLowerCase;
+  case DW_ID_case_insensitive:
+    return eCaseInsensitive;
+  default:
+    return eCaseSensitive;
+  }
+}
+
 uint64_t DWARFUnit::GetDWARFLanguageType() {
   if (m_language_type)
     return *m_language_type;
