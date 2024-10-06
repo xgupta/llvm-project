@@ -80,8 +80,9 @@ ConstString Variable::GetName() const {
 
 ConstString Variable::GetUnqualifiedName() const { return m_name; }
 
-bool Variable::NameMatches(ConstString name) const {
-  if (m_name == name)
+// TODO handle case insentitive mangling
+bool Variable::NameMatches(ConstString name, bool case_sensitive) const {
+  if (ConstString::Equals(m_name, name, case_sensitive))
     return true;
   SymbolContext variable_sc;
   m_owner_scope->CalculateSymbolContext(&variable_sc);
