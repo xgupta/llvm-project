@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PseudoProbe.h"
@@ -1658,6 +1659,17 @@ public:
   bool getDebugInfoForProfiling() const { return DebugInfoForProfiling; }
   DebugNameTableKind getNameTableKind() const {
     return (DebugNameTableKind)NameTableKind;
+  }
+  unsigned getIdentifierCase() const {
+    switch (getSourceLanguage()) {
+    default:
+      break;
+    case dwarf::DW_LANG_PLI:
+    case dwarf::DW_LANG_Cobol74:
+    case dwarf::DW_LANG_Cobol85:
+      return dwarf::DW_ID_case_insensitive;
+    }
+    return dwarf::DW_ID_case_sensitive;
   }
   bool getRangesBaseAddress() const { return RangesBaseAddress; }
   StringRef getProducer() const { return getStringOperand(1); }

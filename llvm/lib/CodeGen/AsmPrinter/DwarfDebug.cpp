@@ -1028,6 +1028,15 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   NewCU.addUInt(Die, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
                 DIUnit->getSourceLanguage());
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
+
+  unsigned sourceLanguage = DIUnit->getSourceLanguage();
+  if (sourceLanguage == dwarf::DW_LANG_PLI ||
+      sourceLanguage == dwarf::DW_LANG_Cobol74 ||
+      sourceLanguage == dwarf::DW_LANG_Cobol85) {
+    NewCU.addUInt(Die, dwarf::DW_AT_identifier_case, dwarf::DW_FORM_data1,
+                  DIUnit->getIdentifierCase());
+  }
+
   StringRef SysRoot = DIUnit->getSysRoot();
   if (!SysRoot.empty())
     NewCU.addString(Die, dwarf::DW_AT_LLVM_sysroot, SysRoot);

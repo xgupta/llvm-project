@@ -31,7 +31,13 @@ public:
   /// \param[in] string
   ///     An llvm::StringRef that represents the regular expression to compile.
   //      String is not referenced anymore after the object is constructed.
-  explicit RegularExpression(llvm::StringRef string);
+  //
+  /// \param[in] flags
+  ///     An llvm::Regex::RegexFlags that modifies the matching behavior. The
+  ///     default is NoFlags.
+  explicit RegularExpression(
+      llvm::StringRef string,
+      llvm::Regex::RegexFlags flags = llvm::Regex::NoFlags, bool icase = false);
 
   ~RegularExpression() = default;
 
@@ -87,6 +93,7 @@ private:
   std::string m_regex_text;
   /// The compiled regular expression.
   mutable llvm::Regex m_regex;
+  bool icase = false;
 };
 
 } // namespace lldb_private

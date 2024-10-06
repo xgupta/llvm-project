@@ -149,6 +149,20 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
 
+  const DWARFDIE die = unit.GetDIE(0); // Get the correct DIE
+
+  if (die.IsValid()) {
+    if (die.GetAttributeValueAsUnsigned(DW_AT_identifier_case, 0) ==
+        DW_ID_case_insensitive) {
+      SetNameCaseInsensitive();
+    }
+  } else {
+    if ((cu_language == eLanguageTypeCobol85) ||
+        (cu_language == eLanguageTypeCobol74) ||
+        (cu_language == eLanguageTypePLI))
+      SetNameCaseInsensitive();
+  }
+
   // First check if the unit has a DWO ID. If it does then we only want to index
   // the .dwo file or nothing at all. If we have a compile unit where we can't
   // locate the .dwo/.dwp file we don't want to index anything from the skeleton

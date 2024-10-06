@@ -882,7 +882,7 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
   if (Hdr.BucketCount == 0) {
     // No Hash Table, We need to search through all names in the Name Index.
     for (const NameTableEntry &NTE : *CurrentIndex) {
-      if (NTE.getString() == Key)
+      if (StringRef(NTE.getString()).equals_insensitive(Key))
         return NTE.getEntryOffset();
     }
     return std::nullopt;
