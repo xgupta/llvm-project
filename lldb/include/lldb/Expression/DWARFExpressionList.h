@@ -9,8 +9,8 @@
 #ifndef LLDB_EXPRESSION_DWARFEXPRESSIONLIST_H
 #define LLDB_EXPRESSION_DWARFEXPRESSIONLIST_H
 
-#include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
 

@@ -54,7 +54,7 @@ using namespace lldb_private;
 LLDB_PLUGIN_DEFINE_ADV(ABISysV_loongarch, ABILoongArch)
 
 namespace {
-namespace dwarf {
+namespace dwarf_local {
 enum regnums {
   r0,
   r1,
@@ -128,7 +128,7 @@ static const std::array<RegisterInfo, 33> g_register_infos = {
      DEFINE_REGISTER_STUB(r30),
      DEFINE_REGISTER_STUB(r31),
      DEFINE_GENERIC_REGISTER_STUB(pc, LLDB_REGNUM_GENERIC_PC)}};
-} // namespace dwarf
+} // namespace dwarf_local
 } // namespace
 
 // Number of argument registers (the base integer calling convention
@@ -136,8 +136,8 @@ static const std::array<RegisterInfo, 33> g_register_infos = {
 static constexpr size_t g_regs_for_args_count = 8U;
 
 const RegisterInfo *ABISysV_loongarch::GetRegisterInfoArray(uint32_t &count) {
-  count = dwarf::g_register_infos.size();
-  return dwarf::g_register_infos.data();
+  count = dwarf_local::g_register_infos.size();
+  return dwarf_local::g_register_infos.data();
 }
 
 //------------------------------------------------------------------
