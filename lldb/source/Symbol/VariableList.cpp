@@ -70,11 +70,12 @@ uint32_t VariableList::FindVariableIndex(const VariableSP &var_sp) {
 }
 
 VariableSP VariableList::FindVariable(ConstString name,
-                                      bool include_static_members) {
+                                      bool include_static_members,
+                                      bool case_sensitive) {
   VariableSP var_sp;
   iterator pos, end = m_variables.end();
   for (pos = m_variables.begin(); pos != end; ++pos) {
-    if ((*pos)->NameMatches(name)) {
+    if ((*pos)->NameMatches(name, case_sensitive)) {
       if (include_static_members || !(*pos)->IsStaticMember()) {
         var_sp = (*pos);
         break;
@@ -86,11 +87,13 @@ VariableSP VariableList::FindVariable(ConstString name,
 
 VariableSP VariableList::FindVariable(ConstString name,
                                       lldb::ValueType value_type,
-                                      bool include_static_members) {
+                                      bool include_static_members,
+                                      bool case_sensitive) {
   VariableSP var_sp;
   iterator pos, end = m_variables.end();
   for (pos = m_variables.begin(); pos != end; ++pos) {
-    if ((*pos)->NameMatches(name) && (*pos)->GetScope() == value_type) {
+    if ((*pos)->NameMatches(name, case_sensitive) &&
+        (*pos)->GetScope() == value_type) {
       if (include_static_members || !(*pos)->IsStaticMember()) {
         var_sp = (*pos);
         break;
