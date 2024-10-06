@@ -524,6 +524,21 @@ enum LanguageType {
   eNumLanguageTypes
 };
 
+//----------------------------------------------------------------------
+/// Identifier Case type
+///
+/// this enumeration indetifies the treatment of identifiers within
+/// compilation unit. the default is case sensitive in case it is absent
+/// in compilation unit.
+//----------------------------------------------------------------------
+enum IdentifierCaseType {
+  eCaseUnknown = 0,
+  eCaseSensitive = 1,
+  eUpperCase = 2,
+  eLowerCase = 3,
+  eCaseInsensitive = 4,
+};
+
 enum InstrumentationRuntimeType {
   eInstrumentationRuntimeTypeAddressSanitizer = 0x0000,
   eInstrumentationRuntimeTypeThreadSanitizer = 0x0001,
