@@ -33,20 +33,20 @@ static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                        ExecutionContext *exe_ctx = nullptr) {
   DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
                           /*addr_size*/ 4);
-  Value result;
-  Status status;
+
   std::vector<Value> stack;
-  if (!DWARFExpression::Evaluate(exe_ctx, /*reg_ctx*/ nullptr, module_sp,
-                                 extractor, unit, lldb::eRegisterKindLLDB,
-                                 /*object_address_ptr*/ nullptr, nullptr, stack,
-                                 result, &status))
-    return status.ToError();
 
   llvm::Expected<Value> result =
       DWARFExpression::Evaluate(exe_ctx, /*reg_ctx*/ nullptr, module_sp,
                                 extractor, unit, lldb::eRegisterKindLLDB,
-                                /*initial_value_ptr*/ nullptr,
-                                /*object_address_ptr*/ nullptr);
+                                /*object_address_ptr*/ nullptr, nullptr, stack);
+  if (!result)
+    return result.takeError();
+
+  result = DWARFExpression::Evaluate(exe_ctx, /*reg_ctx*/ nullptr, module_sp,
+                                     extractor, unit, lldb::eRegisterKindLLDB,
+                                     /*initial_value_ptr*/ nullptr,
+                                     /*object_address_ptr*/ nullptr, stack);
   if (!result)
     return result.takeError();
 
@@ -818,6 +818,7 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
   lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
   lldb::PlatformSP platform_sp;
+  std::vector<Value> stack;
   auto target_sp =
       std::make_shared<MockTarget>(*debugger_sp, arch, platform_sp);
   ASSERT_TRUE(target_sp);
@@ -838,7 +839,7 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
       &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor,
       /*unit*/ nullptr, lldb::eRegisterKindLLDB,
       /*initial_value_ptr*/ nullptr,
-      /*object_address_ptr*/ nullptr);
+      /*object_address_ptr*/ nullptr, stack);
 
   ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
   ASSERT_EQ(result->GetValueType(), Value::ValueType::HostAddress);

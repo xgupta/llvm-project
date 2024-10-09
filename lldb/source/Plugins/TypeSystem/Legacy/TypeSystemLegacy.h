@@ -1,17 +1,14 @@
 //===-- TypeSystemLegacy.h ------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_TypeSystemLegacy_h_
 #define liblldb_TypeSystemLegacy_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <memory>
 #include <set>
@@ -24,14 +21,12 @@
 #include "llvm/Support/Errno.h"
 #endif
 
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Core/Debugger.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Core/Debugger.h"
 
 namespace lldb_private {
 
@@ -100,8 +95,7 @@ public:
     return ConstString();
   }
 
-  bool
-  DeclContextIsClassMethod(void *opaque_decl_ctx) override {
+  bool DeclContextIsClassMethod(void *opaque_decl_ctx) override {
     return false;
   }
 
@@ -114,10 +108,9 @@ public:
     return lldb::eLanguageTypeUnknown;
   }
 
-  bool IsMemberFunctionPointerType(lldb::opaque_compiler_type_t type)  override {
+  bool IsMemberFunctionPointerType(lldb::opaque_compiler_type_t type) override {
     return false;
   }
-
 
   //----------------------------------------------------------------------
   // Tests
@@ -148,6 +141,12 @@ public:
 
   bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
                            bool &is_complex) override;
+
+  unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
+
+  unsigned GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) override;
+
+  bool GetPtrAuthAddressDiversity(lldb::opaque_compiler_type_t type) override;
 
   bool IsFunctionType(lldb::opaque_compiler_type_t type) override;
 
@@ -218,7 +217,8 @@ public:
   // Accessors
   //----------------------------------------------------------------------
 
-  ConstString GetTypeName(lldb::opaque_compiler_type_t type, bool BaseOnly) override;
+  ConstString GetTypeName(lldb::opaque_compiler_type_t type,
+                          bool BaseOnly) override;
 
   ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) override {
     return GetTypeName(type, true);
@@ -298,24 +298,24 @@ public:
   }
 
   std::optional<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
-                                       ExecutionContextScope *exe_scope) {
+                                      ExecutionContextScope *exe_scope) {
     if (std::optional<uint64_t> bit_size = GetBitSize(type, exe_scope))
       return (*bit_size + 7) / 8;
     return std::nullopt;
   }
 
-  std::optional<uint64_t>
-  GetBitSize(lldb::opaque_compiler_type_t type,
-             ExecutionContextScope *exe_scope) override;
+  std::optional<uint64_t> GetBitSize(lldb::opaque_compiler_type_t type,
+                                     ExecutionContextScope *exe_scope) override;
 
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;
 
   lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
 
-  uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
-                          bool omit_empty_base_classes,
-                          const ExecutionContext *exe_ctx) override;
+  llvm::Expected<uint32_t>
+  GetNumChildren(lldb::opaque_compiler_type_t type,
+                 bool omit_empty_base_classes,
+                 const ExecutionContext *exe_ctx) override;
 
   lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override;
@@ -336,8 +336,8 @@ public:
   DynArrGetCountExp(lldb::opaque_compiler_type_t type) const override;
 
   /// Dynamic array type update length value
-  bool
-  DynArrUpdateLength(lldb::opaque_compiler_type_t type, uint64_t length) override;
+  bool DynArrUpdateLength(lldb::opaque_compiler_type_t type,
+                          uint64_t length) override;
 
   uint32_t GetNumFields(lldb::opaque_compiler_type_t type) override {
     // TODO struct members calculation
@@ -379,7 +379,7 @@ public:
   CompilerType
   GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) override;
 
-  CompilerType GetChildCompilerTypeAtIndex(
+  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
       bool ignore_array_bounds, std::string &child_name,
@@ -402,7 +402,8 @@ public:
   // so we catch all names that match a given child name, not just the first.
   size_t
   GetIndexOfChildMemberWithName(lldb::opaque_compiler_type_t type,
-                                llvm::StringRef name, bool omit_empty_base_classes,
+                                llvm::StringRef name,
+                                bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) override;
 
   //----------------------------------------------------------------------
@@ -417,7 +418,8 @@ public:
   CompilerType CreateArrayType(const ConstString &array_type_name,
                                const ConstString &name,
                                const CompilerType &element_type,
-                               DWARFExpressionList element_count, bool isVarString);
+                               DWARFExpressionList element_count,
+                               bool isVarString);
 
   CompilerType CreateDynamicType(const CompilerType &base_type,
                                  const DWARFExpressionList &dw_location,
@@ -528,7 +530,7 @@ public:
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,
-                                    lldb::LanguageType language,
+                                    SourceLanguage language,
                                     Expression::ResultType desired_type,
                                     const EvaluateExpressionOptions &options,
                                     ValueObject *ctx_obj) override;
@@ -571,9 +573,9 @@ public:
     icd = (iconv_t)-1;
     if (target_sp) {
       fromcode.assign(target_sp->GetTargetCharset().str());
-      const char * to{};
-      const char * from{};
-      if ( encode ) {
+      const char *to{};
+      const char *from{};
+      if (encode) {
         to = fromcode.c_str();
         from = "";
       } else {
@@ -598,7 +600,7 @@ public:
     bool Converted = false;
 #if defined(USE_BUILTIN_ICONV)
     size_t in_size = inp.length();
-    size_t buffer_size = in_size*2;
+    size_t buffer_size = in_size * 2;
     char *src_ptr = const_cast<char *>(inp.c_str());
     std::vector<char> buffer(buffer_size);
     std::string dst;
@@ -626,15 +628,18 @@ public:
       int e = errno;
       Debugger::ReportError(
           llvm::formatv(
-             "TargetCharsetReader: Attempted iconv of {0} host-bytes, failed with error: {1}({2}): in_size={3} out_size={4}",
-             inp.length(), e, llvm::sys::StrError(e).c_str(), in_size, out_size).str());
+              "TargetCharsetReader: Attempted iconv of {0} host-bytes, failed "
+              "with error: {1}({2}): in_size={3} out_size={4}",
+              inp.length(), e, llvm::sys::StrError(e).c_str(), in_size,
+              out_size)
+              .str());
       return false;
     }
 
     ssize_t out_len = buffer_size - out_size;
     if (out_len > 0) {
       if ((size_t)out_len > inp.length()) {
-         out_len = inp.length();
+        out_len = inp.length();
       }
       dst.append(&buffer[0], out_len);
       Converted |= true;
@@ -652,7 +657,7 @@ public:
       return false;
 #if defined(USE_BUILTIN_ICONV)
     size_t in_size = length;
-    size_t buffer_size = in_size*2;
+    size_t buffer_size = in_size * 2;
     char *src_ptr = inp;
     std::vector<char> buffer(buffer_size);
 
@@ -677,14 +682,16 @@ public:
       int e = errno;
       Debugger::ReportError(
           llvm::formatv(
-             "TargetCharsetReader: Attempted iconv of {0} host-bytes, failed with error: {1}({2}): in_size={3} out_size={4}",
-             length, e, llvm::sys::StrError(e).c_str(), in_size, out_size).str());
+              "TargetCharsetReader: Attempted iconv of {0} host-bytes, failed "
+              "with error: {1}({2}): in_size={3} out_size={4}",
+              length, e, llvm::sys::StrError(e).c_str(), in_size, out_size)
+              .str());
       return false;
     }
     ssize_t out_len = buffer_size - out_size;
     if (out_len > 0) {
       if ((size_t)out_len > length) {
-         out_len = length;
+        out_len = length;
       }
       memcpy(inp, &buffer[0], out_len);
       return true;

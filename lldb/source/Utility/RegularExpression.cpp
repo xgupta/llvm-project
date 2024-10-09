@@ -21,7 +21,8 @@ RegularExpression::RegularExpression(llvm::StringRef str,
 }
 
 RegularExpression::RegularExpression(const RegularExpression &rhs)
-    : RegularExpression(rhs.GetText(), rhs.icase) {}
+    : RegularExpression(rhs.GetText(), rhs.icase ? llvm::Regex::IgnoreCase
+                                                 : llvm::Regex::NoFlags) {}
 
 bool RegularExpression::Execute(
     llvm::StringRef str,

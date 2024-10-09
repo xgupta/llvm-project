@@ -191,12 +191,12 @@ bool ValueObjectVariable::UpdateValue() {
         //                          nullptr, &obj_addr, allocated)) {
         if (!alloc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
                                  nullptr, &obj_addr)) {
-          m_error = Status::FromErrorString(
+          m_error.SetErrorString(
               "dynamic variable allocated attribute read error");
           return m_error.Success();
         }
         if (allocated.ResolveValue(&exe_ctx).IsZero()) {
-          m_error = Status::FromErrorString("dynamic variable not allocated");
+          m_error.SetErrorString("dynamic variable not allocated");
           return false;
         }
       }
@@ -209,8 +209,7 @@ bool ValueObjectVariable::UpdateValue() {
           Value obj_addr(m_value);
           if (!loc_expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
                                  nullptr, &obj_addr)) {
-            m_error =
-                Status::FromErrorString("dynamic variable location read error");
+            m_error.SetErrorString("dynamic variable location read error");
             return m_error.Success();
           }
           CompilerType base_type = comp_type.DynGetBaseType();
@@ -226,16 +225,13 @@ bool ValueObjectVariable::UpdateValue() {
               //                         nullptr, &obj_addr, length_value)) {
               if (!count_exp.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr,
                                       nullptr, &obj_addr)) {
-
-                m_error =
-                    Status::FromErrorString("dynamic array count read error");
+                m_error.SetErrorString("dynamic array count read error");
                 return m_error.Success();
               }
               auto m_value = length_value.ResolveValue(&exe_ctx);
               uint64_t length = m_value.UInt();
               if (!base_type.DynArrUpdateLength(length)) {
-                m_error =
-                    Status::FromErrorString("dynamic array count update error");
+                m_error.SetErrorString("dynamic array count update error");
                 return m_error.Success();
               }
             }
@@ -327,7 +323,6 @@ bool ValueObjectVariable::UpdateValue() {
 
       SetValueIsValid(m_error.Success());
     } else {
-      m_error = maybe_value.takeError();
       // could not find location, won't allow editing
       m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
     }

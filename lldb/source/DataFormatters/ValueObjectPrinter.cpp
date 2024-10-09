@@ -368,9 +368,9 @@ void ValueObjectPrinter::GetValueSummaryError(std::string &value,
   // only
   bool skip_summary = false;
   if (m_options.m_pointer_as_array)
-    valobj->GetValueAsCString(lldb::eFormatDefault, value);
-  else if (format != eFormatDefault && format != valobj->GetFormat()) {
-    valobj->GetValueAsCString(format, value);
+    valobj.GetValueAsCString(lldb::eFormatDefault, value);
+  else if (format != eFormatDefault && format != valobj.GetFormat()) {
+    valobj.GetValueAsCString(format, value);
     skip_summary = true;
   }
   else {

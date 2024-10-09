@@ -13,8 +13,9 @@
 // TODO: Add other DW-based macros.
 #if !(                                                                         \
     defined HANDLE_DW_TAG || defined HANDLE_DW_AT || defined HANDLE_DW_FORM || \
-    defined HANDLE_DW_OP || defined HANDLE_DW_OP_LLVM_USEROP ||                    \
-    defined HANDLE_DW_LANG || defined HANDLE_DW_ATE ||                         \
+    defined HANDLE_DW_OP || defined HANDLE_DW_OP_LLVM_USEROP ||                \
+    defined HANDLE_DW_LANG ||  defined HANDLE_DW_LNAME ||                      \
+    defined HANDLE_DW_ATE ||                                                   \
     defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||             \
     defined HANDLE_DW_CC || defined HANDLE_DW_LNS || defined HANDLE_DW_LNE ||  \
     defined HANDLE_DW_LNCT || defined HANDLE_DW_MACRO ||                       \

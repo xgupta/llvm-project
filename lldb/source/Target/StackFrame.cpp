@@ -659,7 +659,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   }
 
   llvm::StringRef type_name(valobj_sp->GetTypeName().GetStringRef());
-  const bool is_bit_type = type_name.startswith("BIT ");
+  const bool is_bit_type = type_name.starts_with("BIT ");
 
   // We are dumping at least one child
   while (!var_expr.empty()) {
@@ -1224,8 +1224,7 @@ bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
                 exe_ctx.GetTargetPtr());
 
       if (!m_sc.function->GetStaticLinkExpression().Evaluate(
-              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr,
-              expr_value, &m_static_link_error)) {
+              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr)) {
         // We should really have an error if evaluate returns, but in case we
         // don't, lets set the error to something at least.
         if (m_static_link_error.Success())
@@ -1289,7 +1288,8 @@ ValueObjectSP StackFrame::GetValueObjectForFrameAggregateVariable(
   if (result)
     return result;
 
-  for (size_t index = 0; index < valobj_sp->GetNumChildren(); ++index) {
+  uint32_t num_children = valobj_sp->GetNumChildren().get();
+  for (uint32_t index = 0; index < num_children; ++index) {
     ValueObjectSP child = valobj_sp->GetChildAtIndex(index, true);
     if (!child)
       continue;

@@ -1,24 +1,22 @@
-//===-- CobolLanguage.cpp ---------------------------------------*- C++ -*-===//
+//===-- CobolLanguage.cpp -------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Threading.h"
 
 #include "CobolLanguage.h"
 
+#include "Plugins/TypeSystem/Legacy/TypeSystemLegacy.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Utility/ConstString.h"
-#include "Plugins/TypeSystem/Legacy/TypeSystemLegacy.h"
 
 using namespace llvm;
 using namespace lldb;
@@ -44,9 +42,7 @@ llvm::StringRef CobolLanguage::GetPluginNameStatic() {
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------
-llvm::StringRef CobolLanguage::GetPluginName() {
-  return GetPluginNameStatic();
-}
+llvm::StringRef CobolLanguage::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t CobolLanguage::GetPluginVersion() { return 1; }
 
@@ -64,7 +60,8 @@ lldb::TypeCategoryImplSP CobolLanguage::GetFormatters() {
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {
-    DataVisualization::Categories::GetCategory(ConstString(GetPluginName()), g_category);
+    DataVisualization::Categories::GetCategory(ConstString(GetPluginName()),
+                                               g_category);
     if (g_category) {
       LoadCobolFormatters(g_category);
     }
@@ -154,8 +151,10 @@ bool formatters::RaincodeStringSummaryProvider(ValueObject &valobj,
   ExecutionContextScope *exe_scope = process_sp.get();
   TargetCharsetReader Conv(exe_scope->CalculateTarget());
   if (!Conv.IsValid()) {
-    Host::SystemLog(StringRef(std::string("WARNING: Invalid target charset ") + 
-                    std::string(Conv.getTargetFormat().GetCString()) + std::string("\n")));
+    Host::SystemLog(lldb::eSeverityWarning,
+                    StringRef(std::string("WARNING: Invalid target charset ") +
+                              std::string(Conv.getTargetFormat().GetCString()) +
+                              std::string("\n")));
     return false;
   }
 

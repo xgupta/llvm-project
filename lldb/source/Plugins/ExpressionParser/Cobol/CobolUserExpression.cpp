@@ -1,9 +1,8 @@
-//===-- CobolUserExpression.cpp ---------------------------------*- C++ -*-===//
+//===-- CobolUserExpression.cpp -------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -55,8 +54,10 @@ static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
   if (index != 0)
     return true;
 
-  const size_t total_count = comp_type->GetNumChildren(true, nullptr);
-  for (size_t i = 0; i < total_count; ++i) {
+  // const llvm::Expected<uint32_t> total_count =
+  // comp_type->GetNumChildren(true, nullptr);
+  uint32_t total_count = comp_type->GetNumChildren(true, nullptr).get();
+  for (uint32_t i = 0; i < total_count; ++i) {
     std::string child_name;
     uint32_t child_byte_size;
     int32_t child_byte_offset = 0;
@@ -66,10 +67,21 @@ static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
     bool child_is_deref_of_parent;
     uint64_t language_flags;
 
-    CompilerType child_type = comp_type->GetChildCompilerTypeAtIndex(
-        nullptr, i, true, true, true, child_name, child_byte_size,
-        child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-        child_is_base_class, child_is_deref_of_parent, nullptr, language_flags);
+    llvm::Expected<CompilerType> expected_child_type =
+        comp_type->GetChildCompilerTypeAtIndex(
+            nullptr, i, true, true, true, child_name, child_byte_size,
+            child_byte_offset, child_bitfield_bit_size,
+            child_bitfield_bit_offset, child_is_base_class,
+            child_is_deref_of_parent, nullptr, language_flags);
+
+    if (!expected_child_type) {
+      // Handle the error, e.g., by returning or logging it.
+      llvm::consumeError(expected_child_type.takeError());
+      return false; // or handle accordingly
+    }
+    CompilerType child_type =
+        *expected_child_type; // Extract the actual value safely
+
     if (SearchCompilerTypeForMemberWithName(&child_type, name))
       return true;
   }
@@ -100,7 +112,7 @@ static VariableSP SearchMemberByName(TargetSP target, llvm::Twine name) {
 
   for (size_t i = 0; i < variable_list.GetSize(); ++i) {
     VariableSP result = variable_list.GetVariableAtIndex(i);
-    CompilerType comp_type = result->GetType()->GetForwardCompilerType();
+    auto comp_type = result->GetType()->GetForwardCompilerType();
 
     if (SearchCompilerTypeForMemberWithName(&comp_type, name))
       return result;
@@ -116,7 +128,7 @@ static VariableSP FindGlobalVariable(TargetSP target, llvm::Twine name,
   }
   target->GetImages().FindGlobalVariables(
       RegularExpression(llvm::StringRef("^" + name.str() + "$"),
-                        true /* case-insensitive */),
+                        llvm::Regex::NoFlags, true /* case-insensitive */),
       1, variable_list);
 
   const auto match_count = variable_list.GetSize();
@@ -233,7 +245,9 @@ lldb::ValueObjectSP CobolInterpreter::GetLevel88(llvm::StringRef var_name,
                              eval_options);
   if (!result)
     return ValueObjectSP();
-  auto truth_value = GetUIntFromValueObjectSPReportIndex(result, false) == 0 ? "false" : "true";
+  auto truth_value = GetUIntFromValueObjectSPReportIndex(result, false) == 0
+                         ? "false"
+                         : "true";
 
   auto result_str = "(" + parent_name + ") " + truth_value;
   llvm::StringRef result_ref(result_str);
@@ -654,7 +668,9 @@ uint32_t CobolInterpreter::GetUIntFromValueObjectSP(ValueObjectSP var) {
   return this->GetUIntFromValueObjectSPReportIndex(var, true);
 }
 
-uint32_t CobolInterpreter::GetUIntFromValueObjectSPReportIndex(ValueObjectSP var, bool reportIndex) {
+uint32_t
+CobolInterpreter::GetUIntFromValueObjectSPReportIndex(ValueObjectSP var,
+                                                      bool reportIndex) {
   uint32_t index;
   llvm::StringRef index_string(var->GetValueAsCString());
   if (index_string.getAsInteger(10, index)) {
@@ -679,6 +695,7 @@ CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
       if (var_sp && var_sp->GetType()->GetName() == "Level88ConditionName") {
         if (index_expr->GetNumberOfIndices() > 1) {
           Host::SystemLog(
+              lldb::eSeverityWarning,
               "More than one index for level88 is not supported yet");
           return ValueObjectSP();
         }
@@ -729,7 +746,8 @@ CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
 ValueObjectSP
 CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {
   llvm::StringRef funcName = expr->GetFuncName().m_text;
-  if (!funcName.equals(llvm::StringRef("sizeof")))
+  // if (!funcName.equals(llvm::StringRef("sizeof")))
+  if (funcName == (llvm::StringRef("sizeof")))
     // TODO
     return nullptr;
 
@@ -847,8 +865,8 @@ CobolInterpreter::VisitAssignmentExpr(const CobolASTAssignmentExpr *expr) {
 
 CobolUserExpression::CobolUserExpression(
     ExecutionContextScope &exe_scope, llvm::StringRef expr,
-    llvm::StringRef prefix, lldb::LanguageType language,
-    ResultType desired_type, const EvaluateExpressionOptions &options)
+    llvm::StringRef prefix, SourceLanguage language, ResultType desired_type,
+    const EvaluateExpressionOptions &options)
     : UserExpression(exe_scope, expr, prefix, language, desired_type, options) {
 }
 
@@ -864,7 +882,7 @@ bool CobolUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     return true;
 
   LLDB_LOGF(log, "error while parsing the following code:%s\n", GetUserText());
-  diagnostic_manager.Printf(eDiagnosticSeverityError,
+  diagnostic_manager.Printf(lldb::eSeverityError,
                             "cobol expression can't be interpreted");
   return false;
 }
@@ -892,27 +910,28 @@ CobolUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
             "== [CobolUserExpression::Evaluate] Expression may not run, "
             "but is not constant ==");
 
-      diagnostic_manager.PutString(eDiagnosticSeverityError,
+      diagnostic_manager.PutString(lldb::eSeverityError,
                                    "expression needed to run but couldn't");
 
       return execution_results;
     }
   }
 
-  LanguageType language = target->GetLanguage();
+  SourceLanguage language = target->GetLanguage();
+
   m_interpreter->set_use_dynamic(options.GetUseDynamic());
   ValueObjectSP result_val_sp = m_interpreter->Evaluate(exe_ctx);
-  Status err = m_interpreter->error();
+  Status err = std::move(m_interpreter->error());
   m_interpreter.reset();
 
   if (!result_val_sp) {
     const char *error_cstr = err.AsCString();
     if (error_cstr && error_cstr[0]) {
-      diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
+      diagnostic_manager.PutString(lldb::eSeverityError, error_cstr);
       if (log)
         LLDB_LOGF(log, "expression interpretation error: %s\n.", error_cstr);
     } else {
-      diagnostic_manager.PutString(eDiagnosticSeverityError,
+      diagnostic_manager.PutString(lldb::eSeverityError,
                                    "expression can't be interpreted or run");
       if (log)
         LLDB_LOGF(log, "expression interpretation Unknown error\n.");
@@ -925,7 +944,8 @@ CobolUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   result->m_live_sp = result->m_frozen_sp = result_val_sp;
   result->m_flags |= ExpressionVariable::EVIsProgramReference;
   PersistentExpressionState *pv =
-      target->GetPersistentExpressionStateForLanguage(language);
+      target->GetPersistentExpressionStateForLanguage(
+          language.AsLanguageType());
   if (pv != nullptr) {
     if (result_val_sp->GetName().IsEmpty())
       result->SetName(pv->GetNextPersistentVariableName());

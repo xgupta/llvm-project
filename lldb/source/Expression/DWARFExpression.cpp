@@ -1406,15 +1406,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // result
     case DW_OP_RC_byte_swap:
       if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 1 item for DW_OP_RC_byte_swap.");
-        return false;
+        return llvm::createStringError(
+            "Expression stack needs at least 1 item for DW_OP_RC_byte_swap.");
       } else {
         if (!stack.back().ResolveValue(exe_ctx).ByteSwap()) {
-          if (error_ptr)
-            error_ptr->SetErrorString("Byte Swap failed.");
-          return false;
+          return llvm::createStringError("Byte Swap failed.");
         }
       }
       break;
@@ -1425,32 +1421,25 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // address to target address for address calculations.
     case DW_OP_RC_resolve_file_address:
       if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 1 item for DW_OP_RC_byte_swap.");
-        return false;
+        return llvm::createStringError(
+            "Expression stack needs at least 1 item for DW_OP_RC_resolve_file_address.");
+
       } else {
         if (stack.back().GetValueType() == Value::ValueType::FileAddress) {
           auto file_addr =
               stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
           if (!module_sp) {
-            if (error_ptr)
-              error_ptr->SetErrorString(
-                  "need module to resolve file address for DW_OP_deref");
-            return false;
+            return llvm::createStringError(
+                "need module to resolve file address for DW_OP_deref");
           }
           Address so_addr;
           if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
-            if (error_ptr)
-              error_ptr->SetErrorString(
-                  "failed to resolve file address in module");
-            return false;
+            return llvm::createStringError(
+                "failed to resolve file address in module");
           }
           addr_t load_Addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
           if (load_Addr == LLDB_INVALID_ADDRESS) {
-            if (error_ptr)
-              error_ptr->SetErrorString("failed to resolve load address");
-            return false;
+            return llvm::createStringError("failed to resolve load address");
           }
           stack.back().GetScalar() = load_Addr;
           stack.back().SetValueType(Value::ValueType::LoadAddress);
@@ -2363,49 +2352,59 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   return stack.back();
 }
 
-bool DWARFExpression::EvaluateCall(ExecutionContext *exe_ctx,
-                                   RegisterContext *reg_ctx,
-                                   ModuleSP module_sp,
-                                   const DWARFUnit *dwarf_cu,
-                                   dw_offset_t die_ref_offset,
-                                   const RegisterKind reg_kind,
-                                   const Value *initial_value_ptr,
-                                   const Value *object_address_ptr,
-                                   std::vector<Value> &stack,
-                                   Status *error_ptr) {
+llvm::Error DWARFExpression::EvaluateCall(
+    ExecutionContext *exe_ctx, RegisterContext *reg_ctx, ModuleSP module_sp,
+    const DWARFUnit *dwarf_cu, dw_offset_t die_ref_offset,
+    const RegisterKind reg_kind, const Value *initial_value_ptr,
+    const Value *object_address_ptr, std::vector<Value> &stack) {
+
+  // Retrieve the DWARF DIE for the given offset
   DWARFDIE ref_die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(die_ref_offset);
   if (!ref_die.IsValid()) {
-    if (error_ptr)
-      error_ptr->SetErrorStringWithFormat(
-          "unable to find DW_OP_call[2|4] reference = %" PRIu32,
-          die_ref_offset);
-    return false;
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Unable to find DW_OP_call[2|4] reference = %" PRIu32, die_ref_offset);
   }
 
+  // Retrieve the attribute value from the DIE
   DWARFFormValue form_value;
   const dw_offset_t attrib_offset =
       ref_die.GetDIE()->GetAttributeValue(dwarf_cu, DW_AT_location, form_value);
-  if (attrib_offset == 0)
-    return false;
-
-  if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
-    if (error_ptr)
-      error_ptr->SetErrorStringWithFormat(
-          "DW_OP_call[2|4] to reference = %" PRIu32
-          " with location list is not supported.",
-          die_ref_offset);
-    return false;
+  if (attrib_offset == 0) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Attribute offset for DW_OP_call[2|4] reference = %" PRIu32
+        " not found",
+        die_ref_offset);
   }
 
+  // Check if the form value is in block form
+  if (!DWARFFormValue::IsBlockForm(form_value.Form())) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "DW_OP_call[2|4] to reference = %" PRIu32
+                                   " with location list is not supported.",
+                                   die_ref_offset);
+  }
+
+  // Extract data for evaluation
   const DWARFDataExtractor &ref_debug_info_data = ref_die.GetData();
   uint32_t location_offset =
       form_value.BlockData() - ref_debug_info_data.GetDataStart();
   uint32_t location_length = form_value.Unsigned();
-  Value result(0);
-  return Evaluate(
+
+  // Evaluate the expression
+  auto result_or_error = Evaluate(
       exe_ctx, reg_ctx, module_sp,
       DataExtractor(ref_debug_info_data, location_offset, location_length),
-      dwarf_cu, reg_kind, initial_value_ptr, object_address_ptr, stack, result, error_ptr, true);
+      dwarf_cu, reg_kind, initial_value_ptr, object_address_ptr, stack, true);
+
+  if (!result_or_error) {
+    // Propagate any error from the Evaluate function
+    return result_or_error.takeError();
+  }
+
+  // If successful, return success
+  return llvm::Error::success();
 }
 
 bool DWARFExpression::ParseDWARFLocationList(

@@ -1,15 +1,15 @@
-//===-- TypeSystemLegacy.h -------------------------------------*- C++ -*-===//
+//===-- TypeSystemLegacy.cpp ----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "TypeSystemLegacy.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
@@ -17,8 +17,8 @@
 
 #include "Plugins/ExpressionParser/Cobol/CobolUserExpression.h"
 #include "Plugins/ExpressionParser/PLI/PLIUserExpression.h"
-#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserLegacy.h"
+
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -581,6 +581,24 @@ bool TypeSystemLegacy::IsCharType(opaque_compiler_type_t type) {
   return false;
 }
 
+unsigned TypeSystemLegacy::GetPtrAuthKey(lldb::opaque_compiler_type_t type) {
+  // Since TypeSystemLegacy do not handle pointer authentication, return a
+  // default value.
+  return 0;
+}
+
+unsigned
+TypeSystemLegacy::GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) {
+  // Provide a default implementation.
+  return 0;
+}
+
+bool TypeSystemLegacy::GetPtrAuthAddressDiversity(
+    lldb::opaque_compiler_type_t type) {
+  // Return a default value.
+  return false;
+}
+
 bool TypeSystemLegacy::IsFunctionType(opaque_compiler_type_t type) {
   switch (static_cast<LegacyType *>(type)->GetLegacyKind()) {
   default:
@@ -719,7 +737,8 @@ TypeSystemLegacy::GetLValueReferenceType(opaque_compiler_type_t type) {
     return CompilerType();
 
   // TODOa
-  Host::SystemLog("Warning: DW_TAG_reference_type not supported.");
+  Host::SystemLog(lldb::eSeverityInfo,
+                  "Warning: DW_TAG_reference_type not supported.");
   return CompilerType();
 }
 
@@ -928,7 +947,7 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
                                         DataExtractor &dest_data,
                                         const LanguageType lang) {
   if (!VerifyEncodeType(src_type, dest_type)) {
-    Host::SystemLog("Wrong assignment type.\n");
+    Host::SystemLog(lldb::eSeverityError, "Wrong assignment type.\n");
     return false;
   }
 
@@ -991,7 +1010,7 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     else if (src_type_kind == LegacyType::KIND_DOUBLE)
       value = src_data.GetDouble(&offset);
     else {
-      Host::SystemLog("Invalid float src data type.\n");
+      Host::SystemLog(lldb::eSeverityError, "Invalid float src data type.\n");
       return false;
     }
 
@@ -1013,7 +1032,7 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     else if (src_type_kind == LegacyType::KIND_DOUBLE)
       value = src_data.GetDouble(&offset);
     else {
-      Host::SystemLog("Invalid float src data type.\n");
+      Host::SystemLog(lldb::eSeverityError, "Invalid float src data type.\n");
       return false;
     }
     if (type_scale) {
@@ -1034,7 +1053,8 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
                                                    type_scale, is_binscale));
     uint16_t str_length = val_str.size();
     if (str_length > arr_len) {
-      Host::SystemLog("Assignment string longer then available.\n");
+      Host::SystemLog(lldb::eSeverityError,
+                      "Assignment string longer then available.\n");
       val_str.erase(arr_len, 100);
       str_length = val_str.size();
     }
@@ -1045,12 +1065,14 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
 
     TargetCharsetReader Conv(exe_scope.GetTargetSP(), true);
     if (!Conv.IsValid()) {
-      Host::SystemLog("Assignment charset encoding failure.\n");
+      Host::SystemLog(lldb::eSeverityError,
+                      "Assignment charset encoding failure.\n");
       return false;
     }
 
     if (!Conv.convert(val_str)) {
-      Host::SystemLog("Assignment charset encoding convertion failure.\n");
+      Host::SystemLog(lldb::eSeverityError,
+                      "Assignment charset encoding convertion failure.\n");
       return false;
     }
 
@@ -1140,11 +1162,13 @@ bool TypeSystemLegacy::EncodeDataToType(ExecutionContext &exe_scope,
     } else {
       TargetCharsetReader Conv(exe_scope.GetTargetSP(), true);
       if (!Conv.IsValid()) {
-        Host::SystemLog("Assignment charset encoding failure.\n");
+        Host::SystemLog(lldb::eSeverityError,
+                        "Assignment charset encoding failure.\n");
         return false;
       }
       if (!Conv.convert(val_str)) {
-        Host::SystemLog("Assignment charset encoding convertion failure.\n");
+        Host::SystemLog(lldb::eSeverityError,
+                        "Assignment charset encoding convertion failure.\n");
         return false;
       }
       count = val_str.size();
@@ -1266,9 +1290,10 @@ Encoding TypeSystemLegacy::GetEncoding(opaque_compiler_type_t type,
   return eEncodingInvalid;
 }
 
-uint32_t TypeSystemLegacy::GetNumChildren(opaque_compiler_type_t type,
-                                          bool omit_empty_base_classes,
-                                          const ExecutionContext *exe_ctx) {
+llvm::Expected<uint32_t>
+TypeSystemLegacy::GetNumChildren(opaque_compiler_type_t type,
+                                 bool omit_empty_base_classes,
+                                 const ExecutionContext *exe_ctx) {
   if (!type)
     return 0;
 
@@ -1464,7 +1489,7 @@ CompilerType TypeSystemLegacy::GetFieldAtIndex(opaque_compiler_type_t type,
   return CompilerType();
 }
 
-CompilerType TypeSystemLegacy::GetChildCompilerTypeAtIndex(
+llvm::Expected<CompilerType> TypeSystemLegacy::GetChildCompilerTypeAtIndex(
     opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
     bool transparent_pointers, bool omit_empty_base_classes,
     bool ignore_array_bounds, std::string &child_name,
@@ -1473,8 +1498,14 @@ CompilerType TypeSystemLegacy::GetChildCompilerTypeAtIndex(
     bool &child_is_base_class, bool &child_is_deref_of_parent,
     ValueObject *valobj, uint64_t &language_flags) {
 
-  const bool idx_is_valid =
-      idx < GetNumChildren(type, omit_empty_base_classes, exe_ctx);
+  auto num_children_or_error =
+      GetNumChildren(type, omit_empty_base_classes, exe_ctx);
+  if (!num_children_or_error) {
+    return num_children_or_error.takeError();
+  }
+
+  uint32_t num_children = *num_children_or_error;
+  const bool idx_is_valid = idx < num_children;
 
   auto get_exe_scope = [&exe_ctx]() {
     return exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
@@ -1489,7 +1520,7 @@ CompilerType TypeSystemLegacy::GetChildCompilerTypeAtIndex(
     CompilerType pointee_type(GetPointeeType(type));
 
     if (transparent_pointers && pointee_type.IsAggregateType()) {
-      // ToDO
+      // TODO
       return CompilerType();
     } else {
       child_is_deref_of_parent = true;
@@ -1651,7 +1682,7 @@ CompilerType TypeSystemLegacy::CreateArrayType(
             "Warning: need to add support for "
             "DW_TAG_array_type '%s' with dynamic size",
             name.GetCString());
-    Host::SystemLog(std::string(buffer));
+    Host::SystemLog(lldb::eSeverityWarning, std::string(buffer));
     return CompilerType();
   }
 
@@ -1816,7 +1847,7 @@ CompilerType TypeSystemLegacy::CreateBaseType(
             "sign = %u, scale = %d, byte_order = %u.\n",
             name.GetCString(), dw_ate, bitsize, dw_sign, scale, byte_order);
     std::string message(buffer);
-    Host::SystemLog(message);
+    Host::SystemLog(lldb::eSeverityWarning, message);
     return CompilerType();
   }
 
@@ -1878,7 +1909,7 @@ llvm::StringRef TypeSystemLegacy::GetPluginName() {
   return TypeSystemLegacy::GetPluginNameStatic();
 }
 
-TypeSystemSP TypeSystemLegacy::CreateInstance(LanguageType language,
+TypeSystemSP TypeSystemLegacy::CreateInstance(lldb::LanguageType language,
                                               lldb_private::Module *module,
                                               Target *target) {
   if (TypeSystemLegacySupportsLanguage(language)) {
@@ -1887,11 +1918,10 @@ TypeSystemSP TypeSystemLegacy::CreateInstance(LanguageType language,
 
     if (module) {
       arch = module->GetArchitecture();
-      ast_sp = std::shared_ptr<TypeSystemLegacy>(new TypeSystemLegacy);
+      ast_sp = std::make_shared<TypeSystemLegacy>();
     } else if (target) {
       arch = target->GetArchitecture();
-      ast_sp = std::shared_ptr<TypeSystemLegacy>(
-          new TypeSystemLegacy(target->shared_from_this()));
+      ast_sp = std::make_shared<TypeSystemLegacy>(target->shared_from_this());
     }
 
     ast_sp->SetLanguage(language);
@@ -1936,7 +1966,8 @@ lldb_private::plugin::dwarf::DWARFASTParser *
 TypeSystemLegacy::GetDWARFParser() {
   if (!m_dwarf_ast_parser_ap)
     m_dwarf_ast_parser_ap.reset(new DWARFASTParserLegacy(
-        std::static_pointer_cast<TypeSystemLegacy>(weak_from_this().lock())));
+        *std::static_pointer_cast<TypeSystemLegacy>(weak_from_this().lock())));
+
   return m_dwarf_ast_parser_ap.get();
 }
 
@@ -1964,7 +1995,7 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream &s,
 
   if (IsAggregateType(type)) {
     /*
-    // FIX me
+    // FIXME
     ExecutionContext exe_ctx(exe_scope);
     DumpValue(type, &exe_ctx, s, format, data, byte_offset, byte_size,
               bitfield_bit_size, bitfield_bit_offset, true, true, true, 0);
@@ -2030,7 +2061,8 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream &s,
       uint8_t buffer[64];
 
       if (byte_size > 64) {
-        Host::SystemLog("Error: Display/Decimal type with invalid width"
+        Host::SystemLog(lldb::eSeverityError,
+                        "Error: Display/Decimal type with invalid width"
                         ", Displaying only first 64 bytes.\n");
         byte_size = 64;
       }
@@ -2042,7 +2074,7 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream &s,
           char buffer[64];
           sprintf(buffer, "WARNING: Invalid target charset %s.\n",
                   Conv.getTargetFormat().GetCString());
-          Host::SystemLog(std::string(buffer));
+          Host::SystemLog(lldb::eSeverityWarning, std::string(buffer));
         } else
           Conv.convert(reinterpret_cast<char *>(buffer), byte_size);
       }
@@ -2126,13 +2158,14 @@ bool TypeSystemLegacy::DumpTypeValue(opaque_compiler_type_t type, Stream &s,
                                      exe_scope);
   }
   case LegacyType::KIND_L88: {
-    return DumpDataExtractor(data, &s, byte_offset, eFormatCharPrintable, byte_size,
-                             data.GetDataEnd() - data.GetDataStart(),
+    return DumpDataExtractor(data, &s, byte_offset, eFormatCharPrintable,
+                             byte_size, data.GetDataEnd() - data.GetDataStart(),
                              UINT32_MAX, LLDB_INVALID_ADDRESS,
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
   }
   }
-  Host::SystemLog("Error: DumpTypeValue not handled yet.\n");
+  Host::SystemLog(lldb::eSeverityError,
+                  "Error: DumpTypeValue not handled yet.\n");
   return false;
 }
 
@@ -2153,7 +2186,7 @@ void TypeSystemLegacy::DumpTypeDescription(opaque_compiler_type_t type,
 }
 
 UserExpression *TypeSystemLegacy::GetUserExpression(
-    StringRef expr, StringRef prefix, LanguageType language,
+    StringRef expr, StringRef prefix, SourceLanguage language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
   TargetSP target = m_target_wp.lock();
@@ -2161,15 +2194,16 @@ UserExpression *TypeSystemLegacy::GetUserExpression(
     Log *log = GetLog(LLDBLog::Expressions);
 
     LLDB_LOGF(log, "LegacyTypeSystem: UserExpression %s for %s.\n",
-              expr.str().c_str(), Language::GetNameForLanguageType(language));
+              expr.str().c_str(), language.GetDescription().data());
+
     switch (language) {
     default:
       char buffer[64];
       sprintf(
           buffer,
           "LegacyTypeSystem: UserExpression for language %s not supported.\n",
-          Language::GetNameForLanguageType(language));
-      Host::SystemLog(std::string(buffer));
+          language.GetDescription().data());
+      Host::SystemLog(lldb::eSeverityError, std::string(buffer));
       break;
     case eLanguageTypeCobol74:
     case eLanguageTypeCobol85:
@@ -2181,7 +2215,8 @@ UserExpression *TypeSystemLegacy::GetUserExpression(
     }
   }
 
-  Host::SystemLog("LegacyTypeSystem: UserExpression error.\n");
+  Host::SystemLog(lldb::eSeverityError,
+                  "LegacyTypeSystem: UserExpression error.\n");
   return nullptr;
 }
 
