@@ -971,6 +971,8 @@ public:
 
   bool Append(void *bytes, lldb::offset_t length);
 
+  bool Compare(DataExtractor &rhs);
+
   lldb::offset_t BytesLeft(lldb::offset_t offset) const {
     const lldb::offset_t size = GetByteSize();
     if (size > offset)
