@@ -528,6 +528,13 @@ public:
   CompilerType MutateBaseTypeSize(lldb::opaque_compiler_type_t type,
                                   uint64_t sizeInBits) override;
 
+  UserExpression *GetUserExpression(llvm::StringRef expr,
+                                    llvm::StringRef prefix,
+                                    SourceLanguage language,
+                                    Expression::ResultType desired_type,
+                                    const EvaluateExpressionOptions &options,
+                                    ValueObject *ctx_obj) override;
+
   FunctionCaller *GetFunctionCaller(const CompilerType &return_type,
                                     const Address &function_address,
                                     const ValueList &arg_value_list,
