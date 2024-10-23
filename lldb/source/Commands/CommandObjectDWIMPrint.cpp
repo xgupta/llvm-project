@@ -168,7 +168,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
         expr, eval_options.GetUseDynamic(),
         StackFrame::eExpressionPathOptionsAllowDirectIVarAccess, var_sp,
         status);
-    if (valobj_sp && status.Success() && valobj_sp->GetError().Success()) {
+    if (valobj_sp && valobj_sp->GetTypeName() == "Level88ConditionName") {
+      /* Evaluate as a source expression and not as a frame variable */
+    } else if (valobj_sp && status.Success() && valobj_sp->GetError().Success()) {
       if (!suppress_result) {
         if (auto persisted_valobj = valobj_sp->Persist())
           valobj_sp = persisted_valobj;
