@@ -459,6 +459,25 @@ public:
   ///   derived from.
   uint32_t GetConcreteFrameIndex() const { return m_concrete_frame_index; }
 
+  /// Searches nested agregate Valobject for named variable for first occurance
+  ///
+  /// \params [in] name
+  ///   The name of the Variable to search
+  ///
+  /// \param [in] valobj_sp
+  ///   Top level valueObject to search into
+  ///
+  /// \params [in] use_dynamic
+  ///     Whether the correct dynamic type of the variable should be
+  ///     determined before creating the ValueObject, or if the static type
+  ///     is sufficient.  One of the DynamicValueType enumerated values.
+  ///
+  /// \return
+  //    A name matched ValueObject.
+  lldb::ValueObjectSP GetValueObjectForFrameAggregateVariable(
+      ConstString name, lldb::ValueObjectSP &valobj_sp,
+      lldb::DynamicValueType use_dynamic, bool look_in_array = false);
+
   /// Create a ValueObject for a given Variable in this StackFrame.
   ///
   /// \param [in] variable_sp
@@ -474,6 +493,22 @@ public:
   lldb::ValueObjectSP
   GetValueObjectForFrameVariable(const lldb::VariableSP &variable_sp,
                                  lldb::DynamicValueType use_dynamic);
+
+  /// Add an arbitrary Variable object (e.g. one that specifics a global or
+  /// static) to a StackFrame's list of ValueObjects.
+  ///
+  /// \params [in] variable_sp
+  ///   The Variable to base this ValueObject on
+  ///
+  /// \params [in] use_dynamic
+  ///     Whether the correct dynamic type of the variable should be
+  ///     determined before creating the ValueObject, or if the static type
+  ///     is sufficient.  One of the DynamicValueType enumerated values.
+  ///
+  /// \return
+  ///     A ValueObject for this variable.
+  lldb::ValueObjectSP TrackGlobalVariable(const lldb::VariableSP &variable_sp,
+                                          lldb::DynamicValueType use_dynamic);
 
   /// Query this frame to determine what the default language should be when
   /// parsing expressions given the execution context.
