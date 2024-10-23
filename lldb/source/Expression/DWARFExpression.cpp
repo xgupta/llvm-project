@@ -2326,6 +2326,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       } else {
         stack.back().SetValueType(Value::ValueType::FileAddress);
       }
+      // Convert the file address to a load address
+      if (frame)
+        stack.back().ConvertToLoadAddress(module_sp.get(),
+                                          exe_ctx->GetTargetPtr());
     } break;
 
     // OPCODE: DW_OP_GNU_const_index

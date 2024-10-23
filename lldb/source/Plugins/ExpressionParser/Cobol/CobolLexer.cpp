@@ -1,0 +1,214 @@
+//===-- CobolLexer.cpp ----------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include <cstring>
+
+#include "CobolLexer.h"
+
+using namespace lldb_private;
+using namespace llvm;
+
+const CobolLexer::KeywordMap CobolLexer::m_keywords = {
+    {"&", OP_AMP},      {":", OP_COLON},       {"(", OP_LPAREN},
+    {"[", OP_LBRACK},   {"{", OP_LBRACE},      {")", OP_RPAREN},
+    {"]", OP_RBRACK},   {"}", OP_RBRACE},      {"*", OP_STAR},
+    {"+", OP_PLUS},     {"-", OP_MINUS},       {".", OP_DOT},
+    {"OF", KW_OF},      {"LENGTH", OP_SIZEOF}, {"=", OP_EQ},
+    {"MOVE", KW_MV},    {"SET", KW_SET},       {"TO", KW_TO},
+    {"IF", KW_IF},      {"EQUALS", KW_EQUALS}, {"IS", KW_IS},
+    {"NOT", KW_NOT},    {">", OP_COMP_GT},     {"<", OP_COMP_LT},
+    {">=", OP_COMP_GE}, {"<=", OP_COMP_LE},    {",", OP_COMMA},
+};
+
+CobolLexer::CobolLexer(const char *expr)
+    : m_start(expr), m_end(expr + strlen(expr)), m_last_token(TOK_INVALID, "") {
+}
+
+const CobolLexer::Token &CobolLexer::Lex() {
+  bool newline = false;
+  SkipWhiteSpace(newline);
+
+  if (m_start >= m_end) {
+    m_last_token.m_text = llvm::StringRef("");
+    m_last_token.m_type = TOK_EOF;
+    return m_last_token;
+  }
+
+  const char *start = m_start;
+  size_t offset = 0;
+  CobolLexer::TokenType lastTok = m_last_token.m_type;
+  m_last_token.m_type = TOK_INVALID;
+
+  if (newline) {
+    switch (lastTok) {
+    default:
+      m_start++;
+      start++;
+      break;
+    case TOK_IDENTIFIER:
+    case LIT_FLOAT:
+    case LIT_INTEGER:
+    case LIT_STRING:
+      m_last_token.m_text = llvm::StringRef("");
+      m_last_token.m_type = OP_SEMICOLON;
+      return m_last_token;
+    }
+  }
+
+  if (IsDigit(*m_start))
+    m_last_token.m_type = DoNumber();
+  else if (*m_start == '-' && IsDigit(m_start[1]))
+    m_last_token.m_type = DoNumber();
+  else if (*m_start == '+' && IsDigit(m_start[1]))
+    m_last_token.m_type = DoNumber();
+  else if (IsOperator(*m_start))
+    m_last_token.m_type = DoOperator();
+  else {
+    switch (*m_start) {
+    // persistant variables
+    case '$':
+    default: {
+      if (IsLetterOrDigit(*m_start))
+        m_last_token.m_type = DoIdent();
+    } break;
+    case '.': {
+      if (IsDigit(m_start[1]))
+        m_last_token.m_type = DoNumber();
+      else
+        m_last_token.m_type = DoOperator();
+    } break;
+    case '"':
+    case '`':
+      m_last_token.m_type = DoString();
+      // skip quotes
+      start++;
+      offset = 1;
+      break;
+    }
+  }
+  size_t length = m_start - start;
+  if (length)
+    length -= offset;
+  m_last_token.m_text = llvm::StringRef(start, length);
+  return m_last_token;
+}
+
+CobolLexer::TokenType CobolLexer::DoString() {
+  if (*m_start == '`') {
+    while (++m_start < m_end) {
+      if (*m_start == '`')
+        ++m_start;
+      return LIT_STRING;
+    }
+    return TOK_INVALID;
+  }
+
+  while (++m_start < m_end) {
+    switch (*m_start) {
+    // We already have matched openning double quotation
+    case '"':
+      ++m_start;
+      return LIT_STRING;
+    case '\n':
+      return TOK_INVALID;
+    case '\\':
+      if (m_start[1] == '\n')
+        return TOK_INVALID;
+      m_start++;
+    }
+  }
+  return TOK_INVALID;
+}
+
+CobolLexer::TokenType CobolLexer::DoNumber() {
+  if (m_start[0] == '0' && (m_start[1] == 'x' || m_start[1] == 'X')) {
+    m_start += 2;
+    while (IsHexChar(*m_start))
+      m_start++;
+    return LIT_INTEGER;
+  }
+
+  if (*m_start == '+' || *m_start == '-')
+    ++m_start;
+
+  bool dot_ok = true;
+  bool e_ok = true;
+  while (true) {
+    while (IsDigit(*m_start))
+      ++m_start;
+    switch (*m_start) {
+    case '.':
+      if (!dot_ok)
+        return LIT_FLOAT;
+      ++m_start;
+      dot_ok = false;
+      break;
+    case 'e':
+    case 'E':
+      if (!e_ok)
+        return LIT_FLOAT;
+      dot_ok = e_ok = false;
+      ++m_start;
+      if (*m_start == '+' || *m_start == '-')
+        ++m_start;
+      break;
+    default:
+      if (dot_ok)
+        return LIT_INTEGER;
+      return LIT_FLOAT;
+    }
+  }
+}
+
+CobolLexer::TokenType CobolLexer::DoIdent() {
+  const char *start = m_start++;
+  while (m_start < m_end && IsLetterOrDigit(*m_start))
+    ++m_start;
+  TokenType kw = LookupKeyword(llvm::StringRef(start, m_start - start));
+  if (kw != TOK_INVALID)
+    return kw;
+  return TOK_IDENTIFIER;
+}
+
+CobolLexer::TokenType CobolLexer::DoOperator() {
+  size_t longestOp = (m_end - m_start);
+  if (longestOp > 7)
+    longestOp = 6;
+
+  for (size_t i = longestOp; i > 0; --i) {
+    TokenType TT = LookupKeyword(StringRef(m_start, i));
+    if (TT != TOK_INVALID) {
+      m_start += i;
+      return TT;
+    }
+  }
+  return TOK_INVALID;
+}
+
+CobolLexer::TokenType CobolLexer::DoWord() {
+  const char *start = m_start;
+  while ((m_start < m_end) && IsLetterOrDigit(*m_start))
+    m_start++;
+
+  TokenType TT = LookupKeyword(StringRef(m_start, m_start - start));
+  return (TT == TOK_INVALID) ? TOK_IDENTIFIER : TT;
+}
+
+CobolLexer::TokenType CobolLexer::LookupKeyword(StringRef KW) {
+  const auto &it = m_keywords.find(KW.upper());
+  if (it != m_keywords.end())
+    return it->second;
+  return TOK_INVALID;
+}
+
+StringRef CobolLexer::LookupToken(CobolLexer::TokenType TT) {
+  for (const auto &entry : m_keywords)
+    if (entry.getValue() == TT)
+      return entry.getKey();
+  return "";
+}
