@@ -15,6 +15,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 
+#include "Plugins/ExpressionParser/Cobol/CobolUserExpression.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserLegacy.h"
 
 #include "lldb/Core/DumpDataExtractor.h"
@@ -2181,6 +2182,38 @@ void TypeSystemLegacy::DumpTypeDescription(opaque_compiler_type_t type,
 
   ConstString name = GetTypeName(type, true);
   s.PutCString(name.AsCString());
+}
+
+UserExpression *TypeSystemLegacy::GetUserExpression(
+    StringRef expr, StringRef prefix, SourceLanguage language,
+    Expression::ResultType desired_type,
+    const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
+  TargetSP target = m_target_wp.lock();
+  if (target) {
+    Log *log = GetLog(LLDBLog::Expressions);
+
+    LLDB_LOGF(log, "LegacyTypeSystem: UserExpression %s for %s.\n",
+              expr.str().c_str(), language.GetDescription().data());
+
+    switch (language) {
+    default:
+      char buffer[64];
+      sprintf(
+          buffer,
+          "LegacyTypeSystem: UserExpression for language %s not supported.\n",
+          language.GetDescription().data());
+      Host::SystemLog(lldb::eSeverityError, std::string(buffer));
+      break;
+    case eLanguageTypeCobol74:
+    case eLanguageTypeCobol85:
+      return new CobolUserExpression(*target, expr, prefix, language,
+                                     desired_type, options);
+    }
+  }
+
+  Host::SystemLog(lldb::eSeverityError,
+                  "LegacyTypeSystem: UserExpression error.\n");
+  return nullptr;
 }
 
 PersistentExpressionState *TypeSystemLegacy::GetPersistentExpressionState() {
