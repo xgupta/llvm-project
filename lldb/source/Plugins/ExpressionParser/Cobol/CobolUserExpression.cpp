@@ -217,6 +217,54 @@ lldb::ValueObjectSP CobolInterpreter::EvaluateExpr(const CobolASTExpr *expr) {
   return ValueObjectSP();
 }
 
+lldb::ValueObjectSP CobolInterpreter::GetLevel88(llvm::StringRef var_name,
+                                                 ValueObjectSP &result,
+                                                 CompilerType comp_type,
+                                                 int index = -1) {
+  auto target = m_exe_ctx.GetTargetSP();
+  EvaluateExpressionOptions eval_options;
+  eval_options.SetLanguage(lldb::eLanguageTypeC);
+  /* Get Parent Name from the runtime */
+  auto parent_expr = "const char* arg = \"" + var_name.str() +
+                     "\"; rc_cob_get_level88_parent(arg)";
+  target->EvaluateExpression(parent_expr,
+                             m_exe_ctx.GetBestExecutionContextScope(), result,
+                             eval_options);
+  if (!result)
+    return ValueObjectSP();
+  std::string parent_name;
+  result->GetValueAsCString(eFormatCString, parent_name);
+  /* Get truth value of level88 */
+  auto value_expr = "const char* arg = \"" + var_name.str() + "\"; " +
+                    ((index == -1) ? "rc_cob_level88(arg)"
+                                   : "rc_cob_indexed_level88(arg, " +
+                                         std::to_string(index) + ")");
+  target->EvaluateExpression(value_expr,
+                             m_exe_ctx.GetBestExecutionContextScope(), result,
+                             eval_options);
+  if (!result)
+    return ValueObjectSP();
+  auto truth_value = GetUIntFromValueObjectSPReportIndex(result, false) == 0
+                         ? "false"
+                         : "true";
+  auto result_str = "(" + parent_name + ") " + truth_value;
+  llvm::StringRef result_ref(result_str);
+  auto data_ptr = result_ref.data();
+  auto data_length = result_ref.size();
+  auto byte_order = endian::InlHostByteOrder();
+  auto addr_size = target->GetArchitecture().GetAddressByteSize();
+  DataBufferSP buffer(new DataBufferHeap(data_length, 0));
+  DataEncoder enc(buffer->GetBytes(), data_length, byte_order, addr_size);
+  enc.PutData(/*offset */ 0, data_ptr, data_length);
+  DataExtractor data(enc.GetDataBuffer(), byte_order, addr_size);
+  result.reset();
+  result = ValueObject::CreateValueObjectFromData(
+      var_name, data, m_exe_ctx,
+      comp_type.GetBasicTypeFromAST(eBasicTypeOther));
+  result->GetValue().SetValueType(Value::ValueType::Invalid);
+  return result;
+}
+
 lldb::ValueObjectSP CobolInterpreter::VisitIdent(const CobolASTIdent *ident) {
   ValueObjectSP result;
   llvm::StringRef var_name = ident->GetName().m_text;
@@ -235,8 +283,11 @@ lldb::ValueObjectSP CobolInterpreter::VisitIdent(const CobolASTIdent *ident) {
       var_sp = var_list->FindVariable(ConstString(var_name),
                                       /* include_static_members */ true,
                                       /* case_sensitive */ false);
-      if (var_sp) {
+      if (var_sp && var_sp->GetType()->GetName() != "Level88ConditionName") {
         result = m_frame->GetValueObjectForFrameVariable(var_sp, m_use_dynamic);
+      } else if (var_sp) {
+        return GetLevel88(var_name, result,
+                          var_sp->GetType()->GetFullCompilerType());
       }
     }
 
@@ -624,43 +675,47 @@ uint32_t CobolInterpreter::GetUIntFromValueObjectSP(ValueObjectSP var) {
 ValueObjectSP
 CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
   auto index_expr = llvm::cast<CobolASTIndexExpr>(expr->GetStartExpr());
-  ValueObjectSP var = EvaluateExpr(expr->GetExpr());
-  if (!var || index_expr->GetNumberOfIndices() != 1) {
-    m_error.Clear();
-    switch (expr->GetExpr()->GetKind()) {
-    case CobolASTNode::eIdent:
-      return FindFieldInStructArray(expr);
-    case CobolASTNode::eSelectorExpr: {
-      auto selector = llvm::cast<CobolASTSelectorExpr>(expr->GetExpr());
-      auto target = EvaluateExpr(selector->GetExpr());
-      if (!target)
-        return nullptr;
-      auto memberName = selector->GetSel()->GetName().m_text;
-      auto result = m_frame->GetValueObjectForFrameAggregateVariable(
-          ConstString(memberName), target, m_use_dynamic, true);
-      return GetIndexedExpression(
-          result, llvm::cast<CobolASTIndexExpr>(expr->GetStartExpr()),
-          memberName);
+  switch (expr->GetExpr()->GetKind()) {
+  case CobolASTNode::eIdent: {
+    auto ident = llvm::cast<const CobolASTIdent>(expr->GetExpr());
+    VariableListSP var_list_sp(m_frame->GetInScopeVariableList(true));
+    VariableList *var_list = var_list_sp.get();
+    if (var_list) {
+      auto var_name = ident->GetName().m_text;
+      auto var_sp = var_list->FindVariable(ConstString(var_name), true, false);
+      if (var_sp && var_sp->GetType()->GetName() == "Level88ConditionName") {
+        if (index_expr->GetNumberOfIndices() > 1) {
+          Host::SystemLog(
+              lldb::eSeverityWarning,
+              "More than one index for level88 is not supported yet");
+          return ValueObjectSP();
+        }
+        auto indices =
+            llvm::cast<const CobolASTIndexExpr>(expr->GetStartExpr());
+        int index = GetUIntFromValueObjectSP(
+            EvaluateExpr(indices->GetIndices()[0].get()));
+        auto result = ValueObjectSP();
+        return GetLevel88(var_name, result,
+                          var_sp->GetType()->GetFullCompilerType(), index);
+      }
     }
-    default:
-      return nullptr;
+    if (ValueObjectSP var = EvaluateExpr(expr->GetExpr())) {
+      auto start_var = EvaluateExpr(index_expr->GetIndices()[0].get());
+      auto start = GetUIntFromValueObjectSP(start_var);
+      if (m_error.Fail())
+        return nullptr;
+      auto len_var = EvaluateExpr(expr->GetLenExpr());
+      uint32_t len;
+      if (len_var) {
+        len = GetUIntFromValueObjectSP(len_var);
+        if (m_error.Fail())
+          return nullptr;
+        return GetElementAtIndex(var, start, len);
+      }
+      return GetElementAtIndex(var, start);
+    }
+    return FindFieldInStructArray(expr);
   }
-
-  auto start_var = EvaluateExpr(index_expr->GetIndices()[0].get());
-  auto start = GetUIntFromValueObjectSP(start_var);
-  if (m_error.Fail())
-    return nullptr;
-  auto len_var = EvaluateExpr(expr->GetLenExpr());
-  uint32_t len;
-  if (len_var) {
-    len = GetUIntFromValueObjectSP(len_var);
-    if (m_error.Fail())
-      return nullptr;
-return GetElementAtIndex(var, start, len);
-
-  }
-    return GetElementAtIndex(var, start);
-}
 
 ValueObjectSP
 CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {

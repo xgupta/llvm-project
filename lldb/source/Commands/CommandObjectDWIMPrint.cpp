@@ -154,7 +154,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   // First, try `expr` as the name of a frame variable.
   if (frame) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
-    if (valobj_sp && valobj_sp->GetError().Success()) {
+    if (valobj_sp && valobj_sp->GetTypeName() == "Level88ConditionName") {
+      /* Evaluate as a source expression and not as a frame variable */
+    } else if (valobj_sp && valobj_sp->GetError().Success()) {
       if (!suppress_result) {
         if (auto persisted_valobj = valobj_sp->Persist())
           valobj_sp = persisted_valobj;
