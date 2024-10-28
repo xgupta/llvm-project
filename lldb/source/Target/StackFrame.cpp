@@ -552,12 +552,14 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 
   size_t separator_idx = 0;
   // TODO needs better handling
-  SourceLanguage language =
-      GetLanguage(); // Assume GetLanguage() returns LanguageType.
+  LanguageType language =
+      GetLanguage()
+          .AsLanguageType(); // Assume GetLanguage() returns LanguageType.
   bool LegacyLangauage = (language == eLanguageTypeCobol85) ||
                          (language == eLanguageTypeCobol74) ||
                          (language == eLanguageTypePLI) ||
                          (language == eLanguageTypeFortran90);
+
   if (LegacyLangauage)
     separator_idx = var_expr.find_first_of(".[(=+~|&^%#@!/?,<>{}");
   else
@@ -801,8 +803,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       }
 
       if (var_expr.find_first_of(':') != llvm::StringRef::npos) {
-        error =
-            Status::FromErrorString("member select with length not supported.");
+        error.SetErrorString("member select with length not supported.");
         return ValueObjectSP();
       }
 
@@ -836,7 +837,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       // index correction for legacy languages.
       if (is_sep_mem_select) {
         if (child_index < 1) {
-          error = Status::FromErrorString("invalid index.");
+          error.SetErrorString("invalid index.");
           return ValueObjectSP();
         }
         child_index -= 1;
@@ -1225,10 +1226,9 @@ ValueObjectSP StackFrame::GetValueObjectForFrameAggregateVariable(
   ValueObjectSP result = valobj_sp->GetChildMemberWithName(name, true);
   if (result)
     return result;
-  uint32_t num_children = valobj_sp->GetNumChildren().get();
-  // for (size_t index = 0; index < valobj_sp->GetNumChildren(); ++index) {
-  for (uint32_t index = 0; index < num_children; ++index) {
-    ValueObjectSP child = valobj_sp->GetChildAtIndex(index, true);
+  for (uint32_t index = 0; index < valobj_sp->GetNumChildrenIgnoringErrors();
+       ++index) {
+    ValueObjectSP child = valobj_sp->GetChildAtIndex(index);
     if (!child)
       continue;
     CompilerType child_type = child->GetCompilerType();
@@ -1848,11 +1848,13 @@ lldb::ValueObjectSP StackFrame::FindVariable(ConstString name) {
   VariableSP var_sp;
   SymbolContext sc(GetSymbolContext(eSymbolContextBlock));
 
-  // FIXME optimise this
-  bool LegacyLangauage = (GetLanguage() == eLanguageTypeCobol85) ||
-                         (GetLanguage() == eLanguageTypeCobol74) ||
-                         (GetLanguage() == eLanguageTypePLI) ||
-                         (GetLanguage() == eLanguageTypeFortran90);
+  LanguageType language =
+      GetLanguage()
+          .AsLanguageType(); // Assume GetLanguage() returns LanguageType.
+  bool LegacyLangauage = (language == eLanguageTypeCobol85) ||
+                         (language == eLanguageTypeCobol74) ||
+                         (language == eLanguageTypePLI) ||
+                         (language == eLanguageTypeFortran90);
 
   if (sc.block) {
     const bool can_create = true;
@@ -1877,7 +1879,7 @@ lldb::ValueObjectSP StackFrame::FindVariable(ConstString name) {
                    &variable_list)) {
       // LegacyLanguages listed above are case insensitive
       var_sp = variable_list.FindVariable(name, true, !LegacyLangauage);
-            }
+    }
     if (var_sp)
       value_sp = GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
   }

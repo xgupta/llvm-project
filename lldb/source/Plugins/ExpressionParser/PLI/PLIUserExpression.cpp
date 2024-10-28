@@ -52,7 +52,14 @@ static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
   if (index != 0)
     return true;
 
-  uint32_t total_count = comp_type->GetNumChildren(true, nullptr).get();
+  llvm::Expected<uint32_t> total_count_or_err =
+      comp_type->GetNumChildren(true, nullptr);
+  if (!total_count_or_err) {
+    llvm::consumeError(total_count_or_err.takeError());
+    return false;
+  }
+  uint32_t total_count = *total_count_or_err;
+
   for (uint32_t i = 0; i < total_count; ++i) {
     std::string child_name;
     uint32_t child_byte_size;
@@ -197,8 +204,8 @@ PLIInterpreter::EvaluateStatement(const lldb_private::PLIASTStmt *stmt) {
   // Handle other
   switch (stmt->GetKind()) {
   default:
-    m_error = Status::FromErrorStringWithFormat("%s node not supported",
-                                                stmt->GetKindName());
+    m_error.SetErrorStringWithFormat("%s node not supported",
+                                     stmt->GetKindName());
     break;
   case PLIASTNode::eExprStmt:
     const PLIASTExprStmt *expr = llvm::cast<PLIASTExprStmt>(stmt);
@@ -220,8 +227,7 @@ lldb::ValueObjectSP PLIInterpreter::VisitIdent(const PLIASTIdent *ident) {
     VariableSP var_sp;
     if (var_name[0] == '$') {
       m_error.Clear();
-      m_error =
-          Status::FromErrorString("Consistent var lookup not implemented yet");
+      m_error.SetErrorString("Consistent var lookup not implemented yet");
       return nullptr;
     }
 
@@ -265,7 +271,7 @@ lldb::ValueObjectSP PLIInterpreter::VisitIdent(const PLIASTIdent *ident) {
       TargetSP target = m_frame->CalculateTarget();
       if (!target) {
         m_error.Clear();
-        m_error = Status::FromErrorString("No target");
+        m_error.SetErrorString("No target");
         return nullptr;
       }
 
@@ -282,8 +288,8 @@ lldb::ValueObjectSP PLIInterpreter::VisitIdent(const PLIASTIdent *ident) {
     }
   }
   if (!result)
-    m_error = Status::FromErrorStringWithFormat("Unknown variable %s",
-                                                var_name.str().c_str());
+    m_error.SetErrorStringWithFormat("Unknown variable %s",
+                                     var_name.str().c_str());
   return result;
 }
 
@@ -319,15 +325,15 @@ ValueObjectSP PLIInterpreter::VisitBasicLit(const PLIASTBasicLit *expr) {
   const void *data_ptr = nullptr;
   switch (expr->GetValue().m_type) {
   default:
-    m_error = Status::FromErrorStringWithFormat("Non-Const lexical type for %s",
-                                                value_string.str().c_str());
+    m_error.SetErrorStringWithFormat("Non-Const lexical type for %s",
+                                     value_string.str().c_str());
     return nullptr;
   case PLILexer::LIT_INTEGER:
     if (value_string.front() == '+')
       value_string = value_string.drop_front(1);
     if (value_string.getAsInteger(0, iValue)) {
-      m_error = Status::FromErrorStringWithFormat("integer conversion error %s",
-                                                  value_string.str().c_str());
+      m_error.SetErrorStringWithFormat("integer conversion error %s",
+                                       value_string.str().c_str());
       return nullptr;
     }
     data_length = sizeof(iValue);
@@ -336,8 +342,8 @@ ValueObjectSP PLIInterpreter::VisitBasicLit(const PLIASTBasicLit *expr) {
     break;
   case PLILexer::LIT_FLOAT:
     if (value_string.getAsDouble(dValue)) {
-      m_error = Status::FromErrorStringWithFormat("double conversion error %s",
-                                                  value_string.str().c_str());
+      m_error.SetErrorStringWithFormat("double conversion error %s",
+                                       value_string.str().c_str());
       return nullptr;
     }
     data_length = sizeof(dValue);
@@ -397,8 +403,7 @@ PLIInterpreter::VisitSelectorExpr(const PLIASTSelectorExpr *expr) {
     ConstString field(expr->GetSel()->GetName().m_text);
     ValueObjectSP result = target->GetChildMemberWithName(field, true);
     if (!result)
-      m_error = Status::FromErrorStringWithFormat("Unknown child %s",
-                                                  field.AsCString());
+      m_error.SetErrorStringWithFormat("Unknown child %s", field.AsCString());
     return result;
   }
   if (const PLIASTIdent *package =
@@ -421,7 +426,7 @@ ValueObjectSP
 PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
   ValueObjectSP var = EvaluateExpr(expr->GetExpr());
   if (!var) {
-    m_error = Status::FromErrorString("variable not found.");
+    m_error.SetErrorString("variable not found.");
     return nullptr;
   }
 
@@ -431,8 +436,8 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
 
   if (!var->GetCompilerType().IsArrayType(&elem_type, &max_elem,
                                           &is_incomplete)) {
-    m_error = Status::FromErrorStringWithFormat("variable %s is not an array.",
-                                                var->GetName().AsCString());
+    m_error.SetErrorStringWithFormat("variable %s is not an array.",
+                                     var->GetName().AsCString());
     return nullptr;
   }
 
@@ -440,7 +445,7 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
 
   ValueObjectSP start_var = EvaluateExpr(expr->GetStartExpr());
   if (!start_var) {
-    m_error = Status::FromErrorString("ref modifier invalid indexes.");
+    m_error.SetErrorString("ref modifier invalid indexes.");
     return nullptr;
   }
 
@@ -448,8 +453,8 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
   uint8_t bit_pos;
   llvm::StringRef index_string(start_var->GetValueAsCString());
   if (index_string.getAsInteger(10, start)) {
-    m_error = Status::FromErrorStringWithFormat(
-        "ref modifier invalid index %s.", index_string.str().c_str());
+    m_error.SetErrorStringWithFormat("ref modifier invalid index %s.",
+                                     index_string.str().c_str());
     return nullptr;
   }
 
@@ -460,8 +465,7 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
   }
 
   if (start >= max_elem) {
-    m_error =
-        Status::FromErrorStringWithFormat("out of bound index: %d.", start + 1);
+    m_error.SetErrorStringWithFormat("out of bound index: %d.", start + 1);
     return nullptr;
   }
 
@@ -478,8 +482,8 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
   uint32_t len;
   llvm::StringRef len_string(len_var->GetValueAsCString());
   if (len_string.getAsInteger(10, len)) {
-    m_error = Status::FromErrorStringWithFormat(
-        "ref modifier invalid index %s.", len_string.str().c_str());
+    m_error.SetErrorStringWithFormat("ref modifier invalid index %s.",
+                                     len_string.str().c_str());
     return nullptr;
   }
 
@@ -495,11 +499,16 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
   bool bt2 = false;
   std::string empty_str;
 
-  if (!(var->GetCompilerType().GetChildCompilerTypeAtIndex(
+  llvm::Expected<CompilerType> child_compiler_type_or_error =
+      var->GetCompilerType().GetChildCompilerTypeAtIndex(
           &m_exe_ctx, 0, true, true, false, empty_str, child_byte_size,
           child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-          bt1, bt2, var.get(), ut1)))
+          bt1, bt2, var.get(), ut1);
+
+  if (!child_compiler_type_or_error) {
+    llvm::consumeError(child_compiler_type_or_error.takeError());
     return nullptr;
+  }
 
   const uint64_t offset = start * child_byte_size;
   AddressType address_type = eAddressTypeInvalid;
@@ -511,14 +520,13 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
 
 ValueObjectSP
 PLIInterpreter::VisitFuncCallExpr(const PLIASTFuncCallExpr *expr) {
-  llvm::StringRef funcName = expr->GetFuncName().m_text;
-  if (funcName == (llvm::StringRef("sizeof")))
-    // TODO
-    return nullptr;
+  // llvm::StringRef funcName = expr->GetFuncName().m_text;
+  // if (funcName == (llvm::StringRef("sizeof")))
+  //  TODO
+  // return nullptr;
 
   if (expr->getTotalNumParams() != 1) {
-    m_error =
-        Status::FromErrorString("wrong number of params for sizeof operator.");
+    m_error.SetErrorString("wrong number of params for sizeof operator.");
     return nullptr;
   }
 

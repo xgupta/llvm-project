@@ -54,9 +54,14 @@ static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
   if (index != 0)
     return true;
 
-  // const llvm::Expected<uint32_t> total_count =
-  // comp_type->GetNumChildren(true, nullptr);
-  uint32_t total_count = comp_type->GetNumChildren(true, nullptr).get();
+  llvm::Expected<uint32_t> expected_count =
+      comp_type->GetNumChildren(true, nullptr);
+  if (!expected_count) {
+    llvm::consumeError(expected_count.takeError());
+    return false;
+  }
+  uint32_t total_count = *expected_count;
+
   for (uint32_t i = 0; i < total_count; ++i) {
     std::string child_name;
     uint32_t child_byte_size;
@@ -201,8 +206,8 @@ CobolInterpreter::EvaluateStatement(const lldb_private::CobolASTStmt *stmt) {
   // Handle other
   switch (stmt->GetKind()) {
   default:
-    m_error = Status::FromErrorStringWithFormat("%s node not supported",
-                                                stmt->GetKindName());
+    m_error.SetErrorStringWithFormat("%s node not supported",
+                                     stmt->GetKindName());
     break;
   case CobolASTNode::eExprStmt:
     const CobolASTExprStmt *expr = llvm::cast<CobolASTExprStmt>(stmt);
@@ -219,14 +224,14 @@ lldb::ValueObjectSP CobolInterpreter::EvaluateExpr(const CobolASTExpr *expr) {
 
 lldb::ValueObjectSP CobolInterpreter::GetLevel88(llvm::StringRef var_name,
                                                  ValueObjectSP &result,
-                                                 CompilerType comp_type,
-                                                 int index = -1) {
+                                                 CompilerType comp_type) {
   auto target = m_exe_ctx.GetTargetSP();
   EvaluateExpressionOptions eval_options;
   eval_options.SetLanguage(lldb::eLanguageTypeC);
+
   /* Get Parent Name from the runtime */
   auto parent_expr = "const char* arg = \"" + var_name.str() +
-                     "\"; rc_cob_get_level88_parent(arg)";
+                     "\"; (char *) rc_cob_get_level88_parent(arg)";
   target->EvaluateExpression(parent_expr,
                              m_exe_ctx.GetBestExecutionContextScope(), result,
                              eval_options);
@@ -235,28 +240,29 @@ lldb::ValueObjectSP CobolInterpreter::GetLevel88(llvm::StringRef var_name,
   std::string parent_name;
   result->GetValueAsCString(eFormatCString, parent_name);
   /* Get truth value of level88 */
-  auto value_expr = "const char* arg = \"" + var_name.str() + "\"; " +
-                    ((index == -1) ? "rc_cob_level88(arg)"
-                                   : "rc_cob_indexed_level88(arg, " +
-                                         std::to_string(index) + ")");
+  auto value_expr =
+      "const char* arg = \"" + var_name.str() + "\"; rc_cob_level88(arg)";
   target->EvaluateExpression(value_expr,
                              m_exe_ctx.GetBestExecutionContextScope(), result,
                              eval_options);
   if (!result)
     return ValueObjectSP();
-  auto truth_value = GetUIntFromValueObjectSPReportIndex(result, false) == 0
-                         ? "false"
-                         : "true";
+  auto truth_value = GetUIntFromValueObjectSP(result) == 0 ? "false" : "true";
+
   auto result_str = "(" + parent_name + ") " + truth_value;
   llvm::StringRef result_ref(result_str);
+
   auto data_ptr = result_ref.data();
   auto data_length = result_ref.size();
+
   auto byte_order = endian::InlHostByteOrder();
   auto addr_size = target->GetArchitecture().GetAddressByteSize();
+
   DataBufferSP buffer(new DataBufferHeap(data_length, 0));
   DataEncoder enc(buffer->GetBytes(), data_length, byte_order, addr_size);
   enc.PutData(/*offset */ 0, data_ptr, data_length);
   DataExtractor data(enc.GetDataBuffer(), byte_order, addr_size);
+
   result.reset();
   result = ValueObject::CreateValueObjectFromData(
       var_name, data, m_exe_ctx,
@@ -272,8 +278,7 @@ lldb::ValueObjectSP CobolInterpreter::VisitIdent(const CobolASTIdent *ident) {
     VariableSP var_sp;
     if (var_name[0] == '$') {
       m_error.Clear();
-      m_error =
-          Status::FromErrorString("Consistent var lookup not implemented yet");
+      m_error.SetErrorString("Consistent var lookup not implemented yet");
       return nullptr;
     }
 
@@ -320,7 +325,7 @@ lldb::ValueObjectSP CobolInterpreter::VisitIdent(const CobolASTIdent *ident) {
       TargetSP target = m_frame->CalculateTarget();
       if (!target) {
         m_error.Clear();
-        m_error = Status::FromErrorString("No target");
+        m_error.SetErrorString("No target");
         return nullptr;
       }
 
@@ -337,8 +342,8 @@ lldb::ValueObjectSP CobolInterpreter::VisitIdent(const CobolASTIdent *ident) {
     }
   }
   if (!result)
-    m_error = Status::FromErrorStringWithFormat("Unknown variable %s",
-                                                var_name.str().c_str());
+    m_error.SetErrorStringWithFormat("Unknown variable %s",
+                                     var_name.str().c_str());
   return result;
 }
 
@@ -374,15 +379,15 @@ ValueObjectSP CobolInterpreter::VisitBasicLit(const CobolASTBasicLit *expr) {
   const void *data_ptr = nullptr;
   switch (expr->GetValue().m_type) {
   default:
-    m_error = Status::FromErrorStringWithFormat("Non-Const lexical type for %s",
-                                                value_string.str().c_str());
+    m_error.SetErrorStringWithFormat("Non-Const lexical type for %s",
+                                     value_string.str().c_str());
     return nullptr;
   case CobolLexer::LIT_INTEGER:
     if (value_string.front() == '+')
       value_string = value_string.drop_front(1);
     if (value_string.getAsInteger(0, iValue)) {
-      m_error = Status::FromErrorStringWithFormat("integer conversion error %s",
-                                                  value_string.str().c_str());
+      m_error.SetErrorStringWithFormat("integer conversion error %s",
+                                       value_string.str().c_str());
       return nullptr;
     }
     data_length = sizeof(iValue);
@@ -391,8 +396,8 @@ ValueObjectSP CobolInterpreter::VisitBasicLit(const CobolASTBasicLit *expr) {
     break;
   case CobolLexer::LIT_FLOAT:
     if (value_string.getAsDouble(dValue)) {
-      m_error = Status::FromErrorStringWithFormat("double conversion error %s",
-                                                  value_string.str().c_str());
+      m_error.SetErrorStringWithFormat("double conversion error %s",
+                                       value_string.str().c_str());
       return nullptr;
     }
     data_length = sizeof(dValue);
@@ -452,8 +457,7 @@ CobolInterpreter::VisitSelectorExpr(const CobolASTSelectorExpr *expr) {
     ConstString field(expr->GetSel()->GetName().m_text);
     ValueObjectSP result = target->GetChildMemberWithName(field, true);
     if (!result)
-      m_error = Status::FromErrorStringWithFormat("Unknown child %s",
-                                                  field.AsCString());
+      m_error.SetErrorStringWithFormat("Unknown child %s", field.AsCString());
     return result;
   }
   if (const CobolASTIdent *package =
@@ -485,8 +489,8 @@ CobolInterpreter::VisitSelectorExpr(const CobolASTSelectorExpr *expr) {
           ConstString(memberName), targetSP, m_use_dynamic, true);
 
       if (!result) {
-        m_error = Status::FromErrorStringWithFormat("Unknown child %s",
-                                                    memberName.str().c_str());
+        m_error.SetErrorStringWithFormat("Unknown child %s",
+                                         memberName.str().c_str());
         return nullptr;
       }
 
@@ -513,8 +517,7 @@ ValueObjectSP CobolInterpreter::GetElementAtIndex(lldb::ValueObjectSP var,
   }
 
   if ((start < 1) || (start > max_elem)) {
-    m_error =
-        Status::FromErrorStringWithFormat("Out of bound index: %d.", start);
+    m_error.SetErrorStringWithFormat("Out of bound index: %d.", start);
     return nullptr;
   }
   start -= 1; // convert 1-based indexing to 0-based.
@@ -646,8 +649,8 @@ CobolInterpreter::FindFieldInStructArray(const CobolASTRefModifierExpr *expr) {
   auto candidates_sp = FindAllCandidates(ConstString(var_name));
 
   if (candidates_sp->GetSize() == 0) {
-    m_error = Status::FromErrorStringWithFormat("Unknown variable %s",
-                                                var_name.str().c_str());
+    m_error.SetErrorStringWithFormat("Unknown variable %s",
+                                     var_name.str().c_str());
     return nullptr;
   }
 
@@ -675,59 +678,53 @@ uint32_t CobolInterpreter::GetUIntFromValueObjectSP(ValueObjectSP var) {
 ValueObjectSP
 CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
   auto index_expr = llvm::cast<CobolASTIndexExpr>(expr->GetStartExpr());
-  switch (expr->GetExpr()->GetKind()) {
-  case CobolASTNode::eIdent: {
-    auto ident = llvm::cast<const CobolASTIdent>(expr->GetExpr());
-    VariableListSP var_list_sp(m_frame->GetInScopeVariableList(true));
-    VariableList *var_list = var_list_sp.get();
-    if (var_list) {
-      auto var_name = ident->GetName().m_text;
-      auto var_sp = var_list->FindVariable(ConstString(var_name), true, false);
-      if (var_sp && var_sp->GetType()->GetName() == "Level88ConditionName") {
-        if (index_expr->GetNumberOfIndices() > 1) {
-          Host::SystemLog(
-              lldb::eSeverityWarning,
-              "More than one index for level88 is not supported yet");
-          return ValueObjectSP();
-        }
-        auto indices =
-            llvm::cast<const CobolASTIndexExpr>(expr->GetStartExpr());
-        int index = GetUIntFromValueObjectSP(
-            EvaluateExpr(indices->GetIndices()[0].get()));
-        auto result = ValueObjectSP();
-        return GetLevel88(var_name, result,
-                          var_sp->GetType()->GetFullCompilerType(), index);
-      }
-    }
-    if (ValueObjectSP var = EvaluateExpr(expr->GetExpr())) {
-      auto start_var = EvaluateExpr(index_expr->GetIndices()[0].get());
-      auto start = GetUIntFromValueObjectSP(start_var);
-      if (m_error.Fail())
+  ValueObjectSP var = EvaluateExpr(expr->GetExpr());
+  if (!var || index_expr->GetNumberOfIndices() != 1) {
+    m_error.Clear();
+    switch (expr->GetExpr()->GetKind()) {
+    case CobolASTNode::eIdent:
+      return FindFieldInStructArray(expr);
+    case CobolASTNode::eSelectorExpr: {
+      auto selector = llvm::cast<CobolASTSelectorExpr>(expr->GetExpr());
+      auto target = EvaluateExpr(selector->GetExpr());
+      if (!target)
         return nullptr;
-      auto len_var = EvaluateExpr(expr->GetLenExpr());
-      uint32_t len;
-      if (len_var) {
-        len = GetUIntFromValueObjectSP(len_var);
-        if (m_error.Fail())
-          return nullptr;
-        return GetElementAtIndex(var, start, len);
-      }
-      return GetElementAtIndex(var, start);
+      auto memberName = selector->GetSel()->GetName().m_text;
+      auto result = m_frame->GetValueObjectForFrameAggregateVariable(
+          ConstString(memberName), target, m_use_dynamic, true);
+      return GetIndexedExpression(
+          result, llvm::cast<CobolASTIndexExpr>(expr->GetStartExpr()),
+          memberName);
     }
-    return FindFieldInStructArray(expr);
+    default:
+      return nullptr;
+    }
   }
+
+  auto start_var = EvaluateExpr(index_expr->GetIndices()[0].get());
+  auto start = GetUIntFromValueObjectSP(start_var);
+  if (m_error.Fail())
+    return nullptr;
+  auto len_var = EvaluateExpr(expr->GetLenExpr());
+  uint32_t len;
+  if (len_var) {
+    len = GetUIntFromValueObjectSP(len_var);
+    if (m_error.Fail())
+      return nullptr;
+    return GetElementAtIndex(var, start, len);
+  }
+  return GetElementAtIndex(var, start);
+}
 
 ValueObjectSP
 CobolInterpreter::VisitFuncCallExpr(const CobolASTFuncCallExpr *expr) {
-  llvm::StringRef funcName = expr->GetFuncName().m_text;
+  // llvm::StringRef funcName = expr->GetFuncName().m_text;
   // if (!funcName.equals(llvm::StringRef("sizeof")))
-  if (funcName == (llvm::StringRef("sizeof")))
-    // TODO
-    return nullptr;
+  //  TODO
+  // return nullptr;
 
   if (expr->getTotalNumParams() != 1) {
-    m_error =
-        Status::FromErrorString("wrong number of params for sizeof operator.");
+    m_error.SetErrorString("wrong number of params for sizeof operator.");
     return nullptr;
   }
 

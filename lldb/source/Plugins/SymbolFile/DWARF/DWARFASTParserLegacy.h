@@ -43,10 +43,9 @@ public:
                          const lldb_private::plugin::dwarf::DWARFDIE &die,
                          const lldb_private::AddressRange &func_range) override;
 
-  bool
-  CompleteTypeFromDWARF(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                        lldb_private::Type *type,
-                        const lldb_private::CompilerType &legacy_type) override;
+  bool CompleteTypeFromDWARF(const lldb_private::plugin::dwarf::DWARFDIE &die,
+                             lldb_private::Type *type,
+                             lldb_private::CompilerType &legacy_type) override;
 
   lldb_private::CompilerDeclContext GetDeclContextForUIDFromDWARF(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override {
@@ -67,9 +66,10 @@ public:
       lldb_private::CompilerDeclContext decl_context) override {}
 
   std::string GetDIEClassTemplateParams(
-      lldb_private::plugin::dwarf::DWARFDIE die) override {
+      const lldb_private::plugin::dwarf::DWARFDIE &die) override {
     return {};
   }
+
   lldb_private::ConstString ConstructDemangledNameFromDWARF(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override {
     return lldb_private::ConstString();
