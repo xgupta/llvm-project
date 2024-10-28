@@ -1596,11 +1596,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // Only look for annotations/ptrauth if both are allocated.
     // If not, we can't tell which was intended to be embedded, as both ptrauth
     // and annotations have been expected at Record[13] at various times.
-    if (Record.size() > 14) {
-      if (Record[13])
-        Annotations = getMDOrNull(Record[13]);
-      if (Record[14])
-        PtrAuthData.emplace(Record[14]);
+    if (Record.size() > 16) {
+      if (Record[15])
+        Annotations = getMDOrNull(Record[15]);
+      if (Record[16])
+        PtrAuthData.emplace(Record[16]);
     }
 
     IsDistinct = Record[0] & 0x1;
