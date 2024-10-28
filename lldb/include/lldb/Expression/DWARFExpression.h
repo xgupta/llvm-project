@@ -129,21 +129,23 @@ public:
   ///
   /// \return An llvm::Expected<Value> that contains the result of the call
   ///     evaluation on success, or an llvm::Error describing the failure.
-  static llvm::Expected<Value>
-  Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
-           lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-           const plugin::dwarf::DWARFUnit *dwarf_cu,
-           const lldb::RegisterKind reg_set, const Value *initial_value_ptr,
-           const Value *object_address_ptr, std::vector<Value> &stack,
-           bool expression_call = false);
+  static bool Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+                       lldb::ModuleSP module_sp, const DataExtractor &opcodes,
+                       const plugin::dwarf::DWARFUnit *dwarf_cu,
+                       const lldb::RegisterKind reg_set,
+                       const Value *initial_value_ptr,
+                       const Value *object_address_ptr,
+                       std::vector<Value> &stack, Value &result,
+                       Status *error_ptr, bool expression_call = false);
 
-  static llvm::Error
-  EvaluateCall(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
-               lldb::ModuleSP module_sp,
-               const plugin::dwarf::DWARFUnit *dwarf_cu,
-               dw_offset_t die_ref_offset, const lldb::RegisterKind reg_set,
-               const Value *initial_value_ptr, const Value *object_address_ptr,
-               std::vector<Value> &stack);
+  static bool EvaluateCall(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+                           lldb::ModuleSP module_sp,
+                           const plugin::dwarf::DWARFUnit *dwarf_cu,
+                           dw_offset_t die_ref_offset,
+                           const lldb::RegisterKind reg_set,
+                           const Value *initial_value_ptr,
+                           const Value *object_address_ptr,
+                           std::vector<Value> &stack, Status *error_ptr);
 
   static bool ParseDWARFLocationList(const plugin::dwarf::DWARFUnit *dwarf_cu,
                                      const DataExtractor &data,

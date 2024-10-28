@@ -248,5 +248,5 @@ bool DWARFExpressionList::Evaluate(ExecutionContext *exe_ctx,
   reg_kind = expr.GetRegisterKind();
   return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, data,
                                    m_dwarf_cu, reg_kind, initial_value_ptr,
-                                   object_address_ptr, stack);
+                                   object_address_ptr, stack, result, error_ptr);
 }

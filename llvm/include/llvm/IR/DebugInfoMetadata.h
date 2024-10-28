@@ -1072,12 +1072,12 @@ class DIDerivedType : public DIType {
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
           uint32_t AlignInBits, uint64_t OffsetInBits,
           std::optional<unsigned> DWARFAddressSpace,
-          std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+          DIFlags Flags,
           Metadata *ExtraData, DINodeArray Annotations, Metadata *Location,
           Metadata *Allocated, StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
                    Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
-                   DWARFAddressSpace, PtrAuthData, Flags, ExtraData,
+                   DWARFAddressSpace, Flags, ExtraData,
                    Annotations.get(), Location, Allocated, Storage,
                    ShouldCreate);
   }
@@ -1086,7 +1086,7 @@ class DIDerivedType : public DIType {
           unsigned Line, Metadata *Scope, Metadata *BaseType,
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
           std::optional<unsigned> DWARFAddressSpace,
-          std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+          DIFlags Flags,
           Metadata *ExtraData, Metadata *Annotations, Metadata *Location,
           Metadata *Allocated, StorageType Storage, bool ShouldCreate = true);
 
@@ -1094,7 +1094,7 @@ class DIDerivedType : public DIType {
     return getTemporary(
         getContext(), getTag(), getName(), getFile(), getLine(), getScope(),
         getBaseType(), getSizeInBits(), getAlignInBits(), getOffsetInBits(),
-        getDWARFAddressSpace(), getPtrAuthData(), getFlags(), getExtraData(),
+        getDWARFAddressSpace(), getFlags(), getExtraData(),
         getAnnotations(), getLocation(), getAllocated());
   }
 
@@ -1105,11 +1105,11 @@ public:
        Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
        uint32_t AlignInBits, uint64_t OffsetInBits,
        std::optional<unsigned> DWARFAddressSpace,
-       std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+       DIFlags Flags,
        Metadata *ExtraData = nullptr, Metadata *Annotations = nullptr,
        Metadata *Location = nullptr, Metadata *Allocated = nullptr),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-       OffsetInBits, DWARFAddressSpace, PtrAuthData, Flags, ExtraData,
+       OffsetInBits, DWARFAddressSpace, Flags, ExtraData,
        Annotations, Location, Allocated))
   DEFINE_MDNODE_GET(DIDerivedType,
                     (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
@@ -1121,7 +1121,7 @@ public:
                      Metadata *Location = nullptr,
                      Metadata *Allocated = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                     AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
+                     AlignInBits, OffsetInBits, DWARFAddressSpace,
                      Flags, ExtraData, Annotations, Location, Allocated))
 
   TempDIDerivedType clone() const { return cloneImpl(); }

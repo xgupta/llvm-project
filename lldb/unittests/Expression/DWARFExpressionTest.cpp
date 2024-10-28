@@ -35,30 +35,14 @@ static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
                           /*addr_size*/ 4);
   Value result;
   Status status;
+  std::vector<Value> stack;
   if (!DWARFExpression::Evaluate(exe_ctx, /*reg_ctx*/ nullptr, module_sp,
                                  extractor, unit, lldb::eRegisterKindLLDB,
-                                 /*initial_value_ptr*/ nullptr,
-                                 /*object_address_ptr*/ nullptr, result,
-                                 &status))
+                                 /*object_address_ptr*/ nullptr, nullptr, stack,
+                                 result, &status))
     return status.ToError();
 
-  std::vector<Value> stack;
-
-  llvm::Expected<Value> result =
-      DWARFExpression::Evaluate(exe_ctx, /*reg_ctx*/ nullptr, module_sp,
-                                extractor, unit, lldb::eRegisterKindLLDB,
-                                /*object_address_ptr*/ nullptr, nullptr, stack);
-  if (!result)
-    return result.takeError();
-
-  result = DWARFExpression::Evaluate(exe_ctx, /*reg_ctx*/ nullptr, module_sp,
-                                     extractor, unit, lldb::eRegisterKindLLDB,
-                                     /*initial_value_ptr*/ nullptr,
-                                     /*object_address_ptr*/ nullptr, stack);
-  if (!result)
-    return result.takeError();
-
-  switch (result->GetValueType()) {
+  switch (result.GetValueType()) {
   case Value::ValueType::Scalar:
     return result.GetScalar();
   case Value::ValueType::LoadAddress:
@@ -442,12 +426,15 @@ TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
   uint8_t expr[] = {DW_OP_addr, 0x40, 0x0, 0x0, 0x0};
   DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
                           /*addr_size*/ 4);
+  Value result;
+  Status status;
   std::vector<Value> stack;
-  llvm::Expected<Value> result = DWARFExpression::Evaluate(
+  ASSERT_TRUE(DWARFExpression::Evaluate(
       &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor,
       /*unit*/ nullptr, lldb::eRegisterKindLLDB,
       /*initial_value_ptr*/ nullptr,
-      /*object_address_ptr*/ nullptr, stack);
+      /*object_address_ptr*/ nullptr, stack, result, &status))
+      << status.ToError();
 
   ASSERT_EQ(result.GetValueType(), Value::ValueType::LoadAddress);
 }
@@ -520,19 +507,19 @@ DWARF:
     DataExtractor extractor;
     std::vector<Value> stack;
     expr.GetExpressionData(extractor);
-    return DWARFExpression::Evaluate(&exe_ctx, /*reg_ctx*/ nullptr,
-                                     /*module_sp*/ {}, extractor, dwarf_cu,
-                                     lldb::eRegisterKindLLDB,
-                                     /*initial_value_ptr*/ nullptr,
-                                     /*object_address_ptr*/ nullptr, stack);
+    return DWARFExpression::Evaluate(
+        &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor, dwarf_cu,
+        lldb::eRegisterKindLLDB,
+        /*initial_value_ptr*/ nullptr,
+        /*object_address_ptr*/ nullptr, stack, result, &status);
   };
 
   // DW_OP_addrx takes a single leb128 operand, the index in the addr table:
   uint8_t expr_data[] = {DW_OP_addrx, 0x01};
   DataExtractor extractor(expr_data, sizeof(expr_data), lldb::eByteOrderLittle,
                           /*addr_size*/ 4);
-  DWARFExpression expr(extractor);
-
+  DWARFExpression expr(extractor);     
+                                       
   Status status;
   Value result;
   ASSERT_TRUE(evaluate(expr, status, result)) << status.ToError();
@@ -782,44 +769,4 @@ Sections:
   auto *dwo_dwarf_unit = dwo_symfile.DebugInfo().GetUnitAtIndex(0);
 
   testExpressionVendorExtensions(dwo_module_sp, *dwo_dwarf_unit);
-}
-
-TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
-  using ::testing::ByMove;
-  using ::testing::ElementsAre;
-  using ::testing::Return;
-
-  // Set up a mock process.
-  ArchSpec arch("i386-pc-linux");
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
-  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
-  ASSERT_TRUE(debugger_sp);
-  lldb::PlatformSP platform_sp;
-  std::vector<Value> stack;
-  auto target_sp =
-      std::make_shared<MockTarget>(*debugger_sp, arch, platform_sp);
-  ASSERT_TRUE(target_sp);
-  ASSERT_TRUE(target_sp->GetArchitecture().IsValid());
-
-  EXPECT_CALL(*target_sp, ReadMemory(0x40, 1))
-      .WillOnce(Return(ByMove(std::vector<uint8_t>{0x11})));
-  EXPECT_CALL(*target_sp, ReadMemory(0x50, 1))
-      .WillOnce(Return(ByMove(std::vector<uint8_t>{0x22})));
-
-  ExecutionContext exe_ctx(static_cast<lldb::TargetSP>(target_sp), false);
-
-  uint8_t expr[] = {DW_OP_addr, 0x40, 0x0, 0x0, 0x0, DW_OP_piece, 1,
-                    DW_OP_addr, 0x50, 0x0, 0x0, 0x0, DW_OP_piece, 1};
-  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
-                          /*addr_size*/ 4);
-  llvm::Expected<Value> result = DWARFExpression::Evaluate(
-      &exe_ctx, /*reg_ctx*/ nullptr, /*module_sp*/ {}, extractor,
-      /*unit*/ nullptr, lldb::eRegisterKindLLDB,
-      /*initial_value_ptr*/ nullptr,
-      /*object_address_ptr*/ nullptr, stack);
-
-  ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
-  ASSERT_EQ(result->GetValueType(), Value::ValueType::HostAddress);
-  ASSERT_THAT(result->GetBuffer().GetData(), ElementsAre(0x11, 0x22));
 }

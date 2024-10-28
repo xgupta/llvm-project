@@ -904,7 +904,7 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
 
     NameTableEntry NTE = CurrentIndex->getNameTableEntry(Index);
     // TODO: Update it for case-insensitive matching.
-    if (NTE.sameNameAs(Key))
+    if (StringRef(NTE.getString()).equals_insensitive(Key))
       return NTE.getEntryOffset();
   }
   return std::nullopt;

@@ -35,9 +35,7 @@ public:
   /// \param[in] flags
   ///     An llvm::Regex::RegexFlags that modifies the matching behavior. The
   ///     default is NoFlags.
-  explicit RegularExpression(
-      llvm::StringRef string,
-      llvm::Regex::RegexFlags flags = llvm::Regex::NoFlags, bool icase = false);
+  explicit RegularExpression(llvm::StringRef string, bool icase = false);
 
   ~RegularExpression() = default;
 

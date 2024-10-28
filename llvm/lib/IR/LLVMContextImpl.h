@@ -558,13 +558,12 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
                 uint32_t AlignInBits, uint64_t OffsetInBits,
                 std::optional<unsigned> DWARFAddressSpace,
-                std::optional<DIDerivedType::PtrAuthData> PtrAuthData,
                 unsigned Flags, Metadata *ExtraData, Metadata *Annotations,
                 Metadata *Location, Metadata *Allocated)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), DWARFAddressSpace(DWARFAddressSpace),
-        PtrAuthData(PtrAuthData), Flags(Flags), ExtraData(ExtraData),
+        Flags(Flags), ExtraData(ExtraData),
         Annotations(Annotations), Location(Location), Allocated(Allocated) {}
   MDNodeKeyImpl(const DIDerivedType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
@@ -572,7 +571,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
         BaseType(N->getRawBaseType()), SizeInBits(N->getSizeInBits()),
         OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
         DWARFAddressSpace(N->getDWARFAddressSpace()),
-        PtrAuthData(N->getPtrAuthData()), Flags(N->getFlags()),
+        Flags(N->getFlags()),
         ExtraData(N->getRawExtraData()), Annotations(N->getRawAnnotations()),
         Location(N->getRawLocation()), Allocated(N->getRawAllocated()) {}
 
@@ -584,7 +583,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
            AlignInBits == RHS->getAlignInBits() &&
            OffsetInBits == RHS->getOffsetInBits() &&
            DWARFAddressSpace == RHS->getDWARFAddressSpace() &&
-           PtrAuthData == RHS->getPtrAuthData() && Flags == RHS->getFlags() &&
+           Flags == RHS->getFlags() &&
            ExtraData == RHS->getRawExtraData() &&
            Annotations == RHS->getRawAnnotations() &&
            Location == RHS->getRawLocation() &&

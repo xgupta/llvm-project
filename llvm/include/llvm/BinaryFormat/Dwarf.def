@@ -893,10 +893,10 @@ HANDLE_DW_OP(0xf0, APPLE_uninit, 0, APPLE)
 HANDLE_DW_OP(0xf3, GNU_entry_value, 0, GNU)
 HANDLE_DW_OP(0xf8, PGI_omp_thread_num, 0, PGI)
 // Extensions for Fission proposal.
-HANDLE_DW_OP(0xfb, GNU_addr_index, 1, 0, 0, GNU)
-HANDLE_DW_OP(0xfc, GNU_const_index, 1, 0, 0, GNU)
-HANDLE_DW_OP(0xea, RC_byte_swap, 1, 0, 0, RAINCODE)
-HANDLE_DW_OP(0xeb, RC_resolve_file_address, 1, 0, 0, RAINCODE)
+HANDLE_DW_OP(0xfb, GNU_addr_index, 0, GNU)
+HANDLE_DW_OP(0xfc, GNU_const_index, 0, GNU)
+HANDLE_DW_OP(0xea, RC_byte_swap, 0, RAINCODE)
+HANDLE_DW_OP(0xeb, RC_resolve_file_address, 0, RAINCODE)
 
 // DW_OP_LLVM_user has two operands:
 //   (1) An unsigned LEB128 "LLVM Vendor Extension Opcode".

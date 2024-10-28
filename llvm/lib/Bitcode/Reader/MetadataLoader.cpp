@@ -1583,16 +1583,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       DWARFAddressSpace = Record[12] - 1;
 
     Metadata *Annotations = nullptr;
-    std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
 
     // Only look for annotations/ptrauth if both are allocated.
     // If not, we can't tell which was intended to be embedded, as both ptrauth
     // and annotations have been expected at Record[13] at various times.
-    if (Record.size() > 16) {
-      if (Record[15])
-        Annotations = getMDOrNull(Record[15]);
-      if (Record[16])
-        PtrAuthData.emplace(Record[16]);
+    if (Record.size() > 15) {
+      if (Record[14])
+        Annotations = getMDOrNull(Record[14]);
     }
 
     IsDistinct = Record[0] & 0x1;
@@ -1608,7 +1605,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
             (Context, Record[1], getMDString(Record[2]), getMDOrNull(Record[3]),
              Record[4], getDITypeRefOrNull(Record[5]),
              getDITypeRefOrNull(Record[6]), Record[7], Record[8], Record[9],
-             DWARFAddressSpace, PtrAuthData, Flags,
+             DWARFAddressSpace, Flags,
              getDITypeRefOrNull(Record[11]), Annotations, Location, Allocated)),
         NextMetadataNo);
     NextMetadataNo++;

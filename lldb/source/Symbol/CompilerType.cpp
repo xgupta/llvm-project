@@ -108,27 +108,6 @@ bool CompilerType::IsConst() const {
   return false;
 }
 
-unsigned CompilerType::GetPtrAuthKey() const {
-  if (IsValid())
-    if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetPtrAuthKey(m_type);
-  return 0;
-}
-
-unsigned CompilerType::GetPtrAuthDiscriminator() const {
-  if (IsValid())
-    if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetPtrAuthDiscriminator(m_type);
-  return 0;
-}
-
-bool CompilerType::GetPtrAuthAddressDiversity() const {
-  if (IsValid())
-    if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetPtrAuthAddressDiversity(m_type);
-  return false;
-}
-
 bool CompilerType::IsCStringType(uint32_t &length) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())

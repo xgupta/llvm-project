@@ -1,4 +1,4 @@
-//===--    PLIBitset.cpp --------------------------------------------------===//
+//===--    PLIBitset.cpp ----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,11 +26,9 @@ public:
   }
 
   bool MightHaveChildren() override { return true; }
-  lldb::ChildCacheState Update() override;
-  llvm::Expected<uint32_t> CalculateNumChildren() override {
-    return m_elements.size();
-  }
-  ValueObjectSP GetChildAtIndex(uint32_t idx) override;
+  bool Update() override;
+  size_t CalculateNumChildren() override { return m_elements.size(); }
+  ValueObjectSP GetChildAtIndex(size_t idx) override;
 
 private:
   std::vector<ValueObjectSP> m_elements;
@@ -51,28 +49,29 @@ BitsetFrontEnd::BitsetFrontEnd(ValueObject &valobj)
   }
 }
 
-lldb::ChildCacheState BitsetFrontEnd::Update() {
+bool BitsetFrontEnd::Update() {
   m_elements.clear();
 
   TargetSP target_sp = m_backend.GetTargetSP();
   if (!target_sp)
-    return lldb::ChildCacheState::eRefetch;
-  uint32_t capping_size = target_sp->GetMaximumNumberOfChildrenToDisplay();
+    return false;
+  size_t capping_size = target_sp->GetMaximumNumberOfChildrenToDisplay();
 
   if (!m_backend.IsArrayType())
-    return lldb::ChildCacheState::eRefetch;
+    return false;
 
   const llvm::StringRef type_name(
       m_backend.GetCompilerType().GetTypeName().GetStringRef());
   const llvm::StringRef size_str = type_name.split('[').second.split(']').first;
-  uint32_t num_elements = 0;
+  size_t num_elements = 0;
   if (size_str.getAsInteger(10, num_elements))
-    num_elements = *m_backend.GetNumChildren(capping_size / 8) * 8;
+    num_elements = m_backend.GetNumChildren(capping_size / 8) * 8;
+
   m_elements.assign(num_elements, ValueObjectSP());
-  return lldb::ChildCacheState::eRefetch;
+  return false;
 }
 
-ValueObjectSP BitsetFrontEnd::GetChildAtIndex(uint32_t idx) {
+ValueObjectSP BitsetFrontEnd::GetChildAtIndex(size_t idx) {
   if (idx >= m_elements.size())
     return ValueObjectSP();
 

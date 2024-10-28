@@ -22,7 +22,7 @@ void CobolParser::GetError(Status &error) {
     return;
 
   size_t rem = m_lexer.BytesLeft();
-  error = Status::FromErrorStringWithFormat(
+  error.SetErrorStringWithFormat(
       "Syntex error: expected with bytes remaining %lu.", rem);
 }
 

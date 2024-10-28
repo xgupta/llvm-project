@@ -554,12 +554,11 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 
   size_t separator_idx = 0;
   // TODO needs better handling
-  SourceLanguage language =
-      GetLanguage(); // Assume GetLanguage() returns LanguageType.
-  bool LegacyLangauage = (language == eLanguageTypeCobol85) ||
-                         (language == eLanguageTypeCobol74) ||
-                         (language == eLanguageTypePLI) ||
-                         (language == eLanguageTypeFortran90);
+  bool LegacyLangauage = (GetLanguage() == eLanguageTypeCobol85) ||
+                         (GetLanguage() == eLanguageTypeCobol74) ||
+                         (GetLanguage() == eLanguageTypePLI) ||
+                         (GetLanguage() == eLanguageTypeFortran90);
+
   if (LegacyLangauage)
     separator_idx = var_expr.find_first_of(".[(=+~|&^%#@!/?,<>{}");
   else
@@ -803,8 +802,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       }
 
       if (var_expr.find_first_of(':') != llvm::StringRef::npos) {
-        error =
-            Status::FromErrorString("member select with length not supported.");
+        error.SetErrorString("member select with length not supported.");
         return ValueObjectSP();
       }
 
@@ -838,7 +836,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       // index correction for legacy languages.
       if (is_sep_mem_select) {
         if (child_index < 1) {
-          error = Status::FromErrorString("invalid index.");
+          error.SetErrorString("invalid index.");
           return ValueObjectSP();
         }
         child_index -= 1;
@@ -1206,7 +1204,7 @@ DWARFExpressionList *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
 bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_cfa_is_valid) {
-    m_static_link_error = Status::FromErrorString(
+    m_static_link_error.SetErrorString(
         "No static link available for this historical stack frame.");
     return false;
   }
@@ -1225,19 +1223,19 @@ bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
             m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
                 exe_ctx.GetTargetPtr());
 
-      if (!m_sc.function->GetStaticLinkExpression().Evaluate(
-              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr)) {
+      if (!m_sc.function->GetFrameBaseExpression().Evaluate(
+              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr,
+              expr_value, &m_frame_base_error)) {
         // We should really have an error if evaluate returns, but in case we
         // don't, lets set the error to something at least.
         if (m_static_link_error.Success())
-          m_static_link_error = Status::FromErrorString(
+          m_static_link_error.SetErrorString(
               "Evaluation of the static link expression failed.");
       } else {
         m_static_link = expr_value.ResolveValue(&exe_ctx);
       }
     } else {
-      m_static_link_error =
-          Status::FromErrorString("No function in symbol context.");
+      m_static_link_error.SetErrorString("No function in symbol context.");
     }
   }
 
@@ -1249,11 +1247,14 @@ bool StackFrame::GetStaticLinkValue(Scalar &static_link, Status *error_ptr) {
   return m_static_link_error.Success();
 }
 
-DWARFExpressionList *StackFrame::GetStaticLinkExpression(Status &error) {
+DWARFExpressionList *StackFrame::GetStaticLinkExpression(Status *error_ptr) {
   if (!m_sc.function) {
-    error = Status::FromErrorString("No function in symbol context.");
+    if (error_ptr) {
+      error_ptr->SetErrorString("No function in symbol context.");
+    }
     return nullptr;
   }
+
   return &m_sc.function->GetStaticLinkExpression();
 }
 
@@ -1273,30 +1274,31 @@ bool StackFrame::HasDebugInformation() {
 }
 
 ValueObjectSP StackFrame::GetValueObjectForFrameAggregateVariable(
-    ConstString name, ValueObjectSP &valobj_sp, DynamicValueType use_dynamic,
-    bool look_in_array) {
+    ConstString name, ValueObjectSP &valobj_sp, DynamicValueType use_dynamic, bool look_in_array) {
+
   if (!valobj_sp)
     return valobj_sp;
+
   bool is_complete;
-  if (valobj_sp->GetCompilerType().IsArrayType(nullptr, nullptr,
-                                               &is_complete)) {
+  if (valobj_sp->GetCompilerType().IsArrayType(nullptr, nullptr, &is_complete)) {
     if (!look_in_array || !valobj_sp->GetCompilerType().IsAggregateType())
       return nullptr;
   }
+
   ValueObjectSP result = valobj_sp->GetChildMemberWithName(name, true);
   if (result)
     return result;
-  uint32_t num_children = valobj_sp->GetNumChildren().get();
-  // for (size_t index = 0; index < valobj_sp->GetNumChildren(); ++index) {
-  for (uint32_t index = 0; index < num_children; ++index) {
+
+  for (size_t index = 0; index < valobj_sp->GetNumChildren(); ++index) {
     ValueObjectSP child = valobj_sp->GetChildAtIndex(index, true);
     if (!child)
       continue;
+
     CompilerType child_type = child->GetCompilerType();
     if (!child_type.IsAggregateType())
       continue;
-    result = GetValueObjectForFrameAggregateVariable(name, child, use_dynamic,
-                                                     look_in_array);
+
+    result = GetValueObjectForFrameAggregateVariable(name, child, use_dynamic, look_in_array);
     if (result)
       break;
   }

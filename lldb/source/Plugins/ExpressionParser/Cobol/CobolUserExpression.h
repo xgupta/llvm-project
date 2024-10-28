@@ -1,8 +1,9 @@
-//===-  CobolUserExpression.h ---------------------------------------------===//
+//===-  CobolUserExpression.h -----------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 
@@ -92,8 +93,7 @@ private:
                        const lldb_private::CobolASTIndexExpr *indices,
                        llvm::StringRef var_name);
   lldb::ValueObjectSP GetLevel88(llvm::StringRef var_name,
-                                 lldb::ValueObjectSP &result,
-                                 CompilerType comp_type, int index);
+                                 lldb::ValueObjectSP &result, CompilerType comp_type, int index);
 };
 
 class CobolUserExpression : public UserExpression {
@@ -107,7 +107,7 @@ public:
   static bool classof(const Expression *obj) { return obj->isA(&ID); }
 
   CobolUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
-                      llvm::StringRef prefix, SourceLanguage language,
+                      llvm::StringRef prefix, lldb::LanguageType language,
                       ResultType desired_type,
                       const EvaluateExpressionOptions &options);
 

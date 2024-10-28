@@ -5175,7 +5175,7 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   Result = GET_OR_DISTINCT(
       DIDerivedType,
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
-       size.Val, align.Val, offset.Val, DWARFAddressSpace, PtrAuthData,
+       size.Val, align.Val, offset.Val, DWARFAddressSpace,
        flags.Val, extraData.Val, annotations.Val, location.Val, allocated.Val));
   return false;
 }

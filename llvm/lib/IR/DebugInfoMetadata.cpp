@@ -744,13 +744,13 @@ DIDerivedType *DIDerivedType::getImpl(
     unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
     uint32_t AlignInBits, uint64_t OffsetInBits,
     std::optional<unsigned> DWARFAddressSpace,
-    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData,
+    DIFlags Flags, Metadata *ExtraData,
     Metadata *Annotations, Metadata *location, Metadata *Allocated,
     StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(
       DIDerivedType, (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                      AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
+                      AlignInBits, OffsetInBits, DWARFAddressSpace,
                       Flags, ExtraData, Annotations, location, Allocated));
   Metadata *Ops[] = {File,      Scope,       Name,     BaseType,
                      ExtraData, Annotations, location, Allocated};
@@ -1503,8 +1503,6 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_LLVM_convert:
     case dwarf::DW_OP_LLVM_arg:
     case dwarf::DW_OP_LLVM_tag_offset:
-    case dwarf::DW_OP_LLVM_extract_bits_sext:
-    case dwarf::DW_OP_LLVM_extract_bits_zext:
     case dwarf::DW_OP_RC_byte_swap:
     case dwarf::DW_OP_RC_resolve_file_address:
     case dwarf::DW_OP_constu:

@@ -797,7 +797,7 @@ StackFrameList::GetFrameWithFrameBaseAddr(const addr_t frame_base) {
     if (frame_sp) {
       Scalar curr_frame_base;
       Status curr_frame_error;
-      if (frame_sp->GetFrameBaseValue(curr_frame_base)) {
+      if (frame_sp->GetFrameBaseValue(curr_frame_base, &curr_frame_error)) {
         lldb::addr_t fb_addr = curr_frame_base.ULongLong(LLDB_INVALID_ADDRESS);
         if (fb_addr == frame_base)
           return frame_sp;

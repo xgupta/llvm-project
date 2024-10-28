@@ -237,13 +237,13 @@ public:
 
   /// Get the DWARFExpression corresponding to the Static link Address.
   ///
-  /// \param [out] error
+  /// \param [out] error_ptr
   ///   If there is an error determining the CFA address, this may contain a
   ///   string explaining the failure.
   ///
   /// \return
   ///   Returns the corresponding DWARF expression, or NULL.
-  DWARFExpressionList *GetStaticLinkExpression(Status &error);
+  DWARFExpressionList *GetStaticLinkExpression(Status *error_ptr);
 
   /// Get the current lexical scope block for this StackFrame, if possible.
   ///
@@ -593,11 +593,12 @@ private:
                              // the actual PC for inlined frames) as a
                              // section/offset address
   SymbolContext m_sc;
+  bool m_cfa_is_valid; // Does this frame have a CFA?  Different from CFA ==
+                       // LLDB_INVALID_ADDRESS
   Flags m_flags;
   Scalar m_frame_base;
   Status m_frame_base_error;
-  bool m_cfa_is_valid; // Does this frame have a CFA?  Different from CFA ==
-                       // LLDB_INVALID_ADDRESS
+
   Scalar m_static_link;
   Status m_static_link_error;
   uint16_t m_frame_recognizer_generation = 0;
