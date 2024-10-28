@@ -1463,28 +1463,16 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // address to target address for address calculations.
     case DW_OP_RC_resolve_file_address:
       if (stack.empty()) {
-        return llvm::createStringError(
-            "Expression stack needs at least 1 item for DW_OP_RC_resolve_file_address.");
-
+        return llvm::createStringError("Expression stack needs at least 1 item "
+                                       "for DW_OP_RC_resolve_file_address.");
       } else {
-        if (stack.back().GetValueType() == Value::ValueType::FileAddress) {
-          auto file_addr =
-              stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-          if (!module_sp) {
-            return llvm::createStringError(
-                "need module to resolve file address for DW_OP_deref");
-          }
-          Address so_addr;
-          if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
-            return llvm::createStringError(
-                "failed to resolve file address in module");
-          }
-          addr_t load_Addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
-          if (load_Addr == LLDB_INVALID_ADDRESS) {
-            return llvm::createStringError("failed to resolve load address");
-          }
-          stack.back().GetScalar() = load_Addr;
-          stack.back().SetValueType(Value::ValueType::LoadAddress);
+        // Call the ConvertToLoadAddress function to convert to load address
+         //stack.back().ConvertToLoadAddress(module_sp.get(),
+         //                                 exe_ctx->GetTargetPtr());
+
+        // Check if conversion was successful by confirming value type
+        if (stack.back().GetValueType() != Value::ValueType::LoadAddress) {
+          return llvm::createStringError("failed to resolve load address");
         }
       }
       break;
@@ -2285,6 +2273,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       } else {
         stack.back().SetValueType(Value::ValueType::FileAddress);
       }
+
+         stack.back().ConvertToLoadAddress(module_sp.get(),
+                                          exe_ctx->GetTargetPtr());
     } break;
 
     // OPCODE: DW_OP_GNU_const_index

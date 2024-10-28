@@ -266,7 +266,7 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
               uint64_t num_elements = 0;
               for (auto pos = array_info->element_orders.rbegin(); pos != end;
                    ++pos) {
-                num_elements = pos->value(); // Retrieve the value
+                num_elements = *pos;
                 compiler_type = m_ast.CreateArrayType(
                     type_name_const_str, empty_name, array_element_type,
                     num_elements, isVarString);
@@ -562,7 +562,7 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(
 
   if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
                                decl_column, call_file, call_line, call_column,
-                               &frame_base, &static_link, &rc_frame_base)) {
+                               &frame_base)) {
     // Union of all ranges in the function DIE (if the function is
     // discontiguous)
     AddressRange func_range;
@@ -604,10 +604,6 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(
         if (func_sp.get() != nullptr) {
           if (frame_base.IsValid())
             func_sp->GetFrameBaseExpression() = frame_base;
-          if (rc_frame_base.IsValid())
-            func_sp->GetRCFrameBaseExpression() = rc_frame_base;
-          if (static_link.IsValid())
-            func_sp->GetStaticLinkExpression() = static_link;
           comp_unit.AddFunction(func_sp);
           return func_sp.get();
         }
@@ -619,7 +615,7 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(
 
 bool DWARFASTParserLegacy::CompleteTypeFromDWARF(
     const lldb_private::plugin::dwarf::DWARFDIE &die, Type *type,
-    const CompilerType &comp_type) {
+    CompilerType &comp_type) {
 
   if (!die)
     return false;
