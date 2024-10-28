@@ -595,12 +595,15 @@ private:
   /// for inlined frames) as a section/offset address.
   Address m_frame_code_addr;
   SymbolContext m_sc;
+
   Flags m_flags;
   Scalar m_frame_base;
   Status m_frame_base_error;
+
   uint16_t m_frame_recognizer_generation = 0;
-  /// Does this frame have a CFA?  Different from CFA == LLDB_INVALID_ADDRESS.
-  bool m_cfa_is_valid;
+  bool m_cfa_is_valid; // Does this frame have a CFA?  Different from CFA ==
+                       // LLDB_INVALID_ADDRESS
+                       
   Kind m_stack_frame_kind;
 
   /// Whether this frame behaves like the zeroth frame, in the sense

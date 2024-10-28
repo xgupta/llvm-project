@@ -826,8 +826,7 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
       }
 
       if (var_expr.find_first_of(':') != llvm::StringRef::npos) {
-        error =
-            Status::FromErrorString("member select with length not supported.");
+        error.SetErrorString("member select with length not supported.");
         return ValueObjectSP();
       }
 
@@ -861,7 +860,7 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
       // index correction for legacy languages.
       if (is_sep_mem_select) {
         if (child_index < 1) {
-          error = Status::FromErrorString("invalid index.");
+          error.SetErrorString("invalid index.");
           return ValueObjectSP();
         }
         child_index -= 1;
