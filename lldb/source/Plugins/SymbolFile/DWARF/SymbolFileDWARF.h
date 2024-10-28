@@ -365,6 +365,7 @@ public:
 
   /// Returns the DWARFIndex for this symbol, if it exists.
   DWARFIndex *getIndex() { return m_index.get(); }
+  bool FixupAddress(Address &addr);
 
   /// If this symbol file is linked to by a debug map (see
   /// SymbolFileDWARFDebugMap), and \p file_addr is a file address relative to
@@ -472,7 +473,14 @@ protected:
   std::vector<std::unique_ptr<CallEdge>>
   CollectCallEdges(lldb::ModuleSP module, DWARFDIE function_die);
 
-  bool FixupAddress(Address &addr);
+  // bool FixupAddress(Address &addr);
+
+  /// If this symbol file is linked to by a debug map (see
+  /// SymbolFileDWARFDebugMap), and \p file_addr is a file address relative to
+  /// an object file, adjust \p file_addr so that it is relative to the main
+  /// binary. Returns the adjusted address, or \p file_addr if no adjustment is
+  /// needed, on success and LLDB_INVALID_ADDRESS otherwise.
+  // lldb::addr_t FixupAddress(lldb::addr_t file_addr);
 
   typedef llvm::SetVector<Type *> TypeSet;
 

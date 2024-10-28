@@ -1,8 +1,9 @@
-//===-- CobolParser.cpp ---------------------------------------------------===//
+//===-- CobolParser.cpp -----------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +23,7 @@ void CobolParser::GetError(Status &error) {
     return;
 
   size_t rem = m_lexer.BytesLeft();
-  error = Status::FromErrorStringWithFormat(
+  error.SetErrorStringWithFormat(
       "Syntex error: expected with bytes remaining %lu.", rem);
 }
 
@@ -159,7 +160,7 @@ CobolASTExpr *CobolParser::Indices() {
       break;
     next();
   }
-
+  
   return new CobolASTIndexExpr(std::move(indices_vec));
 }
 
@@ -262,3 +263,4 @@ bool CobolParser::Semicolon() {
   }
   return false;
 }
+
