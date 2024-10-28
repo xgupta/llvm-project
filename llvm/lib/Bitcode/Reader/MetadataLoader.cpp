@@ -1583,8 +1583,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       DWARFAddressSpace = Record[12] - 1;
 
     Metadata *Annotations = nullptr;
-    if (Record.size() > 13 && Record[13])
-      Annotations = getMDOrNull(Record[13]);
+    // Only look for annotations/ptrauth if both are allocated.
+    // If not, we can't tell which was intended to be embedded, as both ptrauth
+    // and annotations have been expected at Record[13] at various times.
+    if (Record.size() > 16) {
+      if (Record[15])
+        Annotations = getMDOrNull(Record[15]);
+    }
 
     IsDistinct = Record[0] & 0x1;
     const unsigned Version = Record[0] & ~(0x1);
