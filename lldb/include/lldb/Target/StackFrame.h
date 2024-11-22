@@ -603,7 +603,7 @@ private:
   uint16_t m_frame_recognizer_generation = 0;
   bool m_cfa_is_valid; // Does this frame have a CFA?  Different from CFA ==
                        // LLDB_INVALID_ADDRESS
-                       
+
   Kind m_stack_frame_kind;
 
   /// Whether this frame behaves like the zeroth frame, in the sense

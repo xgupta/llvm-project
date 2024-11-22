@@ -1295,10 +1295,12 @@ TypeSystemLegacy::GetNumChildren(opaque_compiler_type_t type,
                                  bool omit_empty_base_classes,
                                  const ExecutionContext *exe_ctx) {
   if (!type)
-    return 0;
+    return llvm::make_error<llvm::StringError>("invalid legacy type",
+                                               llvm::inconvertibleErrorCode());
 
   if (!GetCompleteType(type))
-    return 0;
+    return llvm::make_error<llvm::StringError>("incomplete legacy type",
+                                               llvm::inconvertibleErrorCode());
 
   LegacyType *base_type = static_cast<LegacyType *>(type);
   if (LegacyArray *array = base_type->GetArray())
@@ -1504,8 +1506,7 @@ llvm::Expected<CompilerType> TypeSystemLegacy::GetChildCompilerTypeAtIndex(
     return num_children_or_error.takeError();
   }
 
-  uint32_t num_children = *num_children_or_error;
-  const bool idx_is_valid = idx < num_children;
+  const bool idx_is_valid = idx < *num_children_or_error;
 
   auto get_exe_scope = [&exe_ctx]() {
     return exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
@@ -1536,7 +1537,7 @@ llvm::Expected<CompilerType> TypeSystemLegacy::GetChildCompilerTypeAtIndex(
                 pointee_type.GetByteSize(get_exe_scope())) {
           child_byte_size = *size;
           child_byte_offset = 0;
-          return pointee_type;
+          return llvm::Expected<CompilerType>(pointee_type);
         }
       }
     }
@@ -1553,7 +1554,7 @@ llvm::Expected<CompilerType> TypeSystemLegacy::GetChildCompilerTypeAtIndex(
         child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
         if (array->isVarString())
           child_byte_offset += 2;
-        return element_type;
+        return llvm::Expected<CompilerType>(element_type);
       }
     }
   } break;
@@ -1565,19 +1566,24 @@ llvm::Expected<CompilerType> TypeSystemLegacy::GetChildCompilerTypeAtIndex(
             exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
       child_byte_size = *byte_size;
     child_byte_offset = bit_offset / 8;
-    return ret;
+    return llvm::Expected<CompilerType>(ret);
   } break;
   case LegacyType::KIND_DYNAMIC: {
     const auto dyn_base_type =
         static_cast<LegacyDynamic *>(type)->GetBaseType();
-    return dyn_base_type.GetChildCompilerTypeAtIndex(
+    auto result = dyn_base_type.GetChildCompilerTypeAtIndex(
         exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
         ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
         child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
         child_is_deref_of_parent, valobj, language_flags);
+
+    if (!result)
+      return result.takeError();
+
+    return *result;
   }
   }
-  return CompilerType();
+  return llvm::Expected<CompilerType>(CompilerType());
 }
 
 uint32_t
@@ -2196,7 +2202,7 @@ UserExpression *TypeSystemLegacy::GetUserExpression(
     LLDB_LOGF(log, "LegacyTypeSystem: UserExpression %s for %s.\n",
               expr.str().c_str(), language.GetDescription().data());
 
-    switch (language) {
+    switch (language.AsLanguageType()) {
     default:
       char buffer[64];
       sprintf(

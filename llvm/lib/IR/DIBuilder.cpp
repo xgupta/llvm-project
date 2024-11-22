@@ -264,12 +264,12 @@ DIBasicType *DIBuilder::createNullPtrType() {
 }
 
 DIBasicType *DIBuilder::createBasicType(StringRef Name, uint64_t SizeInBits,
-                                        unsigned Encoding,
-                                        DINode::DIFlags Flags,
-                                        uint32_t NumExtraInhabitants) {
+                                        unsigned Encoding, 
+                                        DINode::DIFlags Flags, uint32_t NumExtraInhabitants
+                                       ) {
   assert(!Name.empty() && "Unable to create type without name");
   return DIBasicType::get(VMContext, dwarf::DW_TAG_base_type, Name, SizeInBits,
-                          0, Encoding, NumExtraInhabitants, Flags);
+                          Encoding, NumExtraInhabitants, Flags);
 }
 
 DIStringType *DIBuilder::createStringType(StringRef Name, uint64_t SizeInBits) {
@@ -311,7 +311,7 @@ DIBasicType *DIBuilder::createBasicType(StringRef Name, StringRef Pic,
 
   return DIBasicType::get(
       VMContext, dwarf::DW_TAG_base_type, Name, PicString, SizeInBits, 0,
-      Encoding, Flags,
+      Encoding, 0, Flags,
       DIBasicType::DecimalInfo{DigitCount, DecimalSign, Scale});
 }
 

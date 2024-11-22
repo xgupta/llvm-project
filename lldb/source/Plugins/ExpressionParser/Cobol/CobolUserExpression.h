@@ -93,7 +93,7 @@ private:
                        llvm::StringRef var_name);
   lldb::ValueObjectSP GetLevel88(llvm::StringRef var_name,
                                  lldb::ValueObjectSP &result,
-                                 CompilerType comp_type, int index);
+                                 CompilerType comp_type);
 };
 
 class CobolUserExpression : public UserExpression {

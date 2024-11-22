@@ -850,7 +850,7 @@ private:
 
   DIBasicType(LLVMContext &C, StorageType Storage, unsigned Tag,
               uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
-              uint32_t NumExtraInhabitants, std::optional<DecimalInfo> DecimalAttrInfo, DIFlags Flags,
+              uint32_t NumExtraInhabitants, DIFlags Flags, std::optional<DecimalInfo> DecimalAttrInfo,
               ArrayRef<Metadata *> Ops)
       : DIType(C, DIBasicTypeKind, Storage, Tag, 0, SizeInBits, AlignInBits, 0,
                NumExtraInhabitants, Flags, Ops),
@@ -873,24 +873,24 @@ private:
                               std::optional<DecimalInfo> DecimalAttrInfo,
                               StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, Name, nullptr, SizeInBits, AlignInBits,
-                   Encoding, Flags, DecimalAttrInfo, Storage, ShouldCreate);
+                   Encoding, NumExtraInhabitants, Flags, DecimalAttrInfo, Storage, ShouldCreate);
   }
 
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               StringRef Name, MDString *PictureString,
                               uint64_t SizeInBits, uint32_t AlignInBits,
-                              unsigned Encoding, DIFlags Flags,
+                              unsigned Encoding, uint32_t NumExtraInhabitants, DIFlags Flags,
                               std::optional<DecimalInfo> DecimalAttrInfo,
                               StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
-                   PictureString, SizeInBits, AlignInBits, Encoding, Flags,
+                   PictureString, SizeInBits, AlignInBits, Encoding, NumExtraInhabitants, Flags,
                    DecimalAttrInfo, Storage, ShouldCreate);
   }
 
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               MDString *Name, MDString *PictureString,
                               uint64_t SizeInBits, uint32_t AlignInBits,
-                              unsigned Encoding, DIFlags Flags,
+                              unsigned Encoding, uint32_t NumExtraInhabitants, DIFlags Flags,
                               std::optional<DecimalInfo> DecimalAttrInfo,
                               StorageType Storage, bool ShouldCreate = true);
 
@@ -914,25 +914,27 @@ public:
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
                     (Tag, Name, SizeInBits, AlignInBits, Encoding, 0, Flags))
+
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
-                      (Tag, Name, SizeInBits, AlignInBits, Encoding, NumExtraInhabitants, Flags,
-                     std::nullopt))
+                     uint32_t AlignInBits, unsigned Encoding, uint32_t NumExtraInhabitants, DIFlags Flags),
+                      (Tag, Name, SizeInBits, AlignInBits, Encoding, NumExtraInhabitants, Flags, std::nullopt
+                     ))
+
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, MDString *PictureString,
                      uint64_t SizeInBits, uint32_t AlignInBits,
                      unsigned Encoding, uint32_t NumExtraInhabitants, DIFlags Flags,
                      std::optional<DecimalInfo> ExtInfo),
                     (Tag, Name, PictureString, SizeInBits, AlignInBits,
-                     Encoding, NumExtraInhabitants, Flags, ExtInfo))
+                     Encoding,  NumExtraInhabitants, Flags, ExtInfo))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, MDString *PictureString,
                      uint64_t SizeInBits, uint32_t AlignInBits,
                      unsigned Encoding, uint32_t NumExtraInhabitants, DIFlags Flags,
                      std::optional<DecimalInfo> ExtInfo),
                     (Tag, Name, PictureString, SizeInBits, AlignInBits,
-                     Encoding, NumExtraInhabitants, Flags, ExtInfo))
+                     Encoding,  NumExtraInhabitants, Flags, ExtInfo))
 
   TempDIBasicType clone() const { return cloneImpl(); }
 
@@ -1297,8 +1299,8 @@ private:
   static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, Metadata *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
-          uint32_t AlignInBits, uint64_t OffsetInBits, DIType *Specification,
-          uint32_t NumExtraInhabitants, DIFlags Flags, VendorDIFlags VFlags, DINodeArray Elements,
+          uint32_t AlignInBits, uint64_t OffsetInBits, DIType *Specification, uint32_t NumExtraInhabitants, 
+          DIFlags Flags, VendorDIFlags VFlags, DINodeArray Elements,
           unsigned RuntimeLang, DIType *VTableHolder,
           DITemplateParameterArray TemplateParams, StringRef Identifier,
           DIDerivedType *Discriminator, Metadata *DataLocation,
@@ -1347,10 +1349,10 @@ public:
        StringRef Identifier = "", DIDerivedType *Discriminator = nullptr,
        Metadata *DataLocation = nullptr, Metadata *Associated = nullptr,
        Metadata *Allocated = nullptr, Metadata *Rank = nullptr,
-       DINodeArray Annotations = nullptr, DIType *Specification = nullptr,
+       DINodeArray Annotations = nullptr,  DIType *Specification = nullptr,
        uint32_t NumExtraInhabitants = 0),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-       OffsetInBits, Specification, NumExtraInhabitants, Flags, VendorDIFlagZero, Elements,
+       OffsetInBits,  Specification, NumExtraInhabitants, Flags, VendorDIFlagZero, Elements,
        RuntimeLang, VTableHolder, TemplateParams, Identifier, Discriminator,
        DataLocation, Associated, Allocated, Rank, Annotations))
   DEFINE_MDNODE_GET(
@@ -1368,7 +1370,6 @@ public:
        OffsetInBits, Flags, VendorDIFlagZero, Elements, RuntimeLang,
        VTableHolder, TemplateParams, Identifier, Discriminator, DataLocation,
        Associated, Allocated, Rank, Annotations, Specification, NumExtraInhabitants))
-
   DEFINE_MDNODE_GET(
       DICompositeType,
       (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
@@ -1379,11 +1380,13 @@ public:
        StringRef Identifier = "", DIDerivedType *Discriminator = nullptr,
        Metadata *DataLocation = nullptr, Metadata *Associated = nullptr,
        Metadata *Allocated = nullptr, Metadata *Rank = nullptr,
-       DINodeArray Annotations = nullptr),
+       DINodeArray Annotations = nullptr, DIType *Specification = nullptr,
+       uint32_t NumExtraInhabitants = 0),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-       OffsetInBits, Flags, VFlags, Elements, RuntimeLang, VTableHolder,
+       OffsetInBits, Specification, NumExtraInhabitants, Flags, VFlags, Elements, RuntimeLang, VTableHolder,
        TemplateParams, Identifier, Discriminator, DataLocation, Associated,
        Allocated, Rank, Annotations))
+
   DEFINE_MDNODE_GET(
       DICompositeType,
       (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
@@ -1394,11 +1397,12 @@ public:
        MDString *Identifier = nullptr, Metadata *Discriminator = nullptr,
        Metadata *DataLocation = nullptr, Metadata *Associated = nullptr,
        Metadata *Allocated = nullptr, Metadata *Rank = nullptr,
-       Metadata *Annotations = nullptr),
+       Metadata *Annotations = nullptr, DIType *Specification = nullptr,
+       uint32_t NumExtraInhabitants = 0),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, VFlags, Elements, RuntimeLang, VTableHolder,
        TemplateParams, Identifier, Discriminator, DataLocation, Associated,
-       Allocated, Rank, Annotations))
+       Allocated, Rank, Annotations, Specification, NumExtraInhabitants))
 
   TempDICompositeType clone() const { return cloneImpl(); }
 

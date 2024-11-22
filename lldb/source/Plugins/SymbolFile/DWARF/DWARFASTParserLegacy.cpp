@@ -266,7 +266,7 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
               uint64_t num_elements = 0;
               for (auto pos = array_info->element_orders.rbegin(); pos != end;
                    ++pos) {
-                num_elements = *pos;
+                num_elements = pos->value(); 
                 compiler_type = m_ast.CreateArrayType(
                     type_name_const_str, empty_name, array_element_type,
                     num_elements, isVarString);
@@ -543,11 +543,11 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
 lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(
     lldb_private::CompileUnit &comp_unit,
     const lldb_private::plugin::dwarf::DWARFDIE &die,
-    const lldb_private::AddressRange &func_range) {
+    lldb_private::AddressRanges func_ranges) {
   if (die.Tag() != DW_TAG_subprogram)
     return nullptr;
 
-  DWARFRangeList func_ranges;
+  DWARFRangeList unused_func_ranges;
   const char *name = nullptr;
   const char *mangled = nullptr;
   std::optional<int> decl_file = 0;
@@ -557,17 +557,16 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(
   std::optional<int> call_line = 0;
   std::optional<int> call_column = 0;
   DWARFExpressionList frame_base;
-  DWARFExpressionList rc_frame_base;
-  DWARFExpressionList static_link;
 
-  if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
+  if (die.GetDIENamesAndRanges(name, mangled, unused_func_ranges, decl_file, decl_line,
                                decl_column, call_file, call_line, call_column,
                                &frame_base)) {
+
     // Union of all ranges in the function DIE (if the function is
     // discontiguous)
     AddressRange func_range;
-    lldb::addr_t lowest_func_addr = func_ranges.GetMinRangeBase(0);
-    lldb::addr_t highest_func_addr = func_ranges.GetMaxRangeEnd(0);
+    lldb::addr_t lowest_func_addr = unused_func_ranges.GetMinRangeBase(0);
+    lldb::addr_t highest_func_addr = unused_func_ranges.GetMaxRangeEnd(0);
     if (lowest_func_addr != LLDB_INVALID_ADDRESS &&
         lowest_func_addr <= highest_func_addr) {
       ModuleSP module_sp(die.GetModule());
@@ -599,7 +598,7 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(
         func_sp = std::make_shared<Function>(
             &comp_unit, func_user_id, // UserID is the DIE offset
             func_user_id, func_name, func_type,
-            func_range); // first address range
+            func_ranges); // first address range
 
         if (func_sp.get() != nullptr) {
           if (frame_base.IsValid())
@@ -614,8 +613,8 @@ lldb_private::Function *DWARFASTParserLegacy::ParseFunctionFromDWARF(
 }
 
 bool DWARFASTParserLegacy::CompleteTypeFromDWARF(
-    const lldb_private::plugin::dwarf::DWARFDIE &die, Type *type,
-    CompilerType &comp_type) {
+    const lldb_private::plugin::dwarf::DWARFDIE &die, lldb_private::Type *type,
+    const CompilerType &comp_type) {
 
   if (!die)
     return false;
@@ -698,6 +697,7 @@ size_t DWARFASTParserLegacy::ParseChildMembers(
             member_offset_in_bits = form_value.Unsigned();
             break;
           }
+          ++member_idx;
         }
       }
 
@@ -707,7 +707,6 @@ size_t DWARFASTParserLegacy::ParseChildMembers(
         m_ast.AddFieldToStruct(struct_compiler_type, ConstString(name),
                                member_full_type, member_offset_in_bits);
       }
-      ++member_idx;
     }
   }
 

@@ -896,6 +896,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         stack[i].Dump(&new_value);
         LLDB_LOGF(log, "  %s", new_value.GetData());
       }
+
       LLDB_LOGF(log, "0x%8.8" PRIx64 ": %s", op_offset,
                 DW_OP_value_to_name(op));
     }
@@ -907,7 +908,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
             "%s needs at least %d stack entries (stack has %d entries)",
             DW_OP_value_to_name(op), *arity, stack.size());
     }
-
     switch (op) {
     // The DW_OP_addr operation has a single operand that encodes a machine
     // address and whose size is the size of an address on the target machine.
@@ -2083,8 +2083,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_call2: {
       dw_offset_t die_ref_offset =
           opcodes.GetU16(&offset) + dwarf_cu->GetOffset();
-      EvaluateCall(exe_ctx, reg_ctx, module_sp, dwarf_cu, die_ref_offset,
-                   reg_kind, initial_value_ptr, object_address_ptr, stack);
+      if (llvm::Error err = EvaluateCall(
+              exe_ctx, reg_ctx, module_sp, dwarf_cu, die_ref_offset, reg_kind,
+              initial_value_ptr, object_address_ptr, stack)) {
+        return llvm::make_error<llvm::StringError>(
+            "Failure during evaluation", llvm::inconvertibleErrorCode());
+      }
     } break;
 
     // OPCODE: DW_OP_call4
@@ -2109,8 +2113,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_call4: {
       dw_offset_t die_ref_offset =
           opcodes.GetU32(&offset) + dwarf_cu->GetOffset();
-      EvaluateCall(exe_ctx, reg_ctx, module_sp, dwarf_cu, die_ref_offset,
-                   reg_kind, initial_value_ptr, object_address_ptr, stack);
+      if (llvm::Error err = EvaluateCall(
+              exe_ctx, reg_ctx, module_sp, dwarf_cu, die_ref_offset, reg_kind,
+              initial_value_ptr, object_address_ptr, stack)) {
+        return llvm::make_error<llvm::StringError>(
+            "Failure during evaluation", llvm::inconvertibleErrorCode());
+      }
     } break;
 
     // OPCODE: DW_OP_stack_value
@@ -2266,6 +2274,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       } else {
         stack.back().SetValueType(Value::ValueType::FileAddress);
       }
+      stack.back().ConvertToLoadAddress(module_sp.get(),
+                                        exe_ctx->GetTargetPtr());
     } break;
 
     // OPCODE: DW_OP_GNU_const_index
@@ -2380,7 +2390,6 @@ llvm::Error DWARFExpression::EvaluateCall(
       dwarf_cu, reg_kind, initial_value_ptr, object_address_ptr, stack, true);
 
   if (!result_or_error) {
-    // Propagate any error from the Evaluate function
     return result_or_error.takeError();
   }
 

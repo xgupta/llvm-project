@@ -398,7 +398,7 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
     SBStructuredData info =
         m_debugger.GetScriptInterpreterInfo(m_debugger.GetScriptLanguage());
     if (!info) {
-      error.SetErrorString("no script interpreter.");
+       error.SetErrorString("no script interpreter.");
     } else {
       SBStream stream;
       error = info.GetAsJSON(stream);

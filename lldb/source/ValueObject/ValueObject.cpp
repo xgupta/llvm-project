@@ -1692,7 +1692,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromCString(
     if (value_string.front() == '+')
       value_string = value_string.drop_front(1);
     if (value_string.getAsInteger(0, iValue)) {
-      error.SetErrorStringWithFormat("integer conversion error %s",
+      error = Status::FromErrorStringWithFormat("integer conversion error %s",
                                      value_string.str().c_str());
       return nullptr;
     }
@@ -1701,7 +1701,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromCString(
     base_type = eBasicTypeInt;
   } else if (std::regex_match(str, floatRegex)) {
     if (value_string.getAsDouble(dValue)) {
-      error.SetErrorStringWithFormat("double conversion error %s",
+      error = Status::FromErrorStringWithFormat("double conversion error %s",
                                      value_string.str().c_str());
       return nullptr;
     }
@@ -1710,7 +1710,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromCString(
     base_type = eBasicTypeDouble;
   } else {
     if (value_string.front() != '"' || value_string.back() != '"') {
-      error.SetErrorStringWithFormat("string %s must be enclosed in quotes",
+      error = Status::FromErrorStringWithFormat("string %s must be enclosed in quotes",
                                      value_string.str().c_str());
       return nullptr;
     }
