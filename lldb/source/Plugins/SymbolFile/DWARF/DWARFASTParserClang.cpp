@@ -563,8 +563,8 @@ ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
           nullptr, // ExecutionContext *
           nullptr, // RegisterContext *
           module_sp, DataExtractor(debug_info_data, block_offset, block_length),
-          die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr, memberOffset,
-          nullptr, stack)) {
+          die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr, stack,
+          memberOffset, nullptr)) {
     return {};
   }
 

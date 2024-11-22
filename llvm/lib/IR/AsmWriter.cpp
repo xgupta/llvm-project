@@ -2391,12 +2391,21 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
     for (const DIExpression::ExprOperand &Op : N->expr_ops()) {
       auto OpStr = dwarf::OperationEncodingString(Op.getOp());
       assert(!OpStr.empty() && "Expected valid opcode");
-
+      auto opCode = Op.getOp();
       Out << FS << OpStr;
-      if (Op.getOp() == dwarf::DW_OP_LLVM_convert) {
+      if (opCode == dwarf::DW_OP_LLVM_convert) {
         Out << FS << Op.getArg(0);
         Out << FS << dwarf::AttributeEncodingString(Op.getArg(1));
-      } else {
+      }
+      // TODO this is an attempt to print the smothing like a reference.
+      // We want something like !DIEexpression(....DW_OP_call4, !17)
+      // where !17 should be reference..
+      // else if (opCode == dwarf::DW_OP_call4) {
+      //  int index = Op.getArg(0);
+      //  auto ref = N->getRefs()[index];
+      //  Out << FS << ref;
+      //}
+      else {
         for (unsigned A = 0, AE = Op.getNumArgs(); A != AE; ++A)
           Out << FS << Op.getArg(A);
       }

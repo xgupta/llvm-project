@@ -342,7 +342,7 @@ TypeSP DWARFASTParserLegacy::ParseTypeFromDWARF(
         if (type_name_const_str &&
             dwarf->GetUniqueDWARFASTTypeMap().Find(
                 type_name_const_str, die, decl,
-                byte_size_valid ? byte_size : -1, is_forward_declaration)) {
+                byte_size_valid ? byte_size : -1, *unique_ast_entry_ap)) {
           type_sp = unique_ast_entry_ap->m_type_sp;
           if (type_sp) {
             dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
@@ -698,6 +698,7 @@ size_t DWARFASTParserLegacy::ParseChildMembers(
             member_offset_in_bits = form_value.Unsigned();
             break;
           }
+          ++member_idx;
         }
       }
 
@@ -707,7 +708,6 @@ size_t DWARFASTParserLegacy::ParseChildMembers(
         m_ast.AddFieldToStruct(struct_compiler_type, ConstString(name),
                                member_full_type, member_offset_in_bits);
       }
-      ++member_idx;
     }
   }
 

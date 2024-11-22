@@ -142,12 +142,6 @@ public:
   bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
                            bool &is_complex) override;
 
-  unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
-
-  unsigned GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) override;
-
-  bool GetPtrAuthAddressDiversity(lldb::opaque_compiler_type_t type) override;
-
   bool IsFunctionType(lldb::opaque_compiler_type_t type) override;
 
   size_t
@@ -312,8 +306,7 @@ public:
 
   lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
 
-  llvm::Expected<uint32_t>
-  GetNumChildren(lldb::opaque_compiler_type_t type,
+  uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
                  bool omit_empty_base_classes,
                  const ExecutionContext *exe_ctx) override;
 
@@ -379,7 +372,7 @@ public:
   CompilerType
   GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) override;
 
-  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
+  CompilerType GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
       bool ignore_array_bounds, std::string &child_name,
@@ -530,7 +523,7 @@ public:
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,
-                                    SourceLanguage language,
+                                    lldb::LanguageType language,
                                     Expression::ResultType desired_type,
                                     const EvaluateExpressionOptions &options,
                                     ValueObject *ctx_obj) override;

@@ -966,7 +966,7 @@ uint16_t ValueObject::GetVarStringLength(Status &error) {
   return data.GetU16(&offset);
 }
 
-llvm::Expected<std::string> ValueObject::GetObjectDescription() {
+const char * ValueObject::GetObjectDescription() {
   if (!UpdateValueIfNeeded(true))
     return nullptr;
 

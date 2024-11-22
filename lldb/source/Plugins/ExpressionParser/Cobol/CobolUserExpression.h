@@ -85,7 +85,6 @@ private:
   lldb::ValueObjectSP GetElementAtIndex(lldb::ValueObjectSP var, uint32_t start,
                                         uint32_t len = 1);
   uint32_t GetUIntFromValueObjectSP(lldb::ValueObjectSP var);
-  uint32_t GetUIntFromValueObjectSPReportIndex(lldb::ValueObjectSP var, bool reportIndex);
   lldb::ValueObjectListSP FindAllCandidates(ConstString var_name);
   lldb::ValueObjectSP
   GetIndexedExpression(lldb::ValueObjectSP result,
@@ -93,7 +92,7 @@ private:
                        llvm::StringRef var_name);
   lldb::ValueObjectSP GetLevel88(llvm::StringRef var_name,
                                  lldb::ValueObjectSP &result,
-                                 CompilerType comp_type, int index);
+                                 CompilerType comp_type);
 };
 
 class CobolUserExpression : public UserExpression {
@@ -107,7 +106,7 @@ public:
   static bool classof(const Expression *obj) { return obj->isA(&ID); }
 
   CobolUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
-                      llvm::StringRef prefix, SourceLanguage language,
+                      llvm::StringRef prefix, lldb::LanguageType language,
                       ResultType desired_type,
                       const EvaluateExpressionOptions &options);
 

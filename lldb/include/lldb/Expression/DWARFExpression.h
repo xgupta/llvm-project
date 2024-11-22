@@ -138,16 +138,18 @@ public:
                        const plugin::dwarf::DWARFUnit *dwarf_cu,
                        const lldb::RegisterKind reg_set,
                        const Value *initial_value_ptr,
-                       const Value *object_address_ptr, Value &result,
-                       Status *error_ptr, std::vector<Value> &stack,
-           bool expression_call = false);
-  static llvm::Error
-  EvaluateCall(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
-               lldb::ModuleSP module_sp,
-               const plugin::dwarf::DWARFUnit *dwarf_cu,
-               dw_offset_t die_ref_offset, const lldb::RegisterKind reg_set,
-               const Value *initial_value_ptr, const Value *object_address_ptr,
-               std::vector<Value> &stack);
+                       const Value *object_address_ptr,
+                       std::vector<Value> &stack, Value &result,
+                       Status *error_ptr, bool expression_call = false);
+
+  static bool EvaluateCall(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+                           lldb::ModuleSP module_sp,
+                           const plugin::dwarf::DWARFUnit *dwarf_cu,
+                           dw_offset_t die_ref_offset,
+                           const lldb::RegisterKind reg_set,
+                           const Value *initial_value_ptr,
+                           const Value *object_address_ptr,
+                           std::vector<Value> &stack, Status *error_ptr);
 
   static bool ParseDWARFLocationList(const plugin::dwarf::DWARFUnit *dwarf_cu,
                                      const DataExtractor &data,

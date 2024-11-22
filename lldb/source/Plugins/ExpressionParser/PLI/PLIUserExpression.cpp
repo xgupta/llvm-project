@@ -52,7 +52,14 @@ static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
   if (index != 0)
     return true;
 
-  uint32_t total_count = comp_type->GetNumChildren(true, nullptr).get();
+  llvm::Expected<uint32_t> total_count_or_err =
+      comp_type->GetNumChildren(true, nullptr);
+  if (!total_count_or_err) {
+    llvm::consumeError(total_count_or_err.takeError());
+    return false;
+  }
+  uint32_t total_count = *total_count_or_err;
+
   for (uint32_t i = 0; i < total_count; ++i) {
     std::string child_name;
     uint32_t child_byte_size;
@@ -492,11 +499,16 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
   bool bt2 = false;
   std::string empty_str;
 
-  if (!(var->GetCompilerType().GetChildCompilerTypeAtIndex(
+  llvm::Expected<CompilerType> child_compiler_type_or_error =
+      var->GetCompilerType().GetChildCompilerTypeAtIndex(
           &m_exe_ctx, 0, true, true, false, empty_str, child_byte_size,
           child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-          bt1, bt2, var.get(), ut1)))
+          bt1, bt2, var.get(), ut1);
+
+  if (!child_compiler_type_or_error) {
+    llvm::consumeError(child_compiler_type_or_error.takeError());
     return nullptr;
+  }
 
   const uint64_t offset = start * child_byte_size;
   AddressType address_type = eAddressTypeInvalid;
@@ -509,9 +521,9 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
 ValueObjectSP
 PLIInterpreter::VisitFuncCallExpr(const PLIASTFuncCallExpr *expr) {
   llvm::StringRef funcName = expr->GetFuncName().m_text;
-  if (funcName == (llvm::StringRef("sizeof")))
-    // TODO
-    return nullptr;
+  // if (funcName == (llvm::StringRef("sizeof")))
+  //  TODO
+  // return nullptr;
 
   if (expr->getTotalNumParams() != 1) {
     m_error.SetErrorString("wrong number of params for sizeof operator.");
@@ -591,7 +603,7 @@ PLIInterpreter::VisitAssignmentExpr(const PLIASTAssignmentExpr *expr) {
 PLIUserExpression::PLIUserExpression(ExecutionContextScope &exe_scope,
                                      llvm::StringRef expr,
                                      llvm::StringRef prefix,
-                                     SourceLanguage language,
+                                     lldb::LanguageType language,
                                      ResultType desired_type,
                                      const EvaluateExpressionOptions &options)
     : UserExpression(exe_scope, expr, prefix, language, desired_type, options) {
@@ -607,7 +619,7 @@ bool PLIUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   if (m_interpreter->Parse())
     return true;
 
-  diagnostic_manager.Printf(lldb::eSeverityError,
+  diagnostic_manager.Printf(eDiagnosticSeverityError,
                             "PLI expression can't be interpreted");
   return false;
 }
@@ -634,14 +646,14 @@ PLIUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
         log->Printf("== [PLIUserExpression::Evaluate] Expression may not run, "
                     "but is not constant ==");
 
-      diagnostic_manager.PutString(lldb::eSeverityError,
+      diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    "expression needed to run but couldn't");
 
       return execution_results;
     }
   }
 
-  SourceLanguage language = target->GetLanguage();
+  lldb::LanguageType language = target->GetLanguage();
   m_interpreter->set_use_dynamic(options.GetUseDynamic());
   ValueObjectSP result_val_sp = m_interpreter->Evaluate(exe_ctx);
   Status err = std::move(m_interpreter->error());
@@ -650,9 +662,9 @@ PLIUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   if (!result_val_sp) {
     const char *error_cstr = err.AsCString();
     if (error_cstr && error_cstr[0])
-      diagnostic_manager.PutString(lldb::eSeverityError, error_cstr);
+      diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
     else
-      diagnostic_manager.PutString(lldb::eSeverityError,
+      diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    "expression can't be interpreted or run");
     return lldb::eExpressionDiscarded;
   }
@@ -663,7 +675,7 @@ PLIUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   result->m_flags |= ExpressionVariable::EVIsProgramReference;
   PersistentExpressionState *pv =
       target->GetPersistentExpressionStateForLanguage(
-          language.AsLanguageType());
+          language);
   if (pv != nullptr) {
     if (result_val_sp->GetName().IsEmpty())
       result->SetName(pv->GetNextPersistentVariableName());
