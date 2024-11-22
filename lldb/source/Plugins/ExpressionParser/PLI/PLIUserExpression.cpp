@@ -52,7 +52,14 @@ static bool SearchCompilerTypeForMemberWithName(CompilerType *comp_type,
   if (index != 0)
     return true;
 
-  uint32_t total_count = comp_type->GetNumChildren(true, nullptr).get();
+  llvm::Expected<uint32_t> total_count_or_err =
+      comp_type->GetNumChildren(true, nullptr);
+  if (!total_count_or_err) {
+    llvm::consumeError(total_count_or_err.takeError());
+    return false;
+  }
+  uint32_t total_count = *total_count_or_err;
+
   for (uint32_t i = 0; i < total_count; ++i) {
     std::string child_name;
     uint32_t child_byte_size;
@@ -492,11 +499,16 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
   bool bt2 = false;
   std::string empty_str;
 
-  if (!(var->GetCompilerType().GetChildCompilerTypeAtIndex(
+  llvm::Expected<CompilerType> child_compiler_type_or_error =
+      var->GetCompilerType().GetChildCompilerTypeAtIndex(
           &m_exe_ctx, 0, true, true, false, empty_str, child_byte_size,
           child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-          bt1, bt2, var.get(), ut1)))
+          bt1, bt2, var.get(), ut1);
+
+  if (!child_compiler_type_or_error) {
+    llvm::consumeError(child_compiler_type_or_error.takeError());
     return nullptr;
+  }
 
   const uint64_t offset = start * child_byte_size;
   AddressType address_type = eAddressTypeInvalid;
@@ -509,9 +521,9 @@ PLIInterpreter::VisitRefModExpr(const PLIASTRefModifierExpr *expr) {
 ValueObjectSP
 PLIInterpreter::VisitFuncCallExpr(const PLIASTFuncCallExpr *expr) {
   llvm::StringRef funcName = expr->GetFuncName().m_text;
-  if (funcName == (llvm::StringRef("sizeof")))
-    // TODO
-    return nullptr;
+  // if (funcName == (llvm::StringRef("sizeof")))
+  //  TODO
+  // return nullptr;
 
   if (expr->getTotalNumParams() != 1) {
     m_error.SetErrorString("wrong number of params for sizeof operator.");
