@@ -488,7 +488,7 @@ public:
   unsigned GetTypeQualifiers(lldb::opaque_compiler_type_t type) override;
 
   bool IsCStringType(lldb::opaque_compiler_type_t type,
-                     uint32_t &length) override;
+                     uint32_t &length);
 
   std::optional<size_t>
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
