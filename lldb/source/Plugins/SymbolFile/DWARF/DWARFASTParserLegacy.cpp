@@ -698,6 +698,7 @@ size_t DWARFASTParserLegacy::ParseChildMembers(
             member_offset_in_bits = form_value.Unsigned();
             break;
           }
+          ++member_idx;
         }
       }
 
@@ -707,7 +708,6 @@ size_t DWARFASTParserLegacy::ParseChildMembers(
         m_ast.AddFieldToStruct(struct_compiler_type, ConstString(name),
                                member_full_type, member_offset_in_bits);
       }
-      ++member_idx;
     }
   }
 

@@ -1502,6 +1502,8 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_call2:
     case dwarf::DW_OP_call4: {
       // Check if references are there or not.
+      // TODO  is not better doing  (_getNumOperands != 1)?
+      // we know call4 and call2 have exactly 1 parameter
       if ((I->getArg(0)) >= getNumOperands())
         return false;
       break;
@@ -1635,7 +1637,7 @@ DIExpression::convertToUndefExpression(const DIExpression *Expr) {
     UndefOps.append({dwarf::DW_OP_LLVM_fragment, FragmentInfo->OffsetInBits,
                      FragmentInfo->SizeInBits});
   }
-  return DIExpression::get(Expr->getContext(), UndefOps);
+  return DIExpression::get(Expr->getContext(), UndefOps, Expr->getRefs());
 }
 
 const DIExpression *
@@ -1648,7 +1650,7 @@ DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
   NewOps.reserve(Expr->getNumElements() + 2);
   NewOps.append({dwarf::DW_OP_LLVM_arg, 0});
   NewOps.append(Expr->elements_begin(), Expr->elements_end());
-  return DIExpression::get(Expr->getContext(), NewOps);
+  return DIExpression::get(Expr->getContext(), NewOps, Expr->getRefs());
 }
 
 std::optional<const DIExpression *>
@@ -1657,7 +1659,7 @@ DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
     return std::nullopt;
 
   if (auto Elts = Expr->getSingleLocationExpressionElements())
-    return DIExpression::get(Expr->getContext(), *Elts);
+    return DIExpression::get(Expr->getContext(), *Elts, Expr->getRefs());
 
   return std::nullopt;
 }
@@ -1918,7 +1920,7 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
   if (StackValue)
     NewOps.push_back(dwarf::DW_OP_stack_value);
 
-  return DIExpression::get(Expr->getContext(), NewOps);
+  return DIExpression::get(Expr->getContext(), NewOps, Expr->getRefs());
 }
 
 DIExpression *DIExpression::replaceArg(const DIExpression *Expr,
@@ -1940,7 +1942,8 @@ DIExpression *DIExpression::replaceArg(const DIExpression *Expr,
       --Arg;
     NewOps.push_back(Arg);
   }
-  return DIExpression::get(Expr->getContext(), NewOps);
+  return DIExpression::get(Expr->getContext(), NewOps,
+                           Expr->getRefs()); // just in case
 }
 
 DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
@@ -1973,7 +1976,7 @@ DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
   }
   if (StackValue)
     Ops.push_back(dwarf::DW_OP_stack_value);
-  return DIExpression::get(Expr->getContext(), Ops);
+  return DIExpression::get(Expr->getContext(), Ops, Expr->getRefs());
 }
 
 DIExpression *DIExpression::append(const DIExpression *Expr,
@@ -1994,8 +1997,7 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
     Op.appendToVector(NewOps);
   }
   NewOps.append(Ops.begin(), Ops.end());
-  auto *result =
-      DIExpression::get(Expr->getContext(), NewOps)->foldConstantMath();
+  auto *result = DIExpression::get(Expr->getContext(), NewOps, Expr->getRefs());
   assert(result->isValid() && "concatenated expression is not valid");
   return result;
 }
@@ -2118,12 +2120,11 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
   }
   assert((!Expr->isImplicit() || CanSplitValue) && "Expr can't be split");
   assert(Expr && "Unknown DIExpression");
-  if (EmitFragment) {
-    Ops.push_back(dwarf::DW_OP_LLVM_fragment);
-    Ops.push_back(OffsetInBits);
-    Ops.push_back(SizeInBits);
-  }
-  return DIExpression::get(Expr->getContext(), Ops);
+  Ops.push_back(dwarf::DW_OP_LLVM_fragment);
+  Ops.push_back(OffsetInBits);
+  Ops.push_back(SizeInBits);
+  return DIExpression::get(Expr->getContext(), Ops,
+                           Expr->getRefs()); // just in case
 }
 
 /// See declaration for more info.

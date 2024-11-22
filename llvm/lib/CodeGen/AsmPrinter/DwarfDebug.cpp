@@ -2651,6 +2651,13 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
 void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                                    const DbgValueLoc &Value,
                                    DwarfExpression &DwarfExpr) {
+  DwarfDebug::emitDebugLocValue(AP, BT, Value, DwarfExpr, NULL);
+}
+
+void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
+                                   const DbgValueLoc &Value,
+                                   DwarfExpression &DwarfExpr,
+                                   DwarfCompileUnit *TheCU) {
   auto *DIExpr = Value.getExpression();
   DIExpressionCursor ExprCursor(DIExpr);
   DwarfExpr.addFragmentOffset(DIExpr);
@@ -2724,7 +2731,20 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
   if (!Value.isVariadic()) {
     if (!EmitValueLocEntry(Value.getLocEntries()[0], ExprCursor))
       return;
-    DwarfExpr.addExpression(std::move(ExprCursor));
+    // We are working with call4 or call2 we need to pass the list of
+    // references (offsets?) when we add expressions.
+    if (TheCU) {
+      SmallVector<DIE *, 4> Refs;
+      for (const Metadata *ref : DIExpr->operands()) {
+        if (auto DGV = dyn_cast<DIGlobalVariableExpression>(ref)) {
+          ref = DGV->getVariable();
+        }
+        Refs.push_back(TheCU->getDIE((cast<DINode>(ref))));
+      }
+      DwarfExpr.addExpression(std::move(ExprCursor), 0, &Refs);
+    } else {
+      DwarfExpr.addExpression(std::move(ExprCursor));
+    }
     return;
   }
 
@@ -2762,11 +2782,11 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
     assert(llvm::is_sorted(Values) && "fragments are expected to be sorted");
 
     for (const auto &Fragment : Values)
-      DwarfDebug::emitDebugLocValue(AP, BT, Fragment, DwarfExpr);
+      DwarfDebug::emitDebugLocValue(AP, BT, Fragment, DwarfExpr, &TheCU);
 
   } else {
     assert(Values.size() == 1 && "only fragments may have >1 value");
-    DwarfDebug::emitDebugLocValue(AP, BT, Value, DwarfExpr);
+    DwarfDebug::emitDebugLocValue(AP, BT, Value, DwarfExpr, &TheCU);
   }
   DwarfExpr.finalize();
   if (DwarfExpr.TagOffset)
