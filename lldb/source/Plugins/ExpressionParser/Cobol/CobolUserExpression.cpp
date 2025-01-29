@@ -241,7 +241,7 @@ lldb::ValueObjectSP CobolInterpreter::GetLevel88(llvm::StringRef var_name,
   result->GetValueAsCString(eFormatCString, parent_name);
   /* Get truth value of level88 */
   auto value_expr =
-      "const char* arg = \"" + var_name.str() + "\"; rc_cob_level88(arg)";
+      "const char* arg = \"" + var_name.str() + "\"; (int) rc_cob_get_level88(arg,0)";
   target->EvaluateExpression(value_expr,
                              m_exe_ctx.GetBestExecutionContextScope(), result,
                              eval_options);
