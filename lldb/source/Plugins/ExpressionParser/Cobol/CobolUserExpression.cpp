@@ -716,7 +716,7 @@ CobolInterpreter::VisitRefModExpr(const CobolASTRefModifierExpr *expr) {
       const CobolASTFuncCallExpr *expr) {
     llvm::StringRef funcName = expr->GetFuncName().m_text;
     // if (!funcName.equals(llvm::StringRef("sizeof")))
-    if (funcName == (llvm::StringRef("sizeof")))
+    if (funcName != (llvm::StringRef("sizeof")))
       // TODO
       return nullptr;
 
