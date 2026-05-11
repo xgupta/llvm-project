@@ -9,17 +9,36 @@
 #ifndef LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H
 #define LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H
 #include "lldb/Symbol/TypeSystem.h"
+
+#include "Plugins/SymbolFile/DWARF/DWARFASTParserFortran.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
+
 namespace lldb_private {
 
-class TypeSystemFortran : public TypeSystem {
+class FortranType;
 
+class TypeSystemFortran : public TypeSystem {
+public:
   // llvm casting support
   bool isA(const void *ClassID) const override { return ClassID == &ID; }
   static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
 
   TypeSystemFortran();
   ~TypeSystemFortran();
+
+  static void Initialize();
+
+  static void Terminate();
+
+  plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
+
+  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
+                                           Module *module, Target *target);
+
+  static LanguageSet GetSupportedLanguagesForTypes();
+
+  static LanguageSet GetSupportedLanguagesForExpressions();
 
   // CompilerDecl functions
   ConstString DeclGetName(void *opaque_decl) override { return ConstString(); }
@@ -71,14 +90,14 @@ class TypeSystemFortran : public TypeSystem {
   bool IsCharType(lldb::opaque_compiler_type_t type) override { return false; }
 
   bool IsCompleteType(lldb::opaque_compiler_type_t type) override {
-    return false;
+    return true;
   }
 
-  bool IsDefined(lldb::opaque_compiler_type_t type) override { return false; }
-
-  bool IsFloatingPointType(lldb::opaque_compiler_type_t type) override {
-    return false;
+  bool IsDefined(lldb::opaque_compiler_type_t type) override {
+    return type != nullptr;
   }
+
+  bool IsFloatingPointType(lldb::opaque_compiler_type_t type) override;
 
   bool IsFunctionType(lldb::opaque_compiler_type_t type) override {
     return false;
@@ -112,9 +131,7 @@ class TypeSystemFortran : public TypeSystem {
   }
 
   bool IsIntegerType(lldb::opaque_compiler_type_t type,
-                     bool &is_signed) override {
-    return false;
-  };
+                     bool &is_signed) override;
 
   bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override {
     return false;
@@ -131,9 +148,7 @@ class TypeSystemFortran : public TypeSystem {
     return false;
   }
 
-  bool IsScalarType(lldb::opaque_compiler_type_t type) override {
-    return false;
-  }
+  bool IsScalarType(lldb::opaque_compiler_type_t type) override { return true; }
 
   bool IsVoidType(lldb::opaque_compiler_type_t type) override { return false; }
 
@@ -159,7 +174,7 @@ class TypeSystemFortran : public TypeSystem {
   // Type Completion
 
   bool GetCompleteType(lldb::opaque_compiler_type_t type) override {
-    return false;
+    return true;
   }
 
   // AST related queries
@@ -183,14 +198,11 @@ class TypeSystemFortran : public TypeSystem {
   }
 
   // Accessors
-
   ConstString GetTypeName(lldb::opaque_compiler_type_t type,
-                          bool BaseOnly) override {
-    return ConstString();
-  }
+                          bool BaseOnly) override;
 
   ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) override {
-    return ConstString();
+    return GetTypeName(type, false);
   }
 
   uint32_t
@@ -201,12 +213,18 @@ class TypeSystemFortran : public TypeSystem {
 
   lldb::LanguageType
   GetMinimumLanguage(lldb::opaque_compiler_type_t type) override {
-    return lldb::LanguageType::eLanguageTypeUnknown;
+    return lldb::LanguageType::eLanguageTypeFortran90;
   }
 
   lldb::TypeClass GetTypeClass(lldb::opaque_compiler_type_t type) override {
-    return lldb::TypeClass::eTypeClassInvalid;
+    if (!type)
+      return lldb::eTypeClassInvalid;
+
+    return lldb::eTypeClassBuiltin;
   }
+
+  CompilerType GetOrCreateFortranType(int kind, uint64_t bitsize,
+                                      ConstString name);
 
   // Creating related types
 
@@ -214,14 +232,16 @@ class TypeSystemFortran : public TypeSystem {
                                    ExecutionContextScope *exe_scope) override {
     return CompilerType();
   }
-
+  //
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override {
-    return CompilerType();
+    if (!type)
+      return CompilerType();
+    return CompilerType(weak_from_this(), type);
   }
 
   CompilerType
   GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) override {
-    return CompilerType();
+    return CompilerType(weak_from_this(), type);
   }
 
   // Returns -1 if this isn't a function of if the function doesn't have a
@@ -267,17 +287,11 @@ class TypeSystemFortran : public TypeSystem {
 
   llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
-             ExecutionContextScope *exe_scope) override {
-    return 0;
-  }
+             ExecutionContextScope *exe_scope) override;
 
-  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) override {
-    return lldb::eEncodingInvalid;
-  }
+  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) override;
 
-  lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override {
-    return lldb::eFormatDefault;
-  }
+  lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
 
   llvm::Expected<uint32_t>
   GetNumChildren(lldb::opaque_compiler_type_t type,
@@ -285,10 +299,10 @@ class TypeSystemFortran : public TypeSystem {
                  const ExecutionContext *exe_ctx) override {
     return 0;
   }
-
+  // TODO
   lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override {
-    return lldb::eBasicTypeUnsignedInt;
+    return lldb::eBasicTypeInt;
   }
 
   uint32_t GetNumFields(lldb::opaque_compiler_type_t type) override {
@@ -420,14 +434,10 @@ class TypeSystemFortran : public TypeSystem {
     return 0;
   }
 
-  CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override {
-    return CompilerType();
-  }
+  CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
 
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
-                                                   size_t bit_size) override {
-    return CompilerType();
-  }
+                                                   size_t bit_size) override;
 
   bool IsBeingDefined(lldb::opaque_compiler_type_t type) override {
     return false;
@@ -460,13 +470,17 @@ class TypeSystemFortran : public TypeSystem {
 
   CompilerType
   GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) override {
-    return CompilerType();
+    if (!type)
+      return CompilerType();
+    return CompilerType(weak_from_this(), type);
   }
 
   CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override {
-    return CompilerType();
+    if (!type)
+      return CompilerType();
+    return CompilerType(weak_from_this(), type);
   }
-  // TODO
+
   bool IsReferenceType(lldb::opaque_compiler_type_t type,
                        CompilerType *pointee_type, bool *is_rvalue) override {
     return false;
@@ -475,6 +489,14 @@ class TypeSystemFortran : public TypeSystem {
 private:
   // LLVM RTTI support
   static char ID;
+  typedef std::pair<int, uint64_t> TypeKey;
+  typedef llvm::DenseMap<TypeKey, std::unique_ptr<FortranType>> TypeMap;
+
+  TypeMap m_type_map;
+  std::unique_ptr<DWARFASTParserFortran> m_dwarf_ast_parser_up;
+
+  TypeSystemFortran(const TypeSystemFortran &) = delete;
+  const TypeSystemFortran &operator=(const TypeSystemFortran &) = delete;
 };
 } // namespace lldb_private
 #endif // LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H

@@ -8,7 +8,6 @@
 
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_FORTRAN_FORTRANLANGUAGE_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_FORTRAN_FORTRANLANGUAGE_H
-#include "lldb/Target/Language.h"
 
 #include "llvm/ADT/StringRef.h"
 
