@@ -7,8 +7,14 @@
 //===----------------------------------------------------------------------===//
 #include "TypeSystemFortran.h"
 
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Target/Target.h"
+
+#include "llvm/Support/raw_ostream.h"
+
+#include "Plugins/SymbolFile/DWARF/DWARFASTParserFortran.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -19,36 +25,57 @@ LLDB_PLUGIN_DEFINE(TypeSystemFortran)
 
 namespace lldb_private {
 
-// Temporary Type class to represent scalar types for prototype
+/// A simplified internal representation of a Fortran type.
+/// In the future, this will likely be replaced by a Flang-backed AST.
 class FortranType {
 public:
-  enum TypeKind { KIND_INTEGER, KIND_LOGICAL, KIND_REAL, KIND_UNKNOWN };
-  FortranType(int kind, const lldb_private::ConstString &name, uint64_t bitsize)
-      : m_kind(kind), m_type_name(name), m_bitsize(bitsize) {}
-  int GetKind() { return m_kind; }
-  uint64_t GetBitSize() { return m_bitsize; }
-  lldb_private::ConstString GetName() { return m_type_name; }
+  enum TypeKind {
+    KIND_INTEGER,
+    KIND_LOGICAL,
+    KIND_REAL,
+    KIND_FUNCTION,
+    KIND_UNKNOWN
+  };
+  FortranType(int kind, const ConstString &name, uint64_t bitsize)
+      : m_kind(kind), m_bitsize(bitsize), m_type_name(name) {}
+  int GetKind() const { return m_kind; }
+  uint64_t GetBitSize() const { return m_bitsize; }
+  ConstString GetName() const { return m_type_name; }
 
 private:
   int m_kind;
   uint64_t m_bitsize;
-  lldb_private::ConstString m_type_name;
+  ConstString m_type_name;
 };
-}; // namespace lldb_private
 
-namespace {
-bool IsLanguageSupported(lldb::LanguageType language) {
-  if (language == lldb::LanguageType::eLanguageTypeFortran77 ||
-      language == lldb::LanguageType::eLanguageTypeFortran90 ||
-      language == lldb::LanguageType::eLanguageTypeFortran95 ||
-      language == lldb::LanguageType::eLanguageTypeFortran03 ||
-      language == lldb::LanguageType::eLanguageTypeFortran08 ||
-      language == lldb::LanguageType::eLanguageTypeFortran18)
+class FortranFunction : public FortranType {
+public:
+  FortranFunction(ConstString func_name,
+                  const SmallVectorImpl<CompilerType> &parameters)
+      : FortranType(FortranType::KIND_FUNCTION, func_name, 0) {
+    m_parameters.assign(parameters.begin(), parameters.end());
+  }
+  ArrayRef<CompilerType> GetParameters() const { return m_parameters; }
+  size_t GetNumberOfParameters() const { return m_parameters.size(); }
+
+private:
+  SmallVector<CompilerType, 4> m_parameters;
+};
+} // namespace lldb_private
+
+/// Used to determine if TypeSystem supports the language passed in CreateInstance
+static bool IsLanguageSupported(LanguageType language) {
+  if (language == LanguageType::eLanguageTypeFortran77 ||
+      language == LanguageType::eLanguageTypeFortran90 ||
+      language == LanguageType::eLanguageTypeFortran95 ||
+      language == LanguageType::eLanguageTypeFortran03 ||
+      language == LanguageType::eLanguageTypeFortran08 ||
+      language == LanguageType::eLanguageTypeFortran18)
     return true;
 
   return false;
 }
-} // namespace
+
 char TypeSystemFortran::ID;
 
 TypeSystemFortran::~TypeSystemFortran() = default;
@@ -64,6 +91,33 @@ void TypeSystemFortran::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
+plugin::dwarf::DWARFASTParser *TypeSystemFortran::GetDWARFParser() {
+  if (!m_dwarf_ast_parser_up)
+    m_dwarf_ast_parser_up = std::make_unique<DWARFASTParserFortran>(*this);
+  return m_dwarf_ast_parser_up.get();
+}
+
+// TODO: Process Target and architecture for pointers and Expression Evaluation,
+// if module and target have different typesystems like clang, we would have to
+// account for that here
+TypeSystemSP TypeSystemFortran::CreateInstance(LanguageType language,
+                                               Module *module, Target *target) {
+
+  if (IsLanguageSupported(language)) {
+    auto type_system_sp = std::make_shared<TypeSystemFortran>();
+
+    // Get the byte order from the target or module and store it
+    if (target) {
+      type_system_sp->SetByteOrder(target->GetArchitecture().GetByteOrder());
+    } else if (module) {
+      type_system_sp->SetByteOrder(module->GetArchitecture().GetByteOrder());
+    }
+
+    return type_system_sp;
+  }
+  return TypeSystemSP();
+}
+
 LanguageSet TypeSystemFortran::GetSupportedLanguagesForTypes() {
   LanguageSet languages;
   languages.Insert(eLanguageTypeFortran77);
@@ -75,6 +129,8 @@ LanguageSet TypeSystemFortran::GetSupportedLanguagesForTypes() {
   return languages;
 }
 
+// FIXME: Currently returns all Fortran languages to satisfy plugin requirements,
+// but expression evaluation is not yet implemented.
 LanguageSet TypeSystemFortran::GetSupportedLanguagesForExpressions() {
   LanguageSet languages;
   languages.Insert(eLanguageTypeFortran77);
@@ -86,40 +142,21 @@ LanguageSet TypeSystemFortran::GetSupportedLanguagesForExpressions() {
   return languages;
 }
 
-bool TypeSystemFortran::IsFloatingPointType(lldb::opaque_compiler_type_t type) {
-  int kind = static_cast<FortranType *>(type)->GetKind();
-  if (kind == FortranType::KIND_REAL)
+//FIXME: Is support for all Fortran ISO the goal?
+bool TypeSystemFortran::SupportsLanguage(lldb::LanguageType language) {
+  if (language == lldb::LanguageType::eLanguageTypeFortran77 ||
+      language == lldb::LanguageType::eLanguageTypeFortran90 ||
+      language == lldb::LanguageType::eLanguageTypeFortran95 ||
+      language == lldb::LanguageType::eLanguageTypeFortran03 ||
+      language == lldb::LanguageType::eLanguageTypeFortran08 ||
+      language == lldb::LanguageType::eLanguageTypeFortran18) {
     return true;
+  }
   return false;
 }
 
-ConstString TypeSystemFortran::GetTypeName(lldb::opaque_compiler_type_t type,
-                                           bool BaseOnly) {
-  if (!type)
-    return ConstString();
-  FortranType *fortran_type = static_cast<FortranType *>(type);
-  uint64_t bytes = fortran_type->GetBitSize() / 8;
-  if (BaseOnly)
-    return fortran_type->GetName();
-  switch (fortran_type->GetKind()) {
-  case FortranType::KIND_INTEGER:
-    if (fortran_type->GetBitSize() != 32)
-      return ConstString(llvm::formatv("INTEGER(KIND={0})", bytes).str());
-    else
-      return fortran_type->GetName();
-    break;
-  case FortranType::KIND_LOGICAL:
-    return fortran_type->GetName();
-  case FortranType::KIND_REAL:
-    if (bytes == 4)
-      return ConstString("REAL");
-    if (bytes == 8)
-      return ConstString("DOUBLE PRECISION");
-    return ConstString(llvm::formatv("REAL(KIND={0})", bytes).str());
-  }
-  return ConstString("Unsupported");
-}
-
+/// Returns the type assosciated with the kind and bitsize, or creates it 
+/// if it is not in the map
 CompilerType TypeSystemFortran::GetOrCreateFortranType(int kind,
                                                        uint64_t bitsize,
                                                        ConstString name) {
@@ -134,20 +171,80 @@ CompilerType TypeSystemFortran::GetOrCreateFortranType(int kind,
   return CompilerType(weak_from_this(), (void *)raw_ptr);
 }
 
-// FIXME: Needs a map to index this
-CompilerType
-TypeSystemFortran::GetBasicTypeFromAST(lldb::BasicType basic_type) {
+/// Returns the type assosciated with the name, or creates it 
+/// if it is not in the map
+CompilerType TypeSystemFortran::GetOrCreateFortranFunction(
+    ConstString name, const SmallVectorImpl<CompilerType> &parameters) {
+  FortranType *type = m_function_map[name].get();
+  if (type)
+    return CompilerType(weak_from_this(), (void *)type);
+  auto new_type_up = std::make_unique<FortranFunction>(name, parameters);
+  FortranType *raw_ptr = new_type_up.get();
+
+  m_function_map[name] = std::move(new_type_up);
+
+  return CompilerType(weak_from_this(), (void *)raw_ptr);
+}
+
+CompilerType TypeSystemFortran::CreateType(uint32_t kind, uint64_t bitsize,
+                                           ConstString name) {
+  int underlying_kind;
+  switch (kind) {
+  case dwarf::DW_ATE_boolean:
+    underlying_kind = FortranType::KIND_LOGICAL;
+    break;
+  case dwarf::DW_ATE_float:
+    underlying_kind = FortranType::KIND_REAL;
+    break;
+  case dwarf::DW_ATE_signed:
+    underlying_kind = FortranType::KIND_INTEGER;
+    break;
+  default:
+    return CompilerType();
+  }
+  return GetOrCreateFortranType(underlying_kind, bitsize, name);
+}
+
+/// Returns the type name upper-cased to follow Fortran's general style
+ConstString TypeSystemFortran::GetTypeName(opaque_compiler_type_t type,
+                                           bool BaseOnly) {
+  if (!type)
+    return ConstString();
+  FortranType *fortran_type = static_cast<FortranType *>(type);
+  uint64_t bytes = fortran_type->GetBitSize() / 8;
+  if (BaseOnly)
+    return fortran_type->GetName();
+  switch (fortran_type->GetKind()) {
+  case FortranType::KIND_INTEGER:
+    if (fortran_type->GetBitSize() != 32)
+      return ConstString(formatv("INTEGER(KIND={0})", bytes).str());
+    else
+      return fortran_type->GetName();
+    break;
+  case FortranType::KIND_LOGICAL:
+    return fortran_type->GetName();
+  case FortranType::KIND_REAL:
+    if (bytes == 4)
+      return ConstString("REAL");
+    if (bytes == 8)
+      return ConstString("DOUBLE PRECISION");
+    return ConstString(formatv("REAL(KIND={0})", bytes).str());
+  }
+  return ConstString("Unsupported");
+}
+
+CompilerType TypeSystemFortran::GetBasicTypeFromAST(BasicType basic_type) {
   switch (basic_type) {
-  case lldb::eBasicTypeInt:
+  case eBasicTypeInt:
     return GetOrCreateFortranType(FortranType::KIND_INTEGER, 32,
                                   ConstString("INTEGER"));
-  case lldb::eBasicTypeFloat:
+  case eBasicTypeFloat:
     return GetOrCreateFortranType(FortranType::KIND_REAL, 32,
                                   ConstString("REAL"));
-  case lldb::eBasicTypeDouble:
+  case eBasicTypeDouble:
     return GetOrCreateFortranType(FortranType::KIND_REAL, 64,
                                   ConstString("DOUBLE PRECISION"));
-  case lldb::eBasicTypeBool:
+  case eBasicTypeBool:
     return GetOrCreateFortranType(FortranType::KIND_LOGICAL, 32,
                                   ConstString("LOGICAL"));
   default:
@@ -156,7 +253,7 @@ TypeSystemFortran::GetBasicTypeFromAST(lldb::BasicType basic_type) {
 }
 
 CompilerType
-TypeSystemFortran::GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
+TypeSystemFortran::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
                                                        size_t bit_size) {
   switch (encoding) {
   case eEncodingSint:
@@ -170,26 +267,32 @@ TypeSystemFortran::GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
   }
 }
 
-plugin::dwarf::DWARFASTParser *TypeSystemFortran::GetDWARFParser() {
-  if (!m_dwarf_ast_parser_up)
-    m_dwarf_ast_parser_up = std::make_unique<DWARFASTParserFortran>(*this);
-  return m_dwarf_ast_parser_up.get();
-}
-
-// TODO: Process Target and architecture for pointers and Expression Evaluation,
-// if module and target have different typesystems like clang, we would have to
-// account for that here
-lldb::TypeSystemSP
-TypeSystemFortran::CreateInstance(lldb::LanguageType language, Module *module,
-                                  Target *target) {
-  if (IsLanguageSupported(language)) {
-    return std::make_shared<TypeSystemFortran>();
+uint32_t
+TypeSystemFortran::GetTypeInfo(opaque_compiler_type_t type,
+                               CompilerType *pointee_or_element_compiler_type) {
+  if (!type)
+    return 0;
+  FortranType *fortran_type = static_cast<FortranType *>(type);
+  uint32_t builtin_type_flags = eTypeIsBuiltIn | eTypeHasValue;
+  int type_kind = fortran_type->GetKind();
+  switch (type_kind) {
+  case FortranType::KIND_REAL:
+  case FortranType::KIND_INTEGER:
+  case FortranType::KIND_LOGICAL:
+    builtin_type_flags |= eTypeIsScalar;
+    if (type_kind == FortranType::KIND_INTEGER)
+      builtin_type_flags |= eTypeIsInteger | eTypeIsSigned;
+    if (type_kind == FortranType::KIND_REAL)
+      builtin_type_flags |= eTypeIsFloat;
+    break;
+  default:
+    break;
   }
-  return TypeSystemSP();
+  return builtin_type_flags;
 }
 
-llvm::Expected<uint64_t>
-TypeSystemFortran::GetBitSize(lldb::opaque_compiler_type_t type,
+Expected<uint64_t>
+TypeSystemFortran::GetBitSize(opaque_compiler_type_t type,
                               ExecutionContextScope *exe_scope) {
   if (!type)
     return 0;
@@ -197,40 +300,40 @@ TypeSystemFortran::GetBitSize(lldb::opaque_compiler_type_t type,
   return fortran_type->GetBitSize();
 }
 
-lldb::Encoding
-TypeSystemFortran::GetEncoding(lldb::opaque_compiler_type_t type) {
+Encoding TypeSystemFortran::GetEncoding(opaque_compiler_type_t type) {
   if (!type)
-    return lldb::eEncodingInvalid;
+    return eEncodingInvalid;
   FortranType *fortran_type = static_cast<FortranType *>(type);
   switch (fortran_type->GetKind()) {
   case FortranType::KIND_REAL:
-    return lldb::eEncodingIEEE754;
+    return eEncodingIEEE754;
   case FortranType::KIND_INTEGER:
-    return lldb::eEncodingSint;
+    return eEncodingSint;
   case FortranType::KIND_LOGICAL:
-    return lldb::eEncodingUint;
+    return eEncodingUint;
   default:
-    return lldb::eEncodingInvalid;
+    return eEncodingInvalid;
   }
 }
 
-lldb::Format TypeSystemFortran::GetFormat(lldb::opaque_compiler_type_t type) {
+Format TypeSystemFortran::GetFormat(opaque_compiler_type_t type) {
   if (!type)
-    return lldb::eFormatDefault;
+    return eFormatDefault;
   FortranType *fortran_type = static_cast<FortranType *>(type);
   switch (fortran_type->GetKind()) {
   case FortranType::KIND_INTEGER:
-    return lldb::eFormatDecimal;
+    return eFormatDecimal;
   case FortranType::KIND_REAL:
-    return lldb::eFormatFloat;
+    return eFormatFloat;
   case FortranType::KIND_LOGICAL:
-    return lldb::eFormatBoolean;
+    return eFormatBoolean;
   default:
-    return lldb::eFormatDefault;
+    return eFormatDefault;
   }
 }
 
-bool IsIntegerType(lldb::opaque_compiler_type_t type, bool &is_signed) {
+bool TypeSystemFortran::IsIntegerType(opaque_compiler_type_t type,
+                                      bool &is_signed) {
   if (!type)
     return false;
   FortranType *fortran_type = static_cast<FortranType *>(type);
@@ -239,4 +342,41 @@ bool IsIntegerType(lldb::opaque_compiler_type_t type, bool &is_signed) {
     return true;
   }
   return false;
+}
+
+bool TypeSystemFortran::IsFloatingPointType(opaque_compiler_type_t type) {
+  int kind = static_cast<FortranType *>(type)->GetKind();
+  if (kind == FortranType::KIND_REAL)
+    return true;
+  return false;
+}
+
+bool TypeSystemFortran::DumpTypeValue(
+    lldb::opaque_compiler_type_t type, Stream &s, lldb::Format format,
+    const DataExtractor &data, lldb::offset_t data_offset,
+    size_t data_byte_size, uint32_t bitfield_bit_size,
+    uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope) {
+  if (!type)
+    return false;
+
+  FortranType *fortran_type = static_cast<FortranType *>(type);
+  int type_kind = fortran_type->GetKind();
+  DataExtractor format_data;
+  switch (type_kind) {
+  case FortranType::KIND_INTEGER:
+  case FortranType::KIND_REAL:
+  case FortranType::KIND_LOGICAL:
+
+    format_data.SetData(data, 0, data.GetByteSize());
+    format_data.SetAddressByteSize(data.GetAddressByteSize());
+    format_data.SetByteOrder(m_byte_order);
+    return DumpDataExtractor(format_data, &s, data_offset, format,
+                             data_byte_size, 1 /*item_count*/, UINT32_MAX,
+                             LLDB_INVALID_ADDRESS, bitfield_bit_size,
+                             bitfield_bit_offset, exe_scope);
+  default:
+    Host::SystemLog(lldb::eSeverityError,
+                    "Error: DumpTypeValue not handled yet.\n");
+    return false;
+  }
 }

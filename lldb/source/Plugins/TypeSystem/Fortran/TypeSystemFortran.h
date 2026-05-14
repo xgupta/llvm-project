@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H
 #include "lldb/Symbol/TypeSystem.h"
 
-#include "Plugins/SymbolFile/DWARF/DWARFASTParserFortran.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -18,7 +17,14 @@ namespace lldb_private {
 
 class FortranType;
 
+/// A TypeSystem implementation for the Fortran language.
+/// 
+/// This plugin provides LLDB with the ability to understand Fortran types
+/// parsed from debug information (DWARF).
 class TypeSystemFortran : public TypeSystem {
+  // LLVM RTTI support
+  static char ID;
+
 public:
   // llvm casting support
   bool isA(const void *ClassID) const override { return ClassID == &ID; }
@@ -36,9 +42,17 @@ public:
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Module *module, Target *target);
 
+  CompilerType CreateType(uint32_t kind, uint64_t bitsize, ConstString name);
+
   static LanguageSet GetSupportedLanguagesForTypes();
 
   static LanguageSet GetSupportedLanguagesForExpressions();
+
+  bool SupportsLanguage(lldb::LanguageType language) override;
+
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+
+  static llvm::StringRef GetPluginNameStatic() { return "fortran"; }
 
   // CompilerDecl functions
   ConstString DeclGetName(void *opaque_decl) override { return ConstString(); }
@@ -77,6 +91,7 @@ public:
   bool Verify(lldb::opaque_compiler_type_t type) { return false; };
 #endif
 
+  // Type Classification
   bool IsArrayType(lldb::opaque_compiler_type_t type,
                    CompilerType *element_type, uint64_t *size,
                    bool *is_incomplete) override {
@@ -154,25 +169,7 @@ public:
 
   bool CanPassInRegisters(const CompilerType &type) override { return false; }
 
-  // TypeSystems can support more than one language
-  bool SupportsLanguage(lldb::LanguageType language) override {
-    if (language == lldb::LanguageType::eLanguageTypeFortran77 ||
-        language == lldb::LanguageType::eLanguageTypeFortran90 ||
-        language == lldb::LanguageType::eLanguageTypeFortran95 ||
-        language == lldb::LanguageType::eLanguageTypeFortran03 ||
-        language == lldb::LanguageType::eLanguageTypeFortran08 ||
-        language == lldb::LanguageType::eLanguageTypeFortran18) {
-      return true;
-    }
-    return false;
-  }
-
-  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
-
-  static llvm::StringRef GetPluginNameStatic() { return "fortran"; }
-
-  // Type Completion
-
+  // Type Completion, all basic types are complete
   bool GetCompleteType(lldb::opaque_compiler_type_t type) override {
     return true;
   }
@@ -205,11 +202,8 @@ public:
     return GetTypeName(type, false);
   }
 
-  uint32_t
-  GetTypeInfo(lldb::opaque_compiler_type_t type,
-              CompilerType *pointee_or_element_compiler_type) override {
-    return 0;
-  }
+  uint32_t GetTypeInfo(lldb::opaque_compiler_type_t type,
+                       CompilerType *pointee_or_element_compiler_type) override;
 
   lldb::LanguageType
   GetMinimumLanguage(lldb::opaque_compiler_type_t type) override {
@@ -225,6 +219,9 @@ public:
 
   CompilerType GetOrCreateFortranType(int kind, uint64_t bitsize,
                                       ConstString name);
+
+  CompilerType GetOrCreateFortranFunction(
+      ConstString name, const llvm::SmallVectorImpl<CompilerType> &parameters);
 
   // Creating related types
 
@@ -278,6 +275,10 @@ public:
     return CompilerType();
   }
 
+  void SetByteOrder(lldb::ByteOrder byte_order) { m_byte_order = byte_order; }
+
+  lldb::ByteOrder GetByteOrder() { return m_byte_order; }
+
   // Exploring the type
 
   const llvm::fltSemantics &
@@ -299,7 +300,7 @@ public:
                  const ExecutionContext *exe_ctx) override {
     return 0;
   }
-  // TODO
+
   lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override {
     return lldb::eBasicTypeInt;
@@ -383,10 +384,7 @@ public:
                      lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                     ExecutionContextScope *exe_scope) override {
-    return false;
-  }
-
+                     ExecutionContextScope *exe_scope) override;
   /// Dump the type to stdout.
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type,
@@ -412,7 +410,6 @@ public:
   void Dump(llvm::raw_ostream &output, llvm::StringRef filter,
             bool show_color) override {}
 
-  /// This is used by swift.
   bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) override {
     return false;
   }
@@ -487,16 +484,23 @@ public:
   }
 
 private:
-  // LLVM RTTI support
-  static char ID;
+  
   typedef std::pair<int, uint64_t> TypeKey;
   typedef llvm::DenseMap<TypeKey, std::unique_ptr<FortranType>> TypeMap;
+  typedef llvm::DenseMap<ConstString, std::unique_ptr<FortranType>> FunctionMap;
 
+  // TODO: Types are assosciated by their kind and bitsize, this helps to 
+  // return from their basic type and is enough for basic types but 
+  // will change once more types are supported
   TypeMap m_type_map;
-  std::unique_ptr<DWARFASTParserFortran> m_dwarf_ast_parser_up;
-
-  TypeSystemFortran(const TypeSystemFortran &) = delete;
-  const TypeSystemFortran &operator=(const TypeSystemFortran &) = delete;
+  // Right now we can index functions just by their name, but a more 
+  // effecient solution might replace this
+  FunctionMap m_function_map;
+  std::unique_ptr<plugin::dwarf::DWARFASTParser> m_dwarf_ast_parser_up;
+  /// Store byte order of the system so variables can be printed correctly
+  lldb::ByteOrder m_byte_order;
+  TypeSystemFortran(const TypeSystemFortran &);
+  const TypeSystemFortran &operator=(const TypeSystemFortran &);
 };
 } // namespace lldb_private
 #endif // LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H
