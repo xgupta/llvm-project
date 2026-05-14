@@ -63,7 +63,8 @@ private:
 };
 } // namespace lldb_private
 
-/// Used to determine if TypeSystem supports the language passed in CreateInstance
+/// Used to determine if TypeSystem supports the language passed in
+/// CreateInstance
 static bool IsLanguageSupported(LanguageType language) {
   if (language == LanguageType::eLanguageTypeFortran77 ||
       language == LanguageType::eLanguageTypeFortran90 ||
@@ -129,8 +130,8 @@ LanguageSet TypeSystemFortran::GetSupportedLanguagesForTypes() {
   return languages;
 }
 
-// FIXME: Currently returns all Fortran languages to satisfy plugin requirements,
-// but expression evaluation is not yet implemented.
+// FIXME: Currently returns all Fortran languages to satisfy plugin
+// requirements, but expression evaluation is not yet implemented.
 LanguageSet TypeSystemFortran::GetSupportedLanguagesForExpressions() {
   LanguageSet languages;
   languages.Insert(eLanguageTypeFortran77);
@@ -142,7 +143,7 @@ LanguageSet TypeSystemFortran::GetSupportedLanguagesForExpressions() {
   return languages;
 }
 
-//FIXME: Is support for all Fortran ISO the goal?
+// FIXME: Is support for all Fortran ISO the goal?
 bool TypeSystemFortran::SupportsLanguage(lldb::LanguageType language) {
   if (language == lldb::LanguageType::eLanguageTypeFortran77 ||
       language == lldb::LanguageType::eLanguageTypeFortran90 ||
@@ -155,7 +156,7 @@ bool TypeSystemFortran::SupportsLanguage(lldb::LanguageType language) {
   return false;
 }
 
-/// Returns the type assosciated with the kind and bitsize, or creates it 
+/// Returns the type assosciated with the kind and bitsize, or creates it
 /// if it is not in the map
 CompilerType TypeSystemFortran::GetOrCreateFortranType(int kind,
                                                        uint64_t bitsize,
@@ -171,7 +172,7 @@ CompilerType TypeSystemFortran::GetOrCreateFortranType(int kind,
   return CompilerType(weak_from_this(), (void *)raw_ptr);
 }
 
-/// Returns the type assosciated with the name, or creates it 
+/// Returns the type assosciated with the name, or creates it
 /// if it is not in the map
 CompilerType TypeSystemFortran::GetOrCreateFortranFunction(
     ConstString name, const SmallVectorImpl<CompilerType> &parameters) {

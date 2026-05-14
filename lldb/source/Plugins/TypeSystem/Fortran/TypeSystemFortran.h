@@ -18,7 +18,7 @@ namespace lldb_private {
 class FortranType;
 
 /// A TypeSystem implementation for the Fortran language.
-/// 
+///
 /// This plugin provides LLDB with the ability to understand Fortran types
 /// parsed from debug information (DWARF).
 class TypeSystemFortran : public TypeSystem {
@@ -484,16 +484,15 @@ public:
   }
 
 private:
-  
   typedef std::pair<int, uint64_t> TypeKey;
   typedef llvm::DenseMap<TypeKey, std::unique_ptr<FortranType>> TypeMap;
   typedef llvm::DenseMap<ConstString, std::unique_ptr<FortranType>> FunctionMap;
 
-  // TODO: Types are assosciated by their kind and bitsize, this helps to 
-  // return from their basic type and is enough for basic types but 
+  // TODO: Types are assosciated by their kind and bitsize, this helps to
+  // return from their basic type and is enough for basic types but
   // will change once more types are supported
   TypeMap m_type_map;
-  // Right now we can index functions just by their name, but a more 
+  // Right now we can index functions just by their name, but a more
   // effecient solution might replace this
   FunctionMap m_function_map;
   std::unique_ptr<plugin::dwarf::DWARFASTParser> m_dwarf_ast_parser_up;

@@ -30,7 +30,7 @@ DWARFASTParserFortran::DWARFASTParserFortran(TypeSystemFortran &ast)
 
 DWARFASTParserFortran::~DWARFASTParserFortran() {}
 
-//TODO: Add more logging here there is not enough
+// TODO: Add more logging here there is not enough
 lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(const SymbolContext &sc,
                                                        const DWARFDIE &die,
                                                        bool *type_is_new_ptr) {

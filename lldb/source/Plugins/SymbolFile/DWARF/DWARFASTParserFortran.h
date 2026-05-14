@@ -40,8 +40,9 @@ public:
       const lldb_private::plugin::dwarf::DWARFDIE &die,
       lldb_private::Type *type,
       const lldb_private::CompilerType &compiler_type) override;
-  
-  //TODO: The following functions are left intentionally blank and will be populated in a future patch
+
+  // TODO: The following functions are left intentionally blank and will be
+  // populated in a future patch
   lldb_private::ConstString ConstructDemangledNameFromDWARF(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override {
     return lldb_private::ConstString();
