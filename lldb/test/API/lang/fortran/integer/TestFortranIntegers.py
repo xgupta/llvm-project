@@ -28,18 +28,18 @@ class FortranTestIntegers(TestBase):
 
         short_int = frame.FindVariable("short_int")
         self.assertSuccess(short_int.GetError(), "Failed to fetch short_int")
-        self.assertEqual(tiny_int.GetTypeName(), "INTEGER(KIND=2)")
+        self.assertEqual(short_int.GetTypeName(), "INTEGER(KIND=2)")
         self.assertEqual(short_int.GetByteSize(), 2)
         self.assertEqual(short_int.GetValueAsSigned(), 32767)
         
         normal_int = frame.FindVariable("normal_int")
         self.assertSuccess(normal_int.GetError(), "Failed to fetch normal_int")
-        self.assertEqual(tiny_int.GetTypeName(), "INTEGER")
+        self.assertEqual(normal_int.GetTypeName(), "INTEGER")
         self.assertEqual(normal_int.GetByteSize(), 4)
         self.assertEqual(normal_int.GetValueAsSigned(), 2147483647)
 
         huge_int = frame.FindVariable("huge_int")
         self.assertSuccess(huge_int.GetError(), "Failed to fetch huge_int")
-        self.assertEqual(tiny_int.GetTypeName(), "INTEGER(KIND=8)")
+        self.assertEqual(huge_int.GetTypeName(), "INTEGER(KIND=8)")
         self.assertEqual(huge_int.GetByteSize(), 8)
         self.assertEqual(huge_int.GetValueAsSigned(), 9223372036854775807)

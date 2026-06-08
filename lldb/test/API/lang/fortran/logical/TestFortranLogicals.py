@@ -22,13 +22,13 @@ class FortranTestLogicals(TestBase):
 
         bool_one = frame.FindVariable("bool_one")
         self.assertSuccess(bool_one.GetError(), "Failed to fetch bool_one")
-        self.assertEqual(bool_one.GetTypeName(), "LOGICAL")
+        self.assertEqual(bool_one.GetTypeName(), "LOGICAL(KIND=1)")
         self.assertEqual(bool_one.GetByteSize(), 1)
         self.assertEqual(bool_one.GetValue(), "true")
 
         bool_two = frame.FindVariable("bool_two")
         self.assertSuccess(bool_two.GetError(), "Failed to fetch bool_two")
-        self.assertEqual(bool_two.GetTypeName(), "LOGICAL")
+        self.assertEqual(bool_two.GetTypeName(), "LOGICAL(KIND=2)")
         self.assertEqual(bool_two.GetByteSize(), 2)
         self.assertEqual(bool_two.GetValue(), "false")
         
@@ -40,6 +40,6 @@ class FortranTestLogicals(TestBase):
 
         bool_eight = frame.FindVariable("bool_eight")
         self.assertSuccess(bool_eight.GetError(), "Failed to fetch bool_eight")
-        self.assertEqual(bool_eight.GetTypeName(), "LOGICAL")
+        self.assertEqual(bool_eight.GetTypeName(), "LOGICAL(KIND=8)")
         self.assertEqual(bool_eight.GetByteSize(), 8)
         self.assertEqual(bool_eight.GetValue(), "false")

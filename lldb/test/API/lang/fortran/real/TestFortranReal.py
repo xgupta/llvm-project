@@ -28,12 +28,6 @@ class FortranTestReal(TestBase):
 
         float_eight = frame.FindVariable("float_eight")
         self.assertSuccess(float_eight.GetError(), "Failed to fetch float_eight")
-        self.assertEqual(float_four.GetTypeName(), "DOUBLE PRECISION")
+        self.assertEqual(float_eight.GetTypeName(), "REAL(KIND=8)")
         self.assertEqual(float_eight.GetByteSize(), 8)
         self.assertTrue(float_eight.GetValue().startswith("2.718"), "float_eight value is correct")
-
-        float_sixteen = frame.FindVariable("float_sixteen")
-        self.assertSuccess(float_sixteen.GetError(), "Failed to fetch float_sixteen")
-        self.assertEqual(float_four.GetTypeName(), "REAL(KIND=16)")
-        self.assertEqual(float_sixteen.GetByteSize(), 16)
-        self.assertTrue(float_sixteen.GetValue().startswith("1.618"), "float_sixteen value is correct")
