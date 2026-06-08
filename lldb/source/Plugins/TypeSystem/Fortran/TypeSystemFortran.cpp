@@ -192,12 +192,18 @@ CompilerType TypeSystemFortran::CreateType(uint32_t kind, uint64_t bitsize,
   int underlying_kind;
   switch (kind) {
   case dwarf::DW_ATE_boolean:
+    if (bitsize == 32)
+      name.SetCString("LOGICAL");
     underlying_kind = FortranType::KIND_LOGICAL;
     break;
   case dwarf::DW_ATE_float:
+    if (bitsize == 32)
+      name.SetCString("REAL");
     underlying_kind = FortranType::KIND_REAL;
     break;
   case dwarf::DW_ATE_signed:
+    if (bitsize == 32)
+      name.SetCString("INTEGER");
     underlying_kind = FortranType::KIND_INTEGER;
     break;
   default:
@@ -212,26 +218,14 @@ ConstString TypeSystemFortran::GetTypeName(opaque_compiler_type_t type,
   if (!type)
     return ConstString();
   FortranType *fortran_type = static_cast<FortranType *>(type);
-  uint64_t bytes = fortran_type->GetBitSize() / 8;
-  if (BaseOnly)
-    return fortran_type->GetName();
   switch (fortran_type->GetKind()) {
   case FortranType::KIND_INTEGER:
-    if (fortran_type->GetBitSize() != 32)
-      return ConstString(formatv("INTEGER(KIND={0})", bytes).str());
-    else
-      return fortran_type->GetName();
-    break;
   case FortranType::KIND_LOGICAL:
-    return fortran_type->GetName();
   case FortranType::KIND_REAL:
-    if (bytes == 4)
-      return ConstString("REAL");
-    if (bytes == 8)
-      return ConstString("DOUBLE PRECISION");
-    return ConstString(formatv("REAL(KIND={0})", bytes).str());
+    return fortran_type->GetName();
+  default:
+    return ConstString("Unsupported");
   }
-  return ConstString("Unsupported");
 }
 
 CompilerType TypeSystemFortran::GetBasicTypeFromAST(BasicType basic_type) {
@@ -244,7 +238,7 @@ CompilerType TypeSystemFortran::GetBasicTypeFromAST(BasicType basic_type) {
                                   ConstString("REAL"));
   case eBasicTypeDouble:
     return GetOrCreateFortranType(FortranType::KIND_REAL, 64,
-                                  ConstString("DOUBLE PRECISION"));
+                                  ConstString("REAL(KIND=8)"));
   case eBasicTypeBool:
     return GetOrCreateFortranType(FortranType::KIND_LOGICAL, 32,
                                   ConstString("LOGICAL"));

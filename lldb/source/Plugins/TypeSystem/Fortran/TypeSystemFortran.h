@@ -88,7 +88,7 @@ public:
 #ifndef NDEBUG
   /// Verify the integrity of the type to catch CompilerTypes that mix
   /// and match invalid TypeSystem/Opaque type pairs.
-  bool Verify(lldb::opaque_compiler_type_t type) { return false; };
+  bool Verify(lldb::opaque_compiler_type_t type) override { return true; }
 #endif
 
   // Type Classification
