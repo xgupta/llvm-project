@@ -1,4 +1,3 @@
-FC ?= flang
 FFLAGS ?= -g -O0
 
 a.out: integers.f90
