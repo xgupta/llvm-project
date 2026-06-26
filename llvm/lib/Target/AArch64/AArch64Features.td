@@ -703,10 +703,13 @@ def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "Disallow all unaligned memory "
                                           "access">;
 
+// +execute-only callee can be inlined into caller without +execute-only,
+// but not vice versa.
 def FeatureExecuteOnly : SubtargetFeature<"execute-only",
                                           "GenExecuteOnly", "true",
                                           "Enable the generation of "
-                                          "execute only code.">;
+                                          "execute only code.",
+                                          [], InlineInverse>;
 
 foreach i = {1-7,9-15,18,20-28} in
     def FeatureReserveX#i : SubtargetFeature<"reserve-x"#i, "ReserveXRegister["#i#"]", "true",
@@ -792,6 +795,10 @@ def FeatureFuseCmpCSet : SubtargetFeature<
 def FeatureFuseFCmpFCSel : SubtargetFeature<
     "fuse-fcsel", "HasFuseFCmpFCSel", "true",
     "CPU can fuse FCMP and FCSEL operations">;
+
+def FeatureAlignCmpCSelPairs : SubtargetFeature<
+    "align-cmp-csel-pairs", "HasAlignCmpCSelPairs", "true",
+    "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs">;
 
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
@@ -1074,6 +1081,11 @@ def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
   "HardenSlsNoComdat", "true",
   "Generate thunk code for SLS mitigation in the normal text section">;
 
+
+def FeatureNoLFILoads : SubtargetFeature<"no-lfi-loads", "NoLFILoads", "true",
+  "Disable LFI sandboxing for load instructions">;
+def FeatureNoLFIStores : SubtargetFeature<"no-lfi-stores", "NoLFIStores", "true",
+  "Disable LFI sandboxing for store instructions">;
 
 // Only intended to be used by disassemblers.
 def FeatureAll

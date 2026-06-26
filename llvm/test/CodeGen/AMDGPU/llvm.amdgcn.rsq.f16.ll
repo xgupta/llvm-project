@@ -4,11 +4,11 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=SDAG-GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefix=SDAG-GFX12-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=SDAG-GFX12-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefix=GISEL-GCN -check-prefix=GISEL-VI %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=gfx1100 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefix=GISEL-GFX11-TRUE16 %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=GISEL-GFX11-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=gfx1200 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefix=GISEL-GFX12-TRUE16 %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=gfx1200 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=GISEL-GFX12-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefix=GISEL-GCN -check-prefix=GISEL-VI %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=gfx1100 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefix=GISEL-GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=GISEL-GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=gfx1200 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefix=GISEL-GFX12-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=gfx1200 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=GISEL-GFX12-FAKE16 %s
 
 declare half @llvm.amdgcn.rsq.f16(half %a)
 
@@ -156,7 +156,10 @@ define amdgpu_kernel void @rsq_f16(
 ; GISEL-GFX12-TRUE16-NEXT:    s_load_u16 s2, s[2:3], 0x0
 ; GISEL-GFX12-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GISEL-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-TRUE16-NEXT:    v_rsq_f16_e32 v0.l, s2
+; GISEL-GFX12-TRUE16-NEXT:    v_s_rsq_f16 s2, s2
+; GISEL-GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GISEL-GFX12-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GISEL-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
 ; GISEL-GFX12-TRUE16-NEXT:    s_mov_b32 s2, -1
 ; GISEL-GFX12-TRUE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GISEL-GFX12-TRUE16-NEXT:    s_endpgm
@@ -168,7 +171,10 @@ define amdgpu_kernel void @rsq_f16(
 ; GISEL-GFX12-FAKE16-NEXT:    s_load_u16 s2, s[2:3], 0x0
 ; GISEL-GFX12-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GISEL-GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-FAKE16-NEXT:    v_rsq_f16_e32 v0, s2
+; GISEL-GFX12-FAKE16-NEXT:    v_s_rsq_f16 s2, s2
+; GISEL-GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GISEL-GFX12-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GISEL-GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-GFX12-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GISEL-GFX12-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GISEL-GFX12-FAKE16-NEXT:    s_endpgm
