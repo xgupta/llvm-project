@@ -792,6 +792,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
       if (module_sp) {
         auto initialize_cu = [&](SupportFileNSP support_file_nsp,
                                  LanguageType cu_language,
+                                 IdentifierCaseType cu_casing,
                                  SupportFileList &&support_files = {}) {
           BuildCuTranslationTable();
           cu_sp = std::make_shared<CompileUnit>(
@@ -799,8 +800,10 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
               *GetDWARFUnitIndex(dwarf_cu.GetID()), cu_language,
               eLazyBoolCalculate, std::move(support_files));
 
-          dwarf_cu.SetLLDBCompUnit(cu_sp.get());
+          cu_sp->SetCasing(cu_casing);
 
+          dwarf_cu.SetLLDBCompUnit(cu_sp.get());
+          
           SetCompileUnitAtIndex(dwarf_cu.GetID(), cu_sp);
         };
 
@@ -829,7 +832,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
           if (support_files.GetSize() == 0)
             return false;
           initialize_cu(support_files.GetSupportFileAtIndex(0),
-                        eLanguageTypeUnknown, std::move(support_files));
+                        eLanguageTypeUnknown, dwarf_cu.GetIdentifierCase(), std::move(support_files));
           return true;
         };
 
@@ -848,7 +851,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
             MakeAbsoluteAndRemap(cu_file_spec, dwarf_cu, module_sp);
 
             initialize_cu(std::make_shared<SupportFile>(cu_file_spec),
-                          cu_language);
+                          cu_language, dwarf_cu.GetIdentifierCase());
           }
         }
       }
@@ -4512,7 +4515,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       // If we don't have a separate debug info file, then try stripping the
       // extension. The main module could be "a.debug" and the .dwp file could
       // be "a.dwp" instead of "a.debug.dwp".
-      ConstString filename_no_ext =
+      llvm::StringRef filename_no_ext =
           module_fspec.GetFileNameStrippingExtension();
       if (filename_no_ext != module_fspec.GetFilename()) {
         FileSpec module_spec_no_ext(module_fspec);
