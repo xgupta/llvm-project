@@ -169,6 +169,9 @@ private:
   ///   True if this index is a partial index, false otherwise.
   bool IsPartial() const;
 
+	void SetNameCaseInsensitive();
+
+  void SetStrictlyCaseSensitive();
   /// The DWARF file which we are indexing.
   SymbolFileDWARF *m_dwarf;
   /// Which dwarf units should we skip while building the index.

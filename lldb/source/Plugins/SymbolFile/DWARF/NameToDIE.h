@@ -86,8 +86,20 @@ public:
 
   void Clear() { m_map.Clear(); }
 
+  void SetNameCaseInsensitive() {
+    if (!StrictlyCaseSensitive)
+      NameCaseInsensitive = true;
+  }
+
+  void SetStrictlyCaseSensitive() {
+    NameCaseInsensitive = false;
+    StrictlyCaseSensitive = true;
+  }
+
 protected:
   UniqueCStringMap<DIERef> m_map;
+  bool NameCaseInsensitive = false;
+  bool StrictlyCaseSensitive = false;
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

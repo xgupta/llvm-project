@@ -158,6 +158,15 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
 
+  lldb::IdentifierCaseType cu_identifier_case = unit.GetIdentifierCase();
+
+  // If at least one of the Compile Units is case sensitive, then all compile
+  // units will be case sensitive
+  if(cu_identifier_case != eCaseSensitive)
+    SetNameCaseInsensitive();
+  else
+    SetStrictlyCaseSensitive();
+
   // First check if the unit has a DWO ID. If it does then we only want to index
   // the .dwo file or nothing at all. If we have a compile unit where we can't
   // locate the .dwo/.dwp file we don't want to index anything from the skeleton
@@ -653,4 +662,26 @@ void ManualDWARFIndex::SaveToCache() {
     if (cache->SetCachedData(GetCacheKey(), file.GetData()))
       m_dwarf->SetDebugInfoIndexWasSavedToCache();
   }
+}
+
+void ManualDWARFIndex::SetNameCaseInsensitive() {
+		m_set.function_basenames.SetNameCaseInsensitive();
+		m_set.function_fullnames.SetNameCaseInsensitive();
+		m_set.function_methods.SetNameCaseInsensitive();
+		m_set.function_selectors.SetNameCaseInsensitive();
+		m_set.objc_class_selectors.SetNameCaseInsensitive();
+		m_set.globals.SetNameCaseInsensitive();
+		m_set.types.SetNameCaseInsensitive();
+		m_set.namespaces.SetNameCaseInsensitive();
+}
+
+void ManualDWARFIndex::SetStrictlyCaseSensitive() {
+  m_set.function_basenames.SetStrictlyCaseSensitive();
+  m_set.function_fullnames.SetStrictlyCaseSensitive();
+  m_set.function_methods.SetStrictlyCaseSensitive();
+  m_set.function_selectors.SetStrictlyCaseSensitive();
+  m_set.objc_class_selectors.SetStrictlyCaseSensitive();
+  m_set.globals.SetStrictlyCaseSensitive();
+  m_set.types.SetStrictlyCaseSensitive();
+  m_set.namespaces.SetStrictlyCaseSensitive();
 }

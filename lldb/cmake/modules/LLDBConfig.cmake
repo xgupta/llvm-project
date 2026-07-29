@@ -56,6 +56,14 @@ set(LLDB_LIBXML2_VERSION "2.8" CACHE STRING
   static builds of libxml 2. Use at your own risk.")
 mark_as_advanced(LLDB_LIBXML2_VERSION)
 
+set(LLDB_DEFAULT_ENABLE_FORTRAN OFF)
+
+if("flang" IN_LIST LLVM_ENABLE_PROJECTS)
+  set(LLDB_DEFAULT_ENABLE_FORTRAN ON)
+endif()
+
+option(LLDB_ENABLE_FORTRAN "Enable Fortran support in LLDB" ${LLDB_DEFAULT_ENABLE_FORTRAN})
+
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
@@ -190,7 +198,7 @@ else()
   set(LLDB_ENABLE_MTE OFF)
 endif()
 
-if (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD")
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD" AND NOT CMAKE_GENERATOR MATCHES "Xcode")
   set(default_enable_dynamic_scriptinterpreters ON)
 else()
   set(default_enable_dynamic_scriptinterpreters OFF)
